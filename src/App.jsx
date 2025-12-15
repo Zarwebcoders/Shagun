@@ -16,7 +16,6 @@ import LevelIncome from "./pages/LevelIncome"
 import Profile from "./pages/Profile"
 import TransactionHistory from "./pages/TransactionHistory"
 import Home from "./components/Home"
-import AdminDashboard from "./admin/components/adminDashboard"
 import AdminLayout from "./admin/page"
 import UserManagement from "./admin/components/UserManagement"
 import KYCApprovals from "./admin/components/KYCApprovals"
@@ -25,6 +24,7 @@ import PackageManagement from "./admin/components/PackageManagement"
 import TransactionMonitor from "./admin/components/TransactionMonitor"
 import Reports from "./admin/components/Reports"
 import SystemSettings from "./admin/components/SystemSetting"
+import AdminDashboard from "./admin/components/AdminDashboard"
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
