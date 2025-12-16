@@ -3,12 +3,14 @@ import { useState, useEffect } from "react";
 import { Wallet } from "lucide-react";
 import HowItWorks from "./HowItWorks";
 import FAQ from "./FAQ";
+import { useNavigate } from "react-router-dom";
 
 export default function Home() {
     const [text, setText] = useState("");
     const [isDeleting, setIsDeleting] = useState(false);
     const [loopNum, setLoopNum] = useState(0);
     const [typingSpeed, setTypingSpeed] = useState(150);
+    const navigate = useNavigate()
 
     const texts = ["Earn Monthly Rewards", "Build Passive Income", "Get Monthly Returns", "Join Web3 Revolution"];
 
@@ -88,18 +90,33 @@ export default function Home() {
                         </div>
                     </motion.div>
 
-                    {/* Connect Wallet Button */}
-                    <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        className="group relative px-6 py-3 bg-gradient-to-r from-[#9131e7] to-[#ffcc4d] text-black font-bold rounded-full overflow-hidden"
-                    >
-                        <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500"></div>
-                        <span className="flex items-center space-x-2 relative z-10">
-                            <Wallet className="w-5 h-5" />
-                            <span>Connect Wallet</span>
-                        </span>
-                    </motion.button>
+                    <div className="gap-5 flex">
+                        {/* Connect Wallet Button */}
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            className="group relative px-6 py-3 bg-gradient-to-r from-[#9131e7] to-[#ffcc4d] text-black font-bold rounded-full overflow-hidden"
+                        >
+                            <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500"></div>
+                            <span className="flex items-center space-x-2 relative z-10">
+                                <Wallet className="w-5 h-5" />
+                                <span>Connect Wallet</span>
+                            </span>
+                        </motion.button>
+                        {/* Connect Wallet Button */}
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={()=>{navigate("/login")}}
+                            className="group relative px-6 py-3 bg-gradient-to-r from-[#9131e7] to-[#ffcc4d] text-black font-bold rounded-full overflow-hidden"
+                        >
+                            <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500"></div>
+                            <span className="flex items-center space-x-2 relative z-10">
+                                <Wallet className="w-5 h-5" />
+                                <span>Log In</span>
+                            </span>
+                        </motion.button>
+                    </div>
                 </div>
             </motion.header>
 

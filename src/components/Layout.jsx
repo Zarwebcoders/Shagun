@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useLocation, useNavigate } from "react-router-dom"
+import { useLocation, useNavigate, Outlet } from "react-router-dom"
 import { IoIosLogOut } from "react-icons/io";
 
 export default function Layout({ children }) {
@@ -82,7 +82,10 @@ export default function Layout({ children }) {
 
             {/* Main Content */}
             <main className="flex-1 overflow-auto bg-gradient-to-br from-[#040408] to-[#1a1a1a]">
-                <div className="md:p-6 p-2">{children}</div>
+                <div className="md:p-6 p-2">
+                    {/* यहाँ children की जगह Outlet use करें */}
+                    {children || <Outlet />}
+                </div>
             </main>
         </div>
     )

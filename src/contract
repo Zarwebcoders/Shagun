@@ -1,0 +1,420 @@
+// re_Ngx8vLVr_Hcr3QBpAXHRMxrmbYPN6YtTw
+
+
+// SPDX-License-Identifier: MIT
+// pragma solidity ^0.8.0;
+
+// contract REXToken {
+//     // ========== TOKEN DETAILS ==========
+//     string public name = "REX Token";
+//     string public symbol = "REX";
+//     uint8 public decimals = 18;
+//     uint256 public totalSupply;
+    
+//     // ========== TOKENOMICS ==========
+//     uint256 public constant MAX_SUPPLY = 21_000_000 * 10**18;
+//     uint256 public constant INITIAL_PRICE = 5 * 10**18; // 5 INR
+//     uint256 public constant BUSINESS_VOLUME_PER_PHASE = 2_000_000 * 10**18;
+//     uint256 public constant PRICE_INCREASE_PERCENT = 5;
+    
+//     // ========== STATE VARIABLES ==========
+//     uint256 public currentPrice;
+//     uint256 public totalBusinessVolume;
+//     uint256 public currentPhase;
+//     uint256 public constant TOTAL_PHASES = 21;
+    
+//     // Balances and allowances
+//     mapping(address => uint256) private _balances;
+//     mapping(address => mapping(address => uint256)) private _allowances;
+    
+//     // ========== USER STRUCTURES ==========
+//     struct UserInvestment {
+//         uint256 amount;
+//         uint256 investmentTime;
+//         uint256 lastROIClaim;
+//         bool active;
+//     }
+    
+//     struct ReferralInfo {
+//         address upline;
+//         uint256 level;
+//         uint256 totalReferrals;
+//         uint256 referralEarnings;
+//     }
+    
+//     mapping(address => UserInvestment) public investments;
+//     mapping(address => uint256) public totalWithdrawn;
+//     mapping(address => uint256) public referralRewards;
+//     mapping(address => ReferralInfo) public referralTree;
+    
+//     // ========== INCOME DISTRIBUTION (10 levels) ==========
+//     uint256[] public levelPercentages = [500, 200, 150, 100, 100, 100, 75, 50, 25, 25]; // Basis points
+    
+//     // ========== ROI SYSTEM ==========
+//     uint256 public constant ROI_RATE_SMALL = 100; // 1%
+//     uint256 public constant ROI_RATE_LARGE = 150; // 1.5%
+//     uint256 public constant INVESTMENT_THRESHOLD = 100_000 * 10**18;
+//     uint256 public constant HOLDING_BONUS = 600; // 6%
+    
+//     // ========== WITHDRAWAL SETTINGS ==========
+//     uint256 public constant MIN_WITHDRAWAL = 100 * 10**18;
+//     uint256 public constant WITHDRAWAL_FEE_PERCENT = 500; // 5%
+    
+//     // ========== ADMIN ==========
+//     address public owner;
+//     address public treasuryWallet;
+//     address public developmentWallet;
+    
+//     // ========== EVENTS ==========
+//     event Transfer(address indexed from, address indexed to, uint256 value);
+//     event Approval(address indexed owner, address indexed spender, uint256 value);
+//     event TokensPurchased(address indexed user, uint256 tokenAmount, uint256 valuePaid);
+//     event TokensSold(address indexed user, uint256 tokenAmount, uint256 valueReceived);
+//     event InvestmentMade(address indexed user, uint256 amount);
+//     event ROIClaimed(address indexed user, uint256 amount);
+//     event ReferralEarned(address indexed referrer, address indexed referred, uint256 level, uint256 amount);
+//     event PriceUpdated(uint256 newPrice, uint256 newPhase);
+//     event Withdrawal(address indexed user, uint256 tokenAmount, uint256 fee, uint256 netAmount);
+    
+//     // ========== MODIFIERS ==========
+//     modifier onlyOwner() {
+//         require(msg.sender == owner, "Only owner");
+//         _;
+//     }
+    
+//     modifier onlyRegistered() {
+//         require(referralTree[msg.sender].upline != address(0) || msg.sender == owner, "Register first");
+//         _;
+//     }
+    
+//     // ========== CONSTRUCTOR ==========
+//     constructor(address _treasuryWallet, address _developmentWallet) {
+//         owner = msg.sender;
+//         treasuryWallet = _treasuryWallet;
+//         developmentWallet = _developmentWallet;
+        
+//         // Initialize token
+//         currentPrice = INITIAL_PRICE;
+//         currentPhase = 1;
+//         totalSupply = MAX_SUPPLY;
+//         _balances[owner] = MAX_SUPPLY;
+        
+//         // Register owner
+//         referralTree[owner] = ReferralInfo({
+//             upline: address(0),
+//             level: 0,
+//             totalReferrals: 0,
+//             referralEarnings: 0
+//         });
+        
+//         emit Transfer(address(0), owner, MAX_SUPPLY);
+//     }
+    
+//     // ========== BASIC ERC-20 FUNCTIONS ==========
+//     function balanceOf(address account) public view returns (uint256) {
+//         return _balances[account];
+//     }
+    
+//     function transfer(address to, uint256 amount) public returns (bool) {
+//         require(to != address(0), "Transfer to zero address");
+//         require(_balances[msg.sender] >= amount, "Insufficient balance");
+        
+//         _balances[msg.sender] -= amount;
+//         _balances[to] += amount;
+        
+//         emit Transfer(msg.sender, to, amount);
+//         return true;
+//     }
+    
+//     function allowance(address tokenOwner, address spender) public view returns (uint256) {
+//         return _allowances[tokenOwner][spender];
+//     }
+    
+//     function approve(address spender, uint256 amount) public returns (bool) {
+//         _allowances[msg.sender][spender] = amount;
+//         emit Approval(msg.sender, spender, amount);
+//         return true;
+//     }
+    
+//     function transferFrom(address from, address to, uint256 amount) public returns (bool) {
+//         require(_balances[from] >= amount, "Insufficient balance");
+//         require(_allowances[from][msg.sender] >= amount, "Allowance exceeded");
+        
+//         _balances[from] -= amount;
+//         _allowances[from][msg.sender] -= amount;
+//         _balances[to] += amount;
+        
+//         emit Transfer(from, to, amount);
+//         return true;
+//     }
+    
+//     // ========== MAIN BUSINESS FUNCTIONS ==========
+    
+//     // Buy tokens with referral
+//     function buyTokens(address referrer) public payable {
+//         require(msg.value > 0, "Send BNB to buy tokens");
+//         require(totalSupply <= MAX_SUPPLY, "Max supply reached");
+        
+//         // Calculate tokens
+//         uint256 tokenAmount = (msg.value * 10**18) / currentPrice;
+        
+//         // Register if new user
+//         if (referralTree[msg.sender].upline == address(0) && referrer != address(0)) {
+//             _registerUser(msg.sender, referrer);
+//         }
+        
+//         // Mint tokens
+//         _mint(msg.sender, tokenAmount);
+        
+//         // Update business volume
+//         totalBusinessVolume += msg.value;
+//         _updatePriceIfNeeded();
+        
+//         // Distribute referral income
+//         if (referralTree[msg.sender].upline != address(0)) {
+//             _distributeReferralIncome(msg.sender, msg.value);
+//         }
+        
+//         // Send funds to treasury
+//         (bool success, ) = treasuryWallet.call{value: msg.value}("");
+//         require(success, "Transfer failed");
+        
+//         emit TokensPurchased(msg.sender, tokenAmount, msg.value);
+//     }
+    
+//     // Sell tokens
+//     function sellTokens(uint256 tokenAmount) public {
+//         require(tokenAmount > 0, "Amount must be > 0");
+//         require(_balances[msg.sender] >= tokenAmount, "Insufficient balance");
+        
+//         // Calculate BNB value
+//         uint256 bnbValue = (tokenAmount * currentPrice) / 10**18;
+//         uint256 contractBalance = address(this).balance;
+//         require(contractBalance >= bnbValue, "Contract low on BNB");
+        
+//         // Burn tokens
+//         _burn(msg.sender, tokenAmount);
+        
+//         // Calculate fee and net amount
+//         uint256 fee = (bnbValue * WITHDRAWAL_FEE_PERCENT) / 10000;
+//         uint256 netAmount = bnbValue - fee;
+        
+//         // Update business volume
+//         totalBusinessVolume += bnbValue;
+//         _updatePriceIfNeeded();
+        
+//         // Transfer to user
+//         (bool success, ) = msg.sender.call{value: netAmount}("");
+//         require(success, "Transfer failed");
+        
+//         // Transfer fee
+//         (success, ) = developmentWallet.call{value: fee}("");
+//         require(success, "Fee transfer failed");
+        
+//         emit TokensSold(msg.sender, tokenAmount, netAmount);
+//     }
+    
+//     // Investment function
+//     function invest(address investor, uint256 tokenAmount) public {
+//     require(investor != address(0), "Invalid address");
+//     require(tokenAmount >= MIN_WITHDRAWAL, "Below minimum");
+//     require(_balances[investor] >= tokenAmount, "Insufficient balance");
+//     require(!investments[investor].active, "Active investment exists");
+    
+//     // Allow self-investment or admin investment
+//     if (msg.sender != investor) {
+//         require(msg.sender == owner, "Only owner can invest for others");
+//     }
+    
+//     _transfer(investor, address(this), tokenAmount);
+    
+//     investments[investor] = UserInvestment({
+//         amount: tokenAmount,
+//         investmentTime: block.timestamp,
+//         lastROIClaim: block.timestamp,
+//         active: true
+//     });
+    
+//     emit InvestmentMade(investor, tokenAmount);
+// }
+    
+//     // Claim ROI
+//     function claimROI() public {
+//         UserInvestment storage investment = investments[msg.sender];
+//         require(investment.active, "No active investment");
+        
+//         uint256 timeElapsed = block.timestamp - investment.lastROIClaim;
+//         require(timeElapsed >= 30 days, "Wait 30 days");
+        
+//         // Calculate ROI
+//         uint256 roiRate = investment.amount <= INVESTMENT_THRESHOLD ? ROI_RATE_SMALL : ROI_RATE_LARGE;
+//         uint256 roiAmount = (investment.amount * roiRate) / 10000;
+        
+//         // Add holding bonus
+//         if (block.timestamp - investment.investmentTime >= 365 days) {
+//             uint256 bonus = (investment.amount * HOLDING_BONUS) / 10000;
+//             roiAmount += bonus;
+//         }
+        
+//         // Update last claim
+//         investment.lastROIClaim = block.timestamp;
+        
+//         // Transfer ROI
+//         _transfer(address(this), msg.sender, roiAmount);
+        
+//         emit ROIClaimed(msg.sender, roiAmount);
+//     }
+    
+//     // Claim referral rewards
+//     function claimReferralRewards() public {
+//         uint256 rewards = referralRewards[msg.sender];
+//         require(rewards > 0, "No rewards");
+        
+//         // Convert to tokens
+//         uint256 tokenAmount = (rewards * 10**18) / currentPrice;
+        
+//         // Reset and mint
+//         referralRewards[msg.sender] = 0;
+//         _mint(msg.sender, tokenAmount);
+//     }
+    
+//     // Withdraw tokens with fee
+//     function withdrawTokens(uint256 tokenAmount) public onlyRegistered {
+//     require(tokenAmount >= MIN_WITHDRAWAL, "Below minimum");
+//     require(balanceOf(msg.sender) >= tokenAmount, "Insufficient balance");
+
+//     uint256 fee = (tokenAmount * WITHDRAWAL_FEE_PERCENT) / 10000;
+//     uint256 netAmount = tokenAmount - fee;
+
+//     // Transfer fee to admin
+//     _transfer(msg.sender, developmentWallet, fee);
+
+//     // Transfer remaining amount to admin (NOT to user)
+//     _transfer(msg.sender, developmentWallet, netAmount);
+
+//     emit Withdrawal(msg.sender, tokenAmount, fee, netAmount);
+// }
+
+    
+//     // ========== INTERNAL FUNCTIONS ==========
+//     function _mint(address to, uint256 amount) internal {
+//         require(to != address(0), "Mint to zero address");
+//         totalSupply += amount;
+//         _balances[to] += amount;
+//         emit Transfer(address(0), to, amount);
+//     }
+    
+//     function _burn(address from, uint256 amount) internal {
+//         require(_balances[from] >= amount, "Burn amount exceeds balance");
+//         _balances[from] -= amount;
+//         totalSupply -= amount;
+//         emit Transfer(from, address(0), amount);
+//     }
+    
+//     function _transfer(address from, address to, uint256 amount) internal {
+//         require(from != address(0), "Transfer from zero address");
+//         require(to != address(0), "Transfer to zero address");
+//         require(_balances[from] >= amount, "Insufficient balance");
+        
+//         _balances[from] -= amount;
+//         _balances[to] += amount;
+        
+//         emit Transfer(from, to, amount);
+//     }
+    
+//     function _registerUser(address user, address referrer) internal {
+//         require(referrer != address(0), "Referrer required");
+//         require(referralTree[referrer].upline != address(0) || referrer == owner, "Invalid referrer");
+//         require(referralTree[user].upline == address(0), "Already registered");
+        
+//         uint256 uplineLevel = referralTree[referrer].level + 1;
+//         require(uplineLevel <= 10, "Max levels exceeded");
+        
+//         referralTree[user] = ReferralInfo({
+//             upline: referrer,
+//             level: uplineLevel,
+//             totalReferrals: 0,
+//             referralEarnings: 0
+//         });
+        
+//         referralTree[referrer].totalReferrals++;
+//     }
+    
+//     function _distributeReferralIncome(address buyer, uint256 businessAmount) internal {
+//         address currentUpline = referralTree[buyer].upline;
+//         uint256 level = 1;
+        
+//         while (currentUpline != address(0) && level <= 10) {
+//             uint256 rewardPercentage = levelPercentages[level - 1];
+//             uint256 rewardAmount = (businessAmount * rewardPercentage) / 10000;
+            
+//             if (rewardAmount > 0) {
+//                 referralRewards[currentUpline] += rewardAmount;
+//                 referralTree[currentUpline].referralEarnings += rewardAmount;
+                
+//                 emit ReferralEarned(currentUpline, buyer, level, rewardAmount);
+//             }
+            
+//             currentUpline = referralTree[currentUpline].upline;
+//             level++;
+//         }
+//     }
+    
+//     function _updatePriceIfNeeded() internal {
+//         uint256 phasesCompleted = totalBusinessVolume / (BUSINESS_VOLUME_PER_PHASE * currentPrice / 10**18);
+        
+//         if (phasesCompleted > currentPhase && currentPhase < TOTAL_PHASES) {
+//             uint256 phasesToUpdate = phasesCompleted - currentPhase;
+            
+//             for (uint256 i = 0; i < phasesToUpdate && currentPhase < TOTAL_PHASES; i++) {
+//                 currentPrice = (currentPrice * (100 + PRICE_INCREASE_PERCENT)) / 100;
+//                 currentPhase++;
+                
+//                 emit PriceUpdated(currentPrice, currentPhase);
+//             }
+//         }
+//     }
+    
+//     // ========== VIEW FUNCTIONS ==========
+//     function getCurrentPrice() public view returns (uint256) {
+//         return currentPrice;
+//     }
+    
+//     function getPendingROI(address user) public view returns (uint256) {
+//         UserInvestment memory investment = investments[user];
+//         if (!investment.active) return 0;
+        
+//         uint256 timeElapsed = block.timestamp - investment.lastROIClaim;
+//         if (timeElapsed < 30 days) return 0;
+        
+//         uint256 monthsPassed = timeElapsed / 30 days;
+//         uint256 roiRate = investment.amount <= INVESTMENT_THRESHOLD ? ROI_RATE_SMALL : ROI_RATE_LARGE;
+        
+//         uint256 pendingROI = (investment.amount * roiRate * monthsPassed) / 10000;
+        
+//         if (block.timestamp - investment.investmentTime >= 365 days) {
+//             uint256 bonus = (investment.amount * HOLDING_BONUS) / 10000;
+//             pendingROI += bonus;
+//         }
+        
+//         return pendingROI;
+//     }
+    
+//     function getTokenValue(uint256 tokenAmount) public view returns (uint256) {
+//         return (tokenAmount * currentPrice) / 10**18;
+//     }
+    
+//     // ========== ADMIN FUNCTIONS ==========
+//     function updateWallets(address _treasury, address _development) public onlyOwner {
+//         treasuryWallet = _treasury;
+//         developmentWallet = _development;
+//     }
+    
+//     function emergencyWithdraw() public onlyOwner {
+//         (bool success, ) = owner.call{value: address(this).balance}("");
+//         require(success, "Withdraw failed");
+//     }
+    
+//     // Accept BNB
+//     receive() external payable {}
+// }

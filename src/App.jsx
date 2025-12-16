@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom"
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from "react-router-dom"
 import Layout from "./components/Layout"
 import Login from "./pages/Login"
 import Signup from "./pages/Signup"
@@ -24,11 +24,20 @@ import PackageManagement from "./admin/components/PackageManagement"
 import TransactionMonitor from "./admin/components/TransactionMonitor"
 import Reports from "./admin/components/Reports"
 import SystemSettings from "./admin/components/SystemSetting"
-import AdminDashboard from "./admin/components/AdminDashboard"
+import AdminDashboard from "./admin/components/adminDashboard"
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false)
+
+  // Layout wrapper component for protected routes
+  const ProtectedLayout = () => {
+    return (
+      <Layout>
+        <Outlet />
+      </Layout>
+    )
+  }
 
   return (
     <Router>
@@ -50,8 +59,8 @@ export default function App() {
             <Signup setIsAuthenticated={setIsAuthenticated} />
         } />
 
-        {/* User Protected Routes */}
-        <Route element={<Layout />}>
+        {/* User Protected Routes with Layout */}
+        <Route element={<ProtectedLayout />}>
           <Route path="/dashboard" element={
             isAuthenticated ? <Dashboard /> : <Navigate to="/login" />
           } />
