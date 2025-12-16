@@ -24,7 +24,7 @@ import PackageManagement from "./admin/components/PackageManagement"
 import TransactionMonitor from "./admin/components/TransactionMonitor"
 import Reports from "./admin/components/Reports"
 import SystemSettings from "./admin/components/SystemSetting"
-import AdminDashboard from "./admin/components/adminDashboard"
+// import AdminDashboard from "./admin/components/adminDashboard"
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -95,7 +95,7 @@ export default function App() {
           isAdminAuthenticated ? <AdminLayout /> : <Navigate to="/login" />
         }>
           <Route index element={<Navigate to="dashboard" replace />} />
-          <Route path="dashboard" element={<AdminDashboard />} />
+          {/* <Route path="dashboard" element={<AdminDashboard />} /> */}
           <Route path="users" element={<UserManagement />} />
           <Route path="kyc-approvals" element={<KYCApprovals />} />
           <Route path="withdrawals" element={<WithdrawalRequests />} />
