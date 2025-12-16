@@ -2,32 +2,32 @@
 
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
+import client from "../api/client"
 
 export default function Login({ setIsAuthenticated, setIsAdminAuthenticated }) {
     const [email, setEmail] = useState("")
     const [password, setPassword] = useState("")
     const [error, setError] = useState("")
-    const [loginType, setLoginType] = useState("user") // "user" or "admin"
     const navigate = useNavigate()
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault()
         if (email && password) {
-            if (loginType === "user") {
-                // User login logic
-                // यहाँ आप API call कर सकते हैं
-                setIsAuthenticated(true)
-                navigate("/dashboard")
-            } else if (loginType === "admin") {
-                // Admin login logic
-                // यहाँ आप admin authentication की logic add करें
-                // उदाहरण के लिए:
-                if (email === "admin@example.com" && password === "admin123") {
+            try {
+                const { data } = await client.post('/auth/login', { email, password });
+
+                // Store user data in localStorage
+                localStorage.setItem('user', JSON.stringify(data));
+
+                if (data.role === 'admin') {
                     setIsAdminAuthenticated(true)
                     navigate("/admin/dashboard")
                 } else {
-                    setError("Invalid admin credentials")
+                    setIsAuthenticated(true)
+                    navigate("/dashboard")
                 }
+            } catch (err) {
+                setError(err.response?.data?.message || "Login failed");
             }
         } else {
             setError("Please fill all fields")
@@ -65,35 +65,6 @@ export default function Login({ setIsAuthenticated, setIsAdminAuthenticated }) {
                         <p className="text-[#b0b0b0] text-lg">Welcome Back</p>
                     </div>
 
-                    {/* Login Type Selection */}
-                    <div className="animate-slide-up mb-6">
-                        <label className="block text-sm font-semibold text-white mb-2">
-                            Login As
-                        </label>
-                        <div className="flex space-x-2">
-                            <button
-                                type="button"
-                                onClick={() => setLoginType("user")}
-                                className={`flex-1 py-3 rounded-lg font-bold transition-all duration-300 ${loginType === "user"
-                                        ? "bg-gradient-to-r from-[#9131e7] to-[#e84495] text-[#040408]"
-                                        : "bg-[#1a1a1a] border border-[#444] text-white hover:border-[#9131e7]"
-                                    }`}
-                            >
-                                User
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setLoginType("admin")}
-                                className={`flex-1 py-3 rounded-lg font-bold transition-all duration-300 ${loginType === "admin"
-                                        ? "bg-gradient-to-r from-[#9131e7] to-[#e84495] text-[#040408]"
-                                        : "bg-[#1a1a1a] border border-[#444] text-white hover:border-[#9131e7]"
-                                    }`}
-                            >
-                                Admin
-                            </button>
-                        </div>
-                    </div>
-
                     {/* Form */}
                     <form onSubmit={handleSubmit} className="space-y-4">
                         {/* Email Input */}
@@ -104,7 +75,7 @@ export default function Login({ setIsAuthenticated, setIsAdminAuthenticated }) {
                             <input
                                 id="email"
                                 type="email"
-                                placeholder={loginType === "admin" ? "admin@example.com" : "your@email.com"}
+                                placeholder="your@email.com"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 className="w-full px-4 py-3 bg-[#1a1a1a] border border-[#444] text-white rounded-lg focus:outline-none focus:border-[#9131e7] focus:ring-2 focus:ring-[#9131e7]/30 transition-all duration-300 placeholder-[#666]"
@@ -138,28 +109,20 @@ export default function Login({ setIsAuthenticated, setIsAdminAuthenticated }) {
                             type="submit"
                             className="w-full mt-6 px-6 py-3 bg-gradient-to-r from-[#9131e7] to-[#e84495] text-[#040408] font-bold rounded-lg hover:shadow-lg hover:shadow-[#9131e7]/50 transition-all duration-300 hover:-translate-y-1 active:translate-y-0 animate-slide-up"
                         >
-                            {loginType === "admin" ? "Login as Admin" : "Login to Account"}
+                            Login
                         </button>
                     </form>
 
                     {/* Footer */}
-                    {loginType === "user" && (
-                        <p className="text-center text-[#b0b0b0] mt-6 animate-slide-up">
-                            Don't have an account?{" "}
-                            <button
-                                onClick={() => navigate("/signup")}
-                                className="text-[#9131e7] font-bold hover:text-[#e84495] transition-colors duration-300"
-                            >
-                                Sign Up Here
-                            </button>
-                        </p>
-                    )}
-
-                    {loginType === "admin" && (
-                        <p className="text-center text-[#b0b0b0] mt-6 animate-slide-up">
-                            Admin portal for system management
-                        </p>
-                    )}
+                    <p className="text-center text-[#b0b0b0] mt-6 animate-slide-up">
+                        Don't have an account?{" "}
+                        <button
+                            onClick={() => navigate("/signup")}
+                            className="text-[#9131e7] font-bold hover:text-[#e84495] transition-colors duration-300"
+                        >
+                            Sign Up Here
+                        </button>
+                    </p>
                 </div>
             </div>
         </div>

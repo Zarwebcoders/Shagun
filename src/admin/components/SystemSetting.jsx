@@ -1,11 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import client from "../../api/client"
 
 export default function SystemSettings() {
     const [settings, setSettings] = useState({
-        siteName: "Cryptosphere",
-        siteEmail: "admin@cryptosphere.com",
+        siteName: "REX Token",
+        siteEmail: "admin@rextoken.com",
         minWithdrawal: "50",
         maxWithdrawal: "100000",
         withdrawalFee: "2.5",
@@ -15,9 +16,31 @@ export default function SystemSettings() {
         twoFactorAuth: true,
         emailNotifications: true,
     })
+    const [loading, setLoading] = useState(true)
 
-    const handleSave = () => {
-        alert("Settings saved successfully!")
+    useEffect(() => {
+        const fetchSettings = async () => {
+            try {
+                const { data } = await client.get('/settings');
+                // Merge API data with defaults to ensure all fields exist
+                setSettings(prev => ({ ...prev, ...data }));
+            } catch (error) {
+                console.error("Error fetching settings:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchSettings();
+    }, []);
+
+    const handleSave = async () => {
+        try {
+            await client.put('/settings', settings);
+            alert("Settings saved successfully!");
+        } catch (error) {
+            console.error("Error saving settings:", error);
+            alert("Failed to save settings");
+        }
     }
 
     return (
@@ -38,14 +61,14 @@ export default function SystemSettings() {
                 </div>
                 <button
                     onClick={handleSave}
-                    className="px-6 py-3 bg-[#f3b232] text-[#1f1f1f] rounded-lg font-semibold hover:bg-[#d4941f] transition-all"
+                    className="px-6 py-3 bg-gradient-to-r from-[#9131e7] to-[#e3459b] text-white rounded-lg font-semibold hover:shadow-lg hover:shadow-[#9131e7]/20 transition-all"
                 >
                     Save Changes
                 </button>
             </div>
 
             {/* General Settings */}
-            <div className="bg-[#1f1f1f] rounded-xl p-6 border border-[#3f3f3f]">
+            <div className="bg-[#0f0f1a] rounded-xl p-6 border border-[#9131e7]/30">
                 <h3 className="text-xl font-bold text-white mb-6">General Settings</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
@@ -54,7 +77,7 @@ export default function SystemSettings() {
                             type="text"
                             value={settings.siteName}
                             onChange={(e) => setSettings({ ...settings, siteName: e.target.value })}
-                            className="w-full px-4 py-3 bg-[#2b2b2b] text-white rounded-lg border border-[#3f3f3f] focus:border-[#f3b232] focus:outline-none"
+                            className="w-full px-4 py-3 bg-[#1a1a2e] text-white rounded-lg border border-[#9131e7]/30 focus:border-[#9131e7] focus:outline-none"
                         />
                     </div>
                     <div>
@@ -63,14 +86,14 @@ export default function SystemSettings() {
                             type="email"
                             value={settings.siteEmail}
                             onChange={(e) => setSettings({ ...settings, siteEmail: e.target.value })}
-                            className="w-full px-4 py-3 bg-[#2b2b2b] text-white rounded-lg border border-[#3f3f3f] focus:border-[#f3b232] focus:outline-none"
+                            className="w-full px-4 py-3 bg-[#1a1a2e] text-white rounded-lg border border-[#9131e7]/30 focus:border-[#9131e7] focus:outline-none"
                         />
                     </div>
                 </div>
             </div>
 
             {/* Financial Settings */}
-            <div className="bg-[#1f1f1f] rounded-xl p-6 border border-[#3f3f3f]">
+            <div className="bg-[#0f0f1a] rounded-xl p-6 border border-[#9131e7]/30">
                 <h3 className="text-xl font-bold text-white mb-6">Financial Settings</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
@@ -79,7 +102,7 @@ export default function SystemSettings() {
                             type="number"
                             value={settings.minWithdrawal}
                             onChange={(e) => setSettings({ ...settings, minWithdrawal: e.target.value })}
-                            className="w-full px-4 py-3 bg-[#2b2b2b] text-white rounded-lg border border-[#3f3f3f] focus:border-[#f3b232] focus:outline-none"
+                            className="w-full px-4 py-3 bg-[#1a1a2e] text-white rounded-lg border border-[#9131e7]/30 focus:border-[#9131e7] focus:outline-none"
                         />
                     </div>
                     <div>
@@ -88,7 +111,7 @@ export default function SystemSettings() {
                             type="number"
                             value={settings.maxWithdrawal}
                             onChange={(e) => setSettings({ ...settings, maxWithdrawal: e.target.value })}
-                            className="w-full px-4 py-3 bg-[#2b2b2b] text-white rounded-lg border border-[#3f3f3f] focus:border-[#f3b232] focus:outline-none"
+                            className="w-full px-4 py-3 bg-[#1a1a2e] text-white rounded-lg border border-[#9131e7]/30 focus:border-[#9131e7] focus:outline-none"
                         />
                     </div>
                     <div>
@@ -98,7 +121,7 @@ export default function SystemSettings() {
                             step="0.1"
                             value={settings.withdrawalFee}
                             onChange={(e) => setSettings({ ...settings, withdrawalFee: e.target.value })}
-                            className="w-full px-4 py-3 bg-[#2b2b2b] text-white rounded-lg border border-[#3f3f3f] focus:border-[#f3b232] focus:outline-none"
+                            className="w-full px-4 py-3 bg-[#1a1a2e] text-white rounded-lg border border-[#9131e7]/30 focus:border-[#9131e7] focus:outline-none"
                         />
                     </div>
                     <div>
@@ -108,14 +131,14 @@ export default function SystemSettings() {
                             step="0.1"
                             value={settings.referralCommission}
                             onChange={(e) => setSettings({ ...settings, referralCommission: e.target.value })}
-                            className="w-full px-4 py-3 bg-[#2b2b2b] text-white rounded-lg border border-[#3f3f3f] focus:border-[#f3b232] focus:outline-none"
+                            className="w-full px-4 py-3 bg-[#1a1a2e] text-white rounded-lg border border-[#9131e7]/30 focus:border-[#9131e7] focus:outline-none"
                         />
                     </div>
                 </div>
             </div>
 
             {/* Security & Features */}
-            <div className="bg-[#1f1f1f] rounded-xl p-6 border border-[#3f3f3f]">
+            <div className="bg-[#0f0f1a] rounded-xl p-6 border border-[#9131e7]/30">
                 <h3 className="text-xl font-bold text-white mb-6">Security & Features</h3>
                 <div className="space-y-4">
                     {[
@@ -132,7 +155,7 @@ export default function SystemSettings() {
                             description: "Send email notifications for important events",
                         },
                     ].map((item) => (
-                        <div key={item.key} className="flex items-center justify-between p-4 bg-[#2b2b2b] rounded-lg">
+                        <div key={item.key} className="flex items-center justify-between p-4 bg-[#1a1a2e] rounded-lg">
                             <div>
                                 <p className="text-white font-medium">{item.label}</p>
                                 <p className="text-gray-400 text-sm">{item.description}</p>
@@ -153,7 +176,7 @@ export default function SystemSettings() {
             </div>
 
             {/* Crypto Addresses */}
-            <div className="bg-[#1f1f1f] rounded-xl p-6 border border-[#3f3f3f]">
+            <div className="bg-[#0f0f1a] rounded-xl p-6 border border-[#9131e7]/30">
                 <h3 className="text-xl font-bold text-white mb-6">Platform Wallet Addresses</h3>
                 <div className="space-y-4">
                     {[
@@ -161,16 +184,16 @@ export default function SystemSettings() {
                         { crypto: "Ethereum (ETH)", address: "0x9e2c4b1a6f8e3d5c7a9b2e4f6c8d1a3e5b7c9a2d" },
                         { crypto: "Tether (USDT)", address: "0x1f5a7c4e9b2d6a8c3e5f7b9d2a4c6e8f1a3b5c7d" },
                     ].map((wallet, index) => (
-                        <div key={index} className="p-4 bg-[#2b2b2b] rounded-lg">
+                        <div key={index} className="p-4 bg-[#1a1a2e] rounded-lg">
                             <label className="block text-gray-400 text-sm mb-2">{wallet.crypto}</label>
                             <div className="flex gap-2">
                                 <input
                                     type="text"
                                     value={wallet.address}
                                     readOnly
-                                    className="flex-1 px-4 py-2 bg-[#3f3f3f] text-white rounded-lg border border-[#4f4f4f] font-mono text-sm"
+                                    className="flex-1 px-4 py-2 bg-[#0f0f1a] text-white rounded-lg border border-[#9131e7]/30 font-mono text-sm"
                                 />
-                                <button className="px-4 py-2 bg-[#f3b232] text-[#1f1f1f] rounded-lg font-semibold hover:bg-[#d4941f] transition-all">
+                                <button className="px-4 py-2 bg-[#9131e7] text-white rounded-lg font-semibold hover:bg-[#d4941f] transition-all">
                                     Copy
                                 </button>
                             </div>

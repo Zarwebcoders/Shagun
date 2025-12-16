@@ -1,39 +1,95 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import client from "../api/client"
 import WithdrawalForm from "../components/WithdrawalForm"
 
 export default function Withdrawal() {
-    const [userData] = useState({
-        name: "NIRMALABEN SURESHBHAI PATEL",
+    const [userData, setUserData] = useState({
+        name: "",
         points: {
-            loyalty: 12500,
-            sgn: 8500,
-            shopping: 3200,
-            total: 24200
+            loyalty: 0,
+            sgn: 0,
+            shopping: 0,
+            total: 0
         }
     })
+    const [withdrawalHistory, setWithdrawalHistory] = useState([])
+    const [loading, setLoading] = useState(true)
 
-    const [withdrawalHistory, setWithdrawalHistory] = useState([
-        { id: 1, amount: 500, date: "2024-01-15", status: "Completed", method: "Bank Transfer", source: "Loyalty Points" },
-        { id: 2, amount: 250, date: "2024-01-10", status: "Completed", method: "Crypto Wallet", source: "REX Token" },
-        { id: 3, amount: 1000, date: "2024-01-08", status: "Pending", method: "Bank Transfer", source: "Shopping Tokens" },
-        { id: 4, amount: 750, date: "2024-01-05", status: "Completed", method: "Crypto Wallet", source: "Loyalty Points" },
-        { id: 5, amount: 300, date: "2024-01-03", status: "Completed", method: "Bank Transfer", source: "REX Token" },
-    ])
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const [userRes, txRes] = await Promise.all([
+                    client.get('/auth/me'),
+                    client.get('/transactions')
+                ]);
 
-    const handleWithdraw = (data) => {
-        const newWithdrawal = {
-            id: withdrawalHistory.length + 1,
-            ...data,
-            date: new Date().toISOString().split("T")[0],
-            status: "Pending",
+                const user = userRes.data;
+                setUserData({
+                    name: user.name,
+                    points: {
+                        loyalty: user.loyaltyPoints || 0,
+                        sgn: user.sgnToken || 0,
+                        shopping: user.shoppingPoints || 0,
+                        total: user.balance || 0
+                    }
+                });
+
+                // Filter withdrawals from transactions
+                const withdrawals = txRes.data
+                    .filter(tx => tx.type === 'withdrawal')
+                    .map(tx => ({
+                        id: tx._id,
+                        amount: tx.amount,
+                        date: new Date(tx.createdAt).toISOString().split('T')[0],
+                        status: tx.status.charAt(0).toUpperCase() + tx.status.slice(1),
+                        method: tx.description.includes("Bank") ? "Bank Transfer" : "Crypto Wallet",
+                        source: "Main Balance" // Simplified for now as transaction doesn't store source
+                    }));
+                setWithdrawalHistory(withdrawals);
+
+            } catch (error) {
+                console.error("Error fetching data:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchData();
+    }, []);
+
+    const handleWithdraw = async (data) => {
+        try {
+            await client.post('/transactions', {
+                type: 'withdrawal',
+                amount: data.amount,
+                description: `Withdrawal via ${data.method} from ${data.source}`,
+                status: 'pending' // Default to pending
+            });
+            alert("Withdrawal request submitted successfully!");
+
+            // Refresh history
+            const { data: txData } = await client.get('/transactions');
+            const withdrawals = txData
+                .filter(tx => tx.type === 'withdrawal')
+                .map(tx => ({
+                    id: tx._id,
+                    amount: tx.amount,
+                    date: new Date(tx.createdAt).toISOString().split('T')[0],
+                    status: tx.status.charAt(0).toUpperCase() + tx.status.slice(1),
+                    method: tx.description.includes("Bank") ? "Bank Transfer" : "Crypto Wallet",
+                    source: "Main Balance"
+                }));
+            setWithdrawalHistory(withdrawals);
+
+        } catch (error) {
+            console.error("Error submitting withdrawal:", error);
+            alert("Failed to submit withdrawal request");
         }
-        setWithdrawalHistory((prev) => [newWithdrawal, ...prev])
     }
 
     return (
-        <div className="w-full space-y-6 md:space-y-8">
+        <div className="w-full space-y-6 md:space-y-8 animate-fadeIn">
             {/* Header Section */}
             <div className="space-y-3 md:space-y-4">
                 <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-2">Withdrawal Center</h2>
@@ -142,8 +198,8 @@ export default function Withdrawal() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
                 {/* Withdrawal Form Section */}
                 <div className="lg:col-span-1">
-                    <WithdrawalForm 
-                        onSubmit={handleWithdraw} 
+                    <WithdrawalForm
+                        onSubmit={handleWithdraw}
                         walletPoints={userData.points}
                     />
                 </div>
@@ -170,8 +226,8 @@ export default function Withdrawal() {
                                 </thead>
                                 <tbody>
                                     {withdrawalHistory.map((item) => (
-                                        <tr 
-                                            key={item.id} 
+                                        <tr
+                                            key={item.id}
                                             className="border-b border-[#444]/30 hover:bg-[#9131e7]/10 transition-colors group"
                                         >
                                             <td className="py-3 md:py-4 px-3 md:px-6">
@@ -206,22 +262,12 @@ export default function Withdrawal() {
                                             </td>
                                             <td className="py-3 md:py-4 px-3 md:px-6">
                                                 <span className={`inline-flex items-center gap-1 px-2 md:px-3 py-1 rounded-full text-xs md:text-sm font-semibold ${item.status === "Completed"
-                                                        ? "bg-green-600/20 text-green-400 border border-green-600/30"
-                                                        : item.status === "Pending"
+                                                    ? "bg-green-600/20 text-green-400 border border-green-600/30"
+                                                    : item.status === "Pending"
                                                         ? "bg-yellow-600/20 text-yellow-400 border border-yellow-600/30"
                                                         : "bg-red-600/20 text-red-400 border border-red-600/30"
                                                     }`}
                                                 >
-                                                    {item.status === "Completed" && (
-                                                        <svg className="w-2 h-2 md:w-3 md:h-3" fill="currentColor" viewBox="0 0 20 20">
-                                                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                                        </svg>
-                                                    )}
-                                                    {item.status === "Pending" && (
-                                                        <svg className="w-2 h-2 md:w-3 md:h-3 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                                        </svg>
-                                                    )}
                                                     {item.status}
                                                 </span>
                                             </td>
@@ -303,3 +349,5 @@ export default function Withdrawal() {
         </div>
     )
 }
+
+

@@ -1,68 +1,14 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import client from "../api/client"
 
 export default function Packages() {
-    // Purchase History Data
-    const purchaseHistory = [
-        {
-            id: 1,
-            packageName: "Starter",
-            quantity: 1,
-            amount: "$100",
-            purchaseDate: "2024-01-15",
-            transactionId: "TXN00123456",
-            status: "Completed",
-            approvedDate: "2024-01-15",
-            invoice: "INV-001"
-        },
-        {
-            id: 2,
-            packageName: "Pro",
-            quantity: 2,
-            amount: "$1,000",
-            purchaseDate: "2024-01-10",
-            transactionId: "TXN00123457",
-            status: "Pending",
-            approvedDate: "-",
-            invoice: "INV-002"
-        },
-        {
-            id: 3,
-            packageName: "Premium",
-            quantity: 1,
-            amount: "$1,000",
-            purchaseDate: "2024-01-05",
-            transactionId: "TXN00123458",
-            status: "Completed",
-            approvedDate: "2024-01-06",
-            invoice: "INV-003"
-        },
-        {
-            id: 4,
-            packageName: "Elite",
-            quantity: 1,
-            amount: "$5,000",
-            purchaseDate: "2024-01-01",
-            transactionId: "TXN00123459",
-            status: "Completed",
-            approvedDate: "2024-01-02",
-            invoice: "INV-004"
-        },
-        {
-            id: 5,
-            packageName: "Starter",
-            quantity: 3,
-            amount: "$300",
-            purchaseDate: "2023-12-28",
-            transactionId: "TXN00123460",
-            status: "Rejected",
-            approvedDate: "-",
-            invoice: "INV-005"
-        },
-    ]
+    const [packages, setPackages] = useState([])
+    const [investments, setInvestments] = useState([])
+    const [loading, setLoading] = useState(true)
+    const [selectedPackage, setSelectedPackage] = useState("")
 
-    const [showModal, setShowModal] = useState(false);
     const [formData, setFormData] = useState({
         amount: "",
         transactionId: "",
@@ -70,10 +16,23 @@ export default function Packages() {
         userId: ""
     });
 
-    // open modal
-    const openModal = () => {
-        setShowModal(true);
-    };
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const [packagesRes, investmentsRes] = await Promise.all([
+                    client.get('/packages'),
+                    client.get('/investments')
+                ]);
+                setPackages(packagesRes.data);
+                setInvestments(investmentsRes.data);
+            } catch (error) {
+                console.error("Error fetching data:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchData();
+    }, []);
 
     // handle input
     const handleChange = (e) => {
@@ -84,11 +43,58 @@ export default function Packages() {
         });
     };
 
-    // submit form
-    const handleSubmit = () => {
-        console.log("Purchase Data:", formData);
-        setShowModal(false);
+    const handlePackageChange = (e) => {
+        const pkgId = e.target.value;
+        setSelectedPackage(pkgId);
+        const pkg = packages.find(p => p._id === pkgId);
+        if (pkg) {
+            setFormData(prev => ({ ...prev, amount: pkg.minInvestment }));
+        }
     };
+
+    // submit form
+    const handleSubmit = async () => {
+        try {
+            if (!selectedPackage) {
+                alert("Please select a package");
+                return;
+            }
+            if (!formData.amount) {
+                alert("Please enter amount");
+                return;
+            }
+
+            // Note: In a real app we'd verify transaction hash or handle payment gateway here
+            // For now we use the createInvestment endpoint which assumes balance payment or pending manual approval
+            // Since the form asks for Transaction ID, we pass it.
+
+            await client.post('/investments', {
+                packageId: selectedPackage,
+                amount: formData.amount,
+                transactionId: formData.transactionId || `TXN${Date.now()}`
+            });
+
+            alert("Investment request submitted successfully!");
+
+            // Refresh investments
+            const { data } = await client.get('/investments');
+            setInvestments(data);
+
+            // Reset form
+            setFormData({
+                amount: "",
+                transactionId: "",
+                paymentSlip: null,
+                userId: ""
+            });
+            setSelectedPackage("");
+
+        } catch (error) {
+            console.error("Error creating investment:", error);
+            alert(error.response?.data?.message || "Failed to submit investment");
+        }
+    };
+
 
 
     return (
@@ -114,6 +120,24 @@ export default function Packages() {
 
                 <div className="p-4 md:p-6">
                     <div className="space-y-4 md:space-y-6">
+                        <div>
+                            <label htmlFor="package" className="block text-xs md:text-sm font-semibold text-white mb-2">
+                                Select Package
+                            </label>
+                            <select
+                                id="package"
+                                value={selectedPackage}
+                                onChange={handlePackageChange}
+                                className="w-full px-3 md:px-4 py-2 md:py-3 bg-[#1a1a2e] border border-[#9131e7]/40 text-white rounded-lg focus:outline-none focus:border-[#9131e7] focus:ring-2 focus:ring-[#9131e7]/30 transition-all text-sm md:text-base"
+                            >
+                                <option value="">-- Select a Package --</option>
+                                {packages.map(pkg => (
+                                    <option key={pkg._id} value={pkg._id}>
+                                        {pkg.name} (Min: ${pkg.minInvestment} - Max: {pkg.maxInvestment === 'Unlimited' ? 'Unlimited' : '$' + pkg.maxInvestment}) - {pkg.dailyReturn}% Daily
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
                         <div>
                             <label htmlFor="amount" className="block text-xs md:text-sm font-semibold text-white mb-2">
                                 Package Amount (₹)
@@ -212,55 +236,37 @@ export default function Packages() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {purchaseHistory.map((item) => (
+                                {investments.map((item) => (
                                     <tr
-                                        key={item.id}
+                                        key={item._id}
                                         className="border-b border-[#444]/30 hover:bg-[#9131e7]/10 transition-colors duration-300 group"
                                     >
                                         <td className="p-3 md:p-4">
-                                            <span className="text-lg md:text-xl font-bold text-[#9131e7]">{item.amount}</span>
+                                            <span className="text-lg md:text-xl font-bold text-[#9131e7]">${item.amount}</span>
                                         </td>
-                                        <td className="p-3 md:p-4 text-gray-300 text-xs md:text-sm">{item.purchaseDate}</td>
+                                        <td className="p-3 md:p-4 text-gray-300 text-xs md:text-sm">{new Date(item.createdAt).toLocaleDateString()}</td>
                                         <td className="p-3 md:p-4">
                                             <div className="flex items-center gap-2">
-                                                <span className="text-[#b0b0b0] font-mono text-xs md:text-sm truncate">{item.transactionId}</span>
-                                                <button className="opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <svg className="w-3 h-3 md:w-4 md:h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h10a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                                    </svg>
-                                                </button>
+                                                <span className="text-[#b0b0b0] font-mono text-xs md:text-sm truncate max-w-[100px]">{item.transactionId}</span>
                                             </div>
                                         </td>
                                         <td className="p-3 md:p-4">
                                             <span className={`
                                                 px-2 md:px-3 py-1 rounded-full text-xs md:text-sm font-medium inline-flex items-center gap-1
-                                                ${item.status === 'Completed'
+                                                ${item.status === 'completed' || item.status === 'active'
                                                     ? 'bg-green-500/20 text-green-400'
-                                                    : item.status === 'Pending'
+                                                    : item.status === 'pending'
                                                         ? 'bg-yellow-500/20 text-yellow-400'
                                                         : 'bg-red-500/20 text-red-400'
                                                 }
                                             `}>
-                                                {item.status === 'Completed' && (
-                                                    <svg className="w-2 h-2 md:w-3 md:h-3" fill="currentColor" viewBox="0 0 20 20">
-                                                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                                    </svg>
-                                                )}
-                                                {item.status === 'Pending' && (
-                                                    <svg className="w-2 h-2 md:w-3 md:h-3 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                                    </svg>
-                                                )}
                                                 {item.status}
                                             </span>
                                         </td>
-                                        <td className="p-3 md:p-4 text-gray-300 text-xs md:text-sm">{item.approvedDate}</td>
+                                        <td className="p-3 md:p-4 text-gray-300 text-xs md:text-sm">{item.status === 'active' ? new Date(item.createdAt).toLocaleDateString() : '-'}</td>
                                         <td className="p-3 md:p-4">
                                             <button className="px-3 md:px-4 py-1 md:py-2 bg-gradient-to-r from-[#9131e7]/20 to-[#e84495]/20 text-white rounded-lg hover:shadow-lg hover:shadow-[#9131e7]/30 transition-all duration-300 flex items-center gap-1 md:gap-2 text-xs md:text-sm">
-                                                <svg className="w-3 h-3 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                                </svg>
-                                                {item.invoice}
+                                                Invoice
                                             </button>
                                         </td>
                                     </tr>
@@ -272,7 +278,7 @@ export default function Packages() {
                     {/* Table Footer */}
                     <div className="p-3 md:p-4 bg-[#0f0f1a] border-t border-[#9131e7]/30 flex flex-col sm:flex-row justify-between items-center gap-3">
                         <div className="text-gray-400 text-xs md:text-sm">
-                            Showing {purchaseHistory.length} purchases
+                            Showing {investments.length} purchases
                         </div>
                         <div className="flex gap-1 md:gap-2">
                             <button className="px-2 md:px-3 py-1 bg-[#9131e7]/20 text-[#9131e7] rounded-lg hover:bg-[#9131e7]/30 transition-colors text-xs md:text-sm">
@@ -288,7 +294,7 @@ export default function Packages() {
                     </div>
 
                     {/* Empty State */}
-                    {purchaseHistory.length === 0 && (
+                    {investments.length === 0 && (
                         <div className="p-6 md:p-12 text-center">
                             <div className="inline-block p-3 md:p-4 rounded-full bg-gradient-to-br from-[#9131e7]/10 to-[#e84495]/10 mb-3 md:mb-4">
                                 <svg className="w-12 h-12 md:w-16 md:h-16 text-[#9131e7]" fill="none" stroke="currentColor" viewBox="0 0 24 24">

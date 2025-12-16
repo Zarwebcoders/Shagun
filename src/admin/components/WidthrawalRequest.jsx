@@ -90,7 +90,7 @@ export default function WithdrawalRequests() {
                     { label: "Total Amount", value: "$234.5K", color: "blue" },
                     { label: "Rejected Today", value: "3", color: "red" },
                 ].map((stat, index) => (
-                    <div key={index} className="bg-[#1f1f1f] rounded-xl p-6 border border-[#3f3f3f]">
+                    <div key={index} className="bg-[#0f0f1a] rounded-xl p-6 border border-[#9131e7]/30">
                         <p className="text-gray-400 text-sm mb-1">{stat.label}</p>
                         <h3 className="text-3xl font-bold text-white">{stat.value}</h3>
                     </div>
@@ -98,13 +98,13 @@ export default function WithdrawalRequests() {
             </div>
 
             {/* Filters */}
-            <div className="bg-[#1f1f1f] rounded-xl p-4 border border-[#3f3f3f]">
+            <div className="bg-[#0f0f1a] rounded-xl p-4 border border-[#9131e7]/30">
                 <div className="flex flex-wrap gap-2">
                     {["pending", "approved", "rejected", "all"].map((status) => (
                         <button
                             key={status}
                             onClick={() => setFilterStatus(status)}
-                            className={`px-6 py-2 rounded-lg font-semibold capitalize transition-all ${filterStatus === status ? "bg-[#f3b232] text-[#1f1f1f]" : "bg-[#2b2b2b] text-gray-400 hover:text-white"
+                            className={`px-6 py-2 rounded-lg font-semibold capitalize transition-all ${filterStatus === status ? "bg-[#9131e7] text-white" : "bg-[#1a1a2e] text-gray-400 hover:text-white"
                                 }`}
                         >
                             {status}
@@ -114,10 +114,10 @@ export default function WithdrawalRequests() {
             </div>
 
             {/* Withdrawals Table */}
-            <div className="bg-[#1f1f1f] rounded-xl border border-[#3f3f3f] overflow-hidden">
+            <div className="bg-[#0f0f1a] rounded-xl border border-[#9131e7]/30 overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full">
-                        <thead className="bg-[#2b2b2b]">
+                        <thead className="bg-[#1a1a2e]">
                             <tr>
                                 <th className="px-6 py-4 text-left text-gray-400 font-semibold text-sm">ID</th>
                                 <th className="px-6 py-4 text-left text-gray-400 font-semibold text-sm">User</th>
@@ -129,11 +129,11 @@ export default function WithdrawalRequests() {
                                 <th className="px-6 py-4 text-left text-gray-400 font-semibold text-sm">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-[#3f3f3f]">
+                        <tbody className="divide-y divide-[#9131e7]/30">
                             {withdrawals.map((withdrawal) => (
-                                <tr key={withdrawal.id} className="hover:bg-[#2b2b2b] transition-colors">
+                                <tr key={withdrawal.id} className="hover:bg-[#1a1a2e] transition-colors">
                                     <td className="px-6 py-4">
-                                        <span className="text-[#f3b232] font-mono">#{withdrawal.id}</span>
+                                        <span className="text-[#9131e7] font-mono">#{withdrawal.id}</span>
                                     </td>
                                     <td className="px-6 py-4">
                                         <div>
@@ -145,7 +145,7 @@ export default function WithdrawalRequests() {
                                         <span className="text-green-500 font-bold text-lg">{withdrawal.amount}</span>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <span className="px-3 py-1 bg-[#f3b232]/20 text-[#f3b232] rounded-full text-xs font-semibold">
+                                        <span className="px-3 py-1 bg-[#9131e7]/20 text-[#9131e7] rounded-full text-xs font-semibold">
                                             {withdrawal.method}
                                         </span>
                                     </td>
@@ -182,7 +182,7 @@ export default function WithdrawalRequests() {
                                                 </button>
                                             </div>
                                         ) : (
-                                            <button className="px-4 py-2 bg-[#2b2b2b] text-gray-400 rounded-lg text-sm">View Details</button>
+                                            <button className="px-4 py-2 bg-[#1a1a2e] text-gray-400 rounded-lg text-sm">View Details</button>
                                         )}
                                     </td>
                                 </tr>

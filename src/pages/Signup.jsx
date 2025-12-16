@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
+import client from "../api/client"
 
 export default function Signup({ setIsAuthenticated }) {
     const [formData, setFormData] = useState({
@@ -19,15 +20,25 @@ export default function Signup({ setIsAuthenticated }) {
         setFormData((prev) => ({ ...prev, [name]: value }))
     }
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault()
         if (formData.password !== formData.confirmPassword) {
             setError("Passwords do not match")
             return
         }
         if (formData.name && formData.email && formData.password) {
-            setIsAuthenticated(true)
-            navigate("/")
+            try {
+                const { _id, confirmPassword, ...registerData } = formData; // Remove confirmPassword
+                const { data } = await client.post('/auth/register', registerData);
+
+                // Store user data
+                localStorage.setItem('user', JSON.stringify(data));
+
+                setIsAuthenticated(true)
+                navigate("/dashboard")
+            } catch (err) {
+                setError(err.response?.data?.message || "Registration failed");
+            }
         } else {
             setError("Please fill all required fields")
         }

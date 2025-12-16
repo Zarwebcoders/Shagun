@@ -1,59 +1,51 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import client from "../../api/client"
 
 export default function KYCApprovals() {
     const [selectedKYC, setSelectedKYC] = useState(null)
 
-    const kycRequests = [
-        {
-            id: 1,
-            name: "Jane Smith",
-            email: "jane.smith@email.com",
-            submittedDate: "2024-03-15",
-            documentType: "Passport",
-            status: "pending",
-            documents: {
-                idFront: "/placeholder.jpg",
-                idBack: "/placeholder.jpg",
-                selfie: "/placeholder.jpg",
-            },
-            personalInfo: {
-                dob: "1990-05-15",
-                address: "123 Main St, New York, NY 10001",
-                phone: "+1-555-0123",
-                country: "United States",
-            },
-        },
-        {
-            id: 2,
-            name: "Michael Chen",
-            email: "michael.chen@email.com",
-            submittedDate: "2024-03-14",
-            documentType: "Driver License",
-            status: "pending",
-            documents: {
-                idFront: "/placeholder.jpg",
-                idBack: "/placeholder.jpg",
-                selfie: "/placeholder.jpg",
-            },
-            personalInfo: {
-                dob: "1988-08-22",
-                address: "456 Oak Ave, Los Angeles, CA 90001",
-                phone: "+1-555-0456",
-                country: "United States",
-            },
-        },
-    ]
+    const [kycRequests, setKycRequests] = useState([])
+    const [loading, setLoading] = useState(true)
 
-    const handleApprove = (id) => {
-        alert(`KYC #${id} approved`)
-        setSelectedKYC(null)
+    const fetchKYCRequests = async () => {
+        try {
+            const { data } = await client.get('/kyc/pending');
+            setKycRequests(data);
+        } catch (error) {
+            console.error("Error fetching KYC requests:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchKYCRequests();
+    }, []);
+
+    const handleApprove = async (id) => {
+        try {
+            await client.put(`/kyc/${id}`, { status: 'approved' });
+            fetchKYCRequests();
+            setSelectedKYC(null);
+            alert(`KYC approved`);
+        } catch (err) {
+            console.error(err);
+            alert("Failed to approve");
+        }
     }
 
-    const handleReject = (id) => {
-        alert(`KYC #${id} rejected`)
-        setSelectedKYC(null)
+    const handleReject = async (id) => {
+        try {
+            await client.put(`/kyc/${id}`, { status: 'rejected' });
+            fetchKYCRequests();
+            setSelectedKYC(null);
+            alert(`KYC rejected`);
+        } catch (err) {
+            console.error(err);
+            alert("Failed to reject");
+        }
     }
 
     return (
@@ -80,7 +72,7 @@ export default function KYCApprovals() {
                     { label: "Rejected Today", value: "12", color: "red" },
                     { label: "Total Verified", value: "8,234", color: "blue" },
                 ].map((stat, index) => (
-                    <div key={index} className="bg-[#1f1f1f] rounded-xl p-6 border border-[#3f3f3f]">
+                    <div key={index} className="bg-[#0f0f1a] rounded-xl p-6 border border-[#9131e7]/30">
                         <p className="text-gray-400 text-sm mb-1">{stat.label}</p>
                         <h3 className="text-3xl font-bold text-white">{stat.value}</h3>
                     </div>
@@ -89,35 +81,35 @@ export default function KYCApprovals() {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* KYC Requests List */}
-                <div className="lg:col-span-1 bg-[#1f1f1f] rounded-xl p-6 border border-[#3f3f3f]">
+                <div className="lg:col-span-1 bg-[#1f1f1f] rounded-xl p-6 border border-[#9131e7]/30">
                     <h3 className="text-xl font-bold text-white mb-4">Pending Requests</h3>
                     <div className="space-y-3 max-h-[600px] overflow-y-auto">
                         {kycRequests.map((request) => (
                             <button
-                                key={request.id}
+                                key={request._id}
                                 onClick={() => setSelectedKYC(request)}
-                                className={`w-full text-left p-4 rounded-lg transition-all ${selectedKYC?.id === request.id
-                                        ? "bg-[#f3b232] text-[#1f1f1f]"
-                                        : "bg-[#2b2b2b] text-white hover:bg-[#3f3f3f]"
+                                className={`w-full text-left p-4 rounded-lg transition-all ${selectedKYC?._id === request._id
+                                    ? "bg-[#9131e7] text-white"
+                                    : "bg-[#1a1a2e] text-white hover:bg-[#3f3f3f]"
                                     }`}
                             >
                                 <div className="flex items-center gap-3 mb-2">
-                                    <div className="w-10 h-10 bg-gradient-to-br from-[#f3b232] to-[#d4941f] rounded-full flex items-center justify-center text-white font-bold">
+                                    <div className="w-10 h-10 bg-gradient-to-br from-[#9131e7] to-[#e3459b] rounded-full flex items-center justify-center text-white font-bold">
                                         {request.name.charAt(0)}
                                     </div>
                                     <div className="flex-1">
-                                        <p className="font-semibold">{request.name}</p>
-                                        <p className={`text-xs ${selectedKYC?.id === request.id ? "text-[#1f1f1f]" : "text-gray-400"}`}>
-                                            {request.email}
+                                        <p className="font-semibold">{request.user?.name || request.name}</p>
+                                        <p className={`text-xs ${selectedKYC?._id === request._id ? "text-[#1f1f1f]" : "text-gray-400"}`}>
+                                            {request.user?.email || request.email}
                                         </p>
                                     </div>
                                 </div>
                                 <div className="flex items-center justify-between text-xs">
-                                    <span className={selectedKYC?.id === request.id ? "text-[#1f1f1f]" : "text-gray-400"}>
+                                    <span className={selectedKYC?._id === request._id ? "text-[#1f1f1f]" : "text-gray-400"}>
                                         {request.documentType}
                                     </span>
-                                    <span className={selectedKYC?.id === request.id ? "text-[#1f1f1f]" : "text-gray-500"}>
-                                        {request.submittedDate}
+                                    <span className={selectedKYC?._id === request._id ? "text-[#1f1f1f]" : "text-gray-500"}>
+                                        {new Date(request.createdAt || request.submittedDate).toLocaleDateString()}
                                     </span>
                                 </div>
                             </button>
@@ -126,20 +118,20 @@ export default function KYCApprovals() {
                 </div>
 
                 {/* KYC Details */}
-                <div className="lg:col-span-2 bg-[#1f1f1f] rounded-xl p-6 border border-[#3f3f3f]">
+                <div className="lg:col-span-2 bg-[#1f1f1f] rounded-xl p-6 border border-[#9131e7]/30">
                     {selectedKYC ? (
                         <div className="space-y-6">
                             <div className="flex items-center justify-between">
                                 <h3 className="text-2xl font-bold text-white">KYC Review</h3>
                                 <div className="flex gap-2">
                                     <button
-                                        onClick={() => handleReject(selectedKYC.id)}
+                                        onClick={() => handleReject(selectedKYC._id)}
                                         className="px-6 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-all"
                                     >
                                         Reject
                                     </button>
                                     <button
-                                        onClick={() => handleApprove(selectedKYC.id)}
+                                        onClick={() => handleApprove(selectedKYC._id)}
                                         className="px-6 py-2 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-all"
                                     >
                                         Approve
@@ -148,16 +140,16 @@ export default function KYCApprovals() {
                             </div>
 
                             {/* User Info */}
-                            <div className="bg-[#2b2b2b] rounded-lg p-4">
+                            <div className="bg-[#1a1a2e] rounded-lg p-4">
                                 <h4 className="text-white font-semibold mb-3">Personal Information</h4>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <p className="text-gray-400 text-sm">Full Name</p>
-                                        <p className="text-white font-medium">{selectedKYC.name}</p>
+                                        <p className="text-white font-medium">{selectedKYC.user?.name || selectedKYC.name}</p>
                                     </div>
                                     <div>
                                         <p className="text-gray-400 text-sm">Email</p>
-                                        <p className="text-white font-medium">{selectedKYC.email}</p>
+                                        <p className="text-white font-medium">{selectedKYC.user?.email || selectedKYC.email}</p>
                                     </div>
                                     <div>
                                         <p className="text-gray-400 text-sm">Date of Birth</p>
@@ -178,7 +170,7 @@ export default function KYCApprovals() {
                             <div>
                                 <h4 className="text-white font-semibold mb-3">Uploaded Documents</h4>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <div className="bg-[#2b2b2b] rounded-lg p-4">
+                                    <div className="bg-[#1a1a2e] rounded-lg p-4">
                                         <p className="text-gray-400 text-sm mb-2">ID Front</p>
                                         <div className="aspect-video bg-[#3f3f3f] rounded-lg overflow-hidden">
                                             <img
@@ -187,11 +179,11 @@ export default function KYCApprovals() {
                                                 className="w-full h-full object-cover"
                                             />
                                         </div>
-                                        <button className="w-full mt-2 px-3 py-2 bg-[#f3b232] text-[#1f1f1f] rounded-lg text-sm font-semibold hover:bg-[#d4941f] transition-all">
+                                        <button className="w-full mt-2 px-3 py-2 bg-[#9131e7] text-white rounded-lg text-sm font-semibold hover:bg-[#d4941f] transition-all">
                                             View Full Size
                                         </button>
                                     </div>
-                                    <div className="bg-[#2b2b2b] rounded-lg p-4">
+                                    <div className="bg-[#1a1a2e] rounded-lg p-4">
                                         <p className="text-gray-400 text-sm mb-2">ID Back</p>
                                         <div className="aspect-video bg-[#3f3f3f] rounded-lg overflow-hidden">
                                             <img
@@ -200,11 +192,11 @@ export default function KYCApprovals() {
                                                 className="w-full h-full object-cover"
                                             />
                                         </div>
-                                        <button className="w-full mt-2 px-3 py-2 bg-[#f3b232] text-[#1f1f1f] rounded-lg text-sm font-semibold hover:bg-[#d4941f] transition-all">
+                                        <button className="w-full mt-2 px-3 py-2 bg-[#9131e7] text-white rounded-lg text-sm font-semibold hover:bg-[#d4941f] transition-all">
                                             View Full Size
                                         </button>
                                     </div>
-                                    <div className="bg-[#2b2b2b] rounded-lg p-4">
+                                    <div className="bg-[#1a1a2e] rounded-lg p-4">
                                         <p className="text-gray-400 text-sm mb-2">Selfie Verification</p>
                                         <div className="aspect-video bg-[#3f3f3f] rounded-lg overflow-hidden">
                                             <img
@@ -213,7 +205,7 @@ export default function KYCApprovals() {
                                                 className="w-full h-full object-cover"
                                             />
                                         </div>
-                                        <button className="w-full mt-2 px-3 py-2 bg-[#f3b232] text-[#1f1f1f] rounded-lg text-sm font-semibold hover:bg-[#d4941f] transition-all">
+                                        <button className="w-full mt-2 px-3 py-2 bg-[#9131e7] text-white rounded-lg text-sm font-semibold hover:bg-[#d4941f] transition-all">
                                             View Full Size
                                         </button>
                                     </div>
@@ -221,10 +213,10 @@ export default function KYCApprovals() {
                             </div>
 
                             {/* Rejection Reason (Optional) */}
-                            <div className="bg-[#2b2b2b] rounded-lg p-4">
+                            <div className="bg-[#1a1a2e] rounded-lg p-4">
                                 <h4 className="text-white font-semibold mb-2">Admin Notes / Rejection Reason</h4>
                                 <textarea
-                                    className="w-full px-4 py-3 bg-[#3f3f3f] text-white rounded-lg border border-[#4f4f4f] focus:border-[#f3b232] focus:outline-none resize-none"
+                                    className="w-full px-4 py-3 bg-[#9131e7]/30 text-white rounded-lg border border-[#4f4f4f] focus:border-[#9131e7] focus:outline-none resize-none"
                                     rows={3}
                                     placeholder="Enter notes or rejection reason..."
                                 ></textarea>

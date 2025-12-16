@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import CryptoCard from "../components/CryptoCard"
+import client from "../api/client"
 
 export default function Shopping() {
     const [cryptos, setCryptos] = useState([
@@ -14,6 +15,7 @@ export default function Shopping() {
     ])
 
     const [cartItems, setCartItems] = useState([])
+    const [loading, setLoading] = useState(false)
 
     const handleAddToCart = (crypto) => {
         setCartItems((prev) => [...prev, crypto])
@@ -24,6 +26,26 @@ export default function Shopping() {
     }
 
     const totalCartValue = cartItems.reduce((sum, item) => sum + item.price, 0)
+
+    const handleCheckout = async () => {
+        if (cartItems.length === 0) return;
+        setLoading(true);
+        try {
+            await client.post('/transactions', {
+                type: 'purchase',
+                amount: totalCartValue,
+                description: `Purchase of ${cartItems.map(c => c.symbol).join(', ')}`,
+                crypto: 'None' // or mixed
+            });
+            alert('Purchase successful!');
+            setCartItems([]);
+        } catch (error) {
+            console.error(error);
+            alert(error.response?.data?.message || 'Purchase failed');
+        } finally {
+            setLoading(false);
+        }
+    }
 
     return (
         <div className="w-full space-y-8">
@@ -70,8 +92,12 @@ export default function Shopping() {
                                     Total: <span className="text-[#9131e7]">${totalCartValue.toFixed(2)}</span>
                                 </p>
                             </div>
-                            <button className="w-full px-6 py-3 bg-gradient-to-r from-[#9131e7] to-[#e84495] text-[#040408] font-bold rounded-lg hover:shadow-lg hover:shadow-[#9131e7]/50 transition-all duration-300 hover:-translate-y-1 active:translate-y-0">
-                                Proceed to Checkout
+                            <button
+                                onClick={handleCheckout}
+                                disabled={loading}
+                                className={`w-full px-6 py-3 bg-gradient-to-r from-[#9131e7] to-[#e84495] text-[#040408] font-bold rounded-lg hover:shadow-lg hover:shadow-[#9131e7]/50 transition-all duration-300 hover:-translate-y-1 active:translate-y-0 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            >
+                                {loading ? 'Processing...' : 'Proceed to Checkout'}
                             </button>
                         </>
                     )}

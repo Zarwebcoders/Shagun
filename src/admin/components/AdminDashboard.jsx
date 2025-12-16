@@ -11,7 +11,7 @@ export default function AdminDashboard() {
         { label: "Pending KYC", value: "145", change: "-5%", icon: "⏳", color: "from-yellow-500 to-yellow-600" },
         { label: "Active Packages", value: "8,234", change: "+15%", icon: "📦", color: "from-purple-500 to-purple-600" },
         { label: "Pending Withdrawals", value: "67", change: "+3%", icon: "💳", color: "from-red-500 to-red-600" },
-        { label: "Total Transactions", value: "45.2K", change: "+22%", icon: "🔄", color: "from-[#f3b232] to-[#d4941f]" },
+        { label: "Total Transactions", value: "45.2K", change: "+22%", icon: "🔄", color: "from-[#9131e7] to-[#e3459b]" },
     ]
 
     const recentActivities = [
@@ -68,8 +68,8 @@ export default function AdminDashboard() {
           to { opacity: 1; transform: translateY(0); }
         }
         @keyframes glow {
-          0%, 100% { box-shadow: 0 0 5px rgba(243, 178, 50, 0.5); }
-          50% { box-shadow: 0 0 20px rgba(243, 178, 50, 0.8); }
+          0%, 100% { box-shadow: 0 0 5px rgba(145, 49, 231, 0.5); }
+          50% { box-shadow: 0 0 20px rgba(145, 49, 231, 0.8); }
         }
         .animate-fadeIn { animation: fadeIn 0.5s ease-out; }
         .animate-glow { animation: glow 2s ease-in-out infinite; }
@@ -86,7 +86,7 @@ export default function AdminDashboard() {
                         <button
                             key={range}
                             onClick={() => setTimeRange(range)}
-                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${timeRange === range ? "bg-[#f3b232] text-[#1f1f1f]" : "bg-[#1f1f1f] text-gray-400 hover:text-white"
+                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${timeRange === range ? "bg-[#9131e7] text-white" : "bg-[#0f0f1a] border border-[#9131e7]/30 text-gray-400 hover:text-white"
                                 }`}
                         >
                             {range}
@@ -100,7 +100,7 @@ export default function AdminDashboard() {
                 {stats.map((stat, index) => (
                     <div
                         key={index}
-                        className="bg-[#1f1f1f] rounded-xl p-6 border border-[#3f3f3f] hover:border-[#f3b232] transition-all hover:shadow-lg hover:shadow-[#f3b232]/20"
+                        className="bg-[#0f0f1a] rounded-xl p-6 border border-[#9131e7]/30 hover:border-[#9131e7] transition-all hover:shadow-lg hover:shadow-[#9131e7]/20"
                     >
                         <div className="flex items-start justify-between">
                             <div className="flex-1">
@@ -123,19 +123,19 @@ export default function AdminDashboard() {
             {/* Charts and Activity */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Recent Activity */}
-                <div className="lg:col-span-2 bg-[#1f1f1f] rounded-xl p-6 border border-[#3f3f3f]">
+                <div className="lg:col-span-2 bg-[#0f0f1a] rounded-xl p-6 border border-[#9131e7]/30">
                     <h3 className="text-xl font-bold text-white mb-4">Recent Activity</h3>
                     <div className="space-y-3">
                         {recentActivities.map((activity, index) => (
                             <div
                                 key={index}
-                                className="flex items-center justify-between p-4 bg-[#2b2b2b] rounded-lg hover:bg-[#3f3f3f] transition-all"
+                                className="flex items-center justify-between p-4 bg-[#1a1a2e] rounded-lg hover:bg-[#2a2a3e] transition-all"
                             >
                                 <div className="flex items-center gap-4">
                                     <div
                                         className={`w-10 h-10 rounded-lg flex items-center justify-center ${activity.status === "success"
-                                                ? "bg-green-500/20 text-green-500"
-                                                : "bg-yellow-500/20 text-yellow-500"
+                                            ? "bg-green-500/20 text-green-500"
+                                            : "bg-yellow-500/20 text-yellow-500"
                                             }`}
                                     >
                                         {activity.status === "success" ? "✓" : "⏳"}
@@ -152,14 +152,14 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Top Users */}
-                <div className="bg-[#1f1f1f] rounded-xl p-6 border border-[#3f3f3f]">
+                <div className="bg-[#0f0f1a] rounded-xl p-6 border border-[#9131e7]/30">
                     <h3 className="text-xl font-bold text-white mb-4">Top Investors</h3>
                     <div className="space-y-3">
                         {topUsers.map((user, index) => (
-                            <div key={index} className="p-3 bg-[#2b2b2b] rounded-lg hover:bg-[#3f3f3f] transition-all">
+                            <div key={index} className="p-3 bg-[#1a1a2e] rounded-lg hover:bg-[#2a2a3e] transition-all">
                                 <div className="flex items-center justify-between mb-2">
                                     <div className="flex items-center gap-2">
-                                        <div className="w-8 h-8 bg-gradient-to-br from-[#f3b232] to-[#d4941f] rounded-full flex items-center justify-center text-white text-sm font-bold">
+                                        <div className="w-8 h-8 bg-gradient-to-br from-[#9131e7] to-[#e3459b] rounded-full flex items-center justify-center text-white text-sm font-bold">
                                             {index + 1}
                                         </div>
                                         <div>
@@ -180,8 +180,8 @@ export default function AdminDashboard() {
             </div>
 
             {/* Quick Actions */}
-            <div className="bg-gradient-to-r from-[#f3b232] to-[#d4941f] rounded-xl p-6">
-                <h3 className="text-xl font-bold text-[#1f1f1f] mb-4">Quick Actions</h3>
+            <div className="bg-gradient-to-r from-[#9131e7] to-[#e3459b] rounded-xl p-6">
+                <h3 className="text-xl font-bold text-white mb-4">Quick Actions</h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {[
                         { label: "Approve KYC", icon: "✅", count: "145" },
@@ -194,8 +194,8 @@ export default function AdminDashboard() {
                             className="bg-white/10 backdrop-blur-sm hover:bg-white/20 rounded-lg p-4 text-center transition-all hover:scale-105"
                         >
                             <div className="text-3xl mb-2">{action.icon}</div>
-                            <p className="text-[#1f1f1f] font-semibold text-sm">{action.label}</p>
-                            <p className="text-[#1f1f1f] text-xs mt-1">{action.count} pending</p>
+                            <p className="text-white font-semibold text-sm">{action.label}</p>
+                            <p className="text-white/80 text-xs mt-1">{action.count} pending</p>
                         </button>
                     ))}
                 </div>

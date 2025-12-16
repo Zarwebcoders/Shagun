@@ -1,19 +1,45 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import client from "../api/client"
 
 export default function ReferralIncome() {
-    const [referralData, setReferralData] = useState([
-        { id: 1, referralName: "Alice Johnson", date: "2024-01-01", amount: 50, status: "Paid" },
-        { id: 2, referralName: "Bob Smith", date: "2024-01-05", amount: 100, status: "Paid" },
-        { id: 3, referralName: "Carol Davis", date: "2024-01-10", amount: 30, status: "Paid" },
-        { id: 4, referralName: "David Wilson", date: "2024-01-12", amount: 75, status: "Pending" },
-    ])
+    const [referralData, setReferralData] = useState([])
+    const [loading, setLoading] = useState(true)
+
+    useEffect(() => {
+        const fetchReferralIncome = async () => {
+            try {
+                const { data } = await client.get('/transactions'); // user's txs
+                // Filter for referral_income
+                const referralTx = data.filter(tx => tx.type === 'referral_income' || tx.type === 'referral');
+
+                const processed = referralTx.map((tx, index) => ({
+                    id: tx._id,
+                    referralName: tx.relatedUser ? tx.relatedUser.name : "System", // Requires population or handled in desc
+                    // If relatedUser not populated in getTransactions, we might miss it.
+                    // But getTransactions populates 'user'. We should update it to populate 'relatedUser' too if widely used.
+                    // For now fallback to description or "User"
+                    date: new Date(tx.createdAt).toLocaleDateString(),
+                    amount: tx.amount,
+                    status: tx.status === 'completed' ? 'Paid' : 'Pending'
+                }));
+                setReferralData(processed);
+                setLoading(false);
+            } catch (error) {
+                console.error(error);
+                setLoading(false);
+            }
+        }
+        fetchReferralIncome();
+    }, [])
 
     const totalReferralIncome = referralData.reduce((sum, item) => sum + item.amount, 0)
     const pendingIncome = referralData
         .filter((item) => item.status === "Pending")
         .reduce((sum, item) => sum + item.amount, 0)
+
+    if (loading) return <div>Loading...</div>
 
     return (
         <div className="w-full space-y-6 md:space-y-8">
@@ -37,35 +63,39 @@ export default function ReferralIncome() {
 
             <div className="space-y-4 md:space-y-6">
                 <h3 className="text-xl md:text-2xl font-bold text-[#9131e7]">Referral Transaction History</h3>
-                <div className="overflow-x-auto">
-                    <table className="w-full min-w-max">
-                        <thead>
-                            <tr className="border-b border-[#444]">
-                                <th className="text-left py-3 px-3 md:px-4 text-white font-semibold text-xs md:text-sm">Referral Name</th>
-                                <th className="text-left py-3 px-3 md:px-4 text-white font-semibold text-xs md:text-sm">Date</th>
-                                <th className="text-left py-3 px-3 md:px-4 text-white font-semibold text-xs md:text-sm">Amount</th>
-                                <th className="text-left py-3 px-3 md:px-4 text-white font-semibold text-xs md:text-sm">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {referralData.map((item) => (
-                                <tr key={item.id} className="border-b border-[#444] hover:bg-[#040408]/50 transition-colors">
-                                    <td className="py-3 px-3 md:px-4 text-white text-sm md:text-base truncate max-w-[100px] md:max-w-none">{item.referralName}</td>
-                                    <td className="py-3 px-3 md:px-4 text-[#b0b0b0] text-xs md:text-sm">{item.date}</td>
-                                    <td className="py-3 px-3 md:px-4 text-white font-medium text-sm md:text-base">${item.amount}</td>
-                                    <td className="py-3 px-3 md:px-4">
-                                        <span
-                                            className={`px-2 md:px-3 py-1 rounded-full text-xs md:text-sm font-semibold ${item.status === "Paid" ? "bg-green-600/20 text-green-400" : "bg-yellow-600/20 text-yellow-400"
-                                                }`}
-                                        >
-                                            {item.status}
-                                        </span>
-                                    </td>
+                {referralData.length === 0 ? (
+                    <p className="text-gray-400">No referral income data available.</p>
+                ) : (
+                    <div className="overflow-x-auto">
+                        <table className="w-full min-w-max">
+                            <thead>
+                                <tr className="border-b border-[#444]">
+                                    <th className="text-left py-3 px-3 md:px-4 text-white font-semibold text-xs md:text-sm">Referral Name</th>
+                                    <th className="text-left py-3 px-3 md:px-4 text-white font-semibold text-xs md:text-sm">Date</th>
+                                    <th className="text-left py-3 px-3 md:px-4 text-white font-semibold text-xs md:text-sm">Amount</th>
+                                    <th className="text-left py-3 px-3 md:px-4 text-white font-semibold text-xs md:text-sm">Status</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                            </thead>
+                            <tbody>
+                                {referralData.map((item) => (
+                                    <tr key={item.id} className="border-b border-[#444] hover:bg-[#040408]/50 transition-colors">
+                                        <td className="py-3 px-3 md:px-4 text-white text-sm md:text-base truncate max-w-[100px] md:max-w-none">{item.referralName}</td>
+                                        <td className="py-3 px-3 md:px-4 text-[#b0b0b0] text-xs md:text-sm">{item.date}</td>
+                                        <td className="py-3 px-3 md:px-4 text-white font-medium text-sm md:text-base">${item.amount}</td>
+                                        <td className="py-3 px-3 md:px-4">
+                                            <span
+                                                className={`px-2 md:px-3 py-1 rounded-full text-xs md:text-sm font-semibold ${item.status === "Paid" ? "bg-green-600/20 text-green-400" : "bg-yellow-600/20 text-yellow-400"
+                                                    }`}
+                                            >
+                                                {item.status}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
             </div>
         </div>
     )

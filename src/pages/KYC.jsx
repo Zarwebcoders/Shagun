@@ -5,21 +5,21 @@ import { useState } from "react"
 export default function KYC() {
     const [step, setStep] = useState(1)
     const [isEditingBank, setIsEditingBank] = useState(false)
-    
+
     const [formData, setFormData] = useState({
         // Aadhar Details
         aadharNumber: "",
         aadharFrontFile: null,
         aadharBackFile: null,
-        
+
         // PAN Details
         panNumber: "",
         panFile: null,
-        
+
         // Photos
         profilePhoto: null,
         agreementPhoto: null,
-        
+
         // Bank Details
         accountName: "",
         bankName: "",
@@ -45,7 +45,7 @@ export default function KYC() {
         const file = e.target.files[0]
         if (file) {
             setFormData((prev) => ({ ...prev, [field]: file }))
-            
+
             // Create preview URL
             const reader = new FileReader()
             reader.onloadend = () => {
@@ -57,9 +57,9 @@ export default function KYC() {
                     'panFile': 'pan',
                     'agreementPhoto': 'agreement'
                 }
-                
+
                 const previewField = previewFieldMap[field] || field
-                
+
                 setPreviewUrls((prev) => ({
                     ...prev,
                     [previewField]: reader.result
@@ -77,19 +77,43 @@ export default function KYC() {
         if (step > 1) setStep(step - 1)
     }
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault()
-        alert("KYC verification submitted successfully!")
+
+        try {
+            await client.post('/kyc', {
+                aadharNumber: formData.aadharNumber,
+                panNumber: formData.panNumber,
+                bankDetails: {
+                    accountName: formData.accountName,
+                    bankName: formData.bankName,
+                    accountNumber: formData.accountNumber,
+                    branch: formData.branch,
+                    ifscCode: formData.ifscCode
+                },
+                documents: {
+                    profilePhoto: previewUrls.profile,
+                    aadharFront: previewUrls.aadharFront,
+                    aadharBack: previewUrls.aadharBack,
+                    panCard: previewUrls.pan,
+                    agreement: previewUrls.agreement
+                }
+            });
+            alert("KYC verification submitted successfully!")
+
+        } catch (error) {
+            console.error("Error submitting KYC:", error);
+            alert(error.response?.data?.message || "Failed to submit KYC");
+        }
     }
 
     const handleSaveBank = () => {
         setIsEditingBank(false)
-        alert("Bank details saved successfully!")
+        // Bank details are part of the main form state, so just closing edit mode
     }
 
     const handleCancelEdit = () => {
         setIsEditingBank(false)
-        // Reset form to original values here if needed
     }
 
     const removeFile = (field) => {
@@ -101,9 +125,9 @@ export default function KYC() {
             'pan': 'panFile',
             'agreement': 'agreementPhoto'
         }
-        
+
         const formDataField = formDataFieldMap[field] || field;
-        
+
         setFormData((prev) => ({ ...prev, [formDataField]: null }))
         setPreviewUrls((prev) => ({ ...prev, [field]: null }))
     }
@@ -119,8 +143,8 @@ export default function KYC() {
                     <div key={num} className="flex items-center flex-1">
                         <div
                             className={`w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 rounded-full flex items-center justify-center font-bold text-sm md:text-base lg:text-lg transition-all ${step >= num
-                                    ? "bg-[#9131e7] text-[#040408] shadow-lg shadow-[#9131e7]/50"
-                                    : "bg-[#444] text-white border border-[#666]"
+                                ? "bg-[#9131e7] text-[#040408] shadow-lg shadow-[#9131e7]/50"
+                                : "bg-[#444] text-white border border-[#666]"
                                 }`}
                         >
                             {num}
@@ -153,7 +177,7 @@ export default function KYC() {
                 {step === 1 && (
                     <div className="bg-gradient-to-br from-[#040408] to-[#1f1f1f] p-4 md:p-6 lg:p-8 rounded-xl border border-[#444] animate-fade-in">
                         <h3 className="text-lg md:text-xl lg:text-2xl font-bold text-[#9131e7] mb-4 md:mb-6">Profile Photo</h3>
-                        
+
                         <div className="space-y-4 md:space-y-6">
                             {/* Profile Photo Upload */}
                             <div>
@@ -218,7 +242,7 @@ export default function KYC() {
                 {step === 2 && (
                     <div className="bg-gradient-to-br from-[#040408] to-[#1f1f1f] p-4 md:p-6 lg:p-8 rounded-xl border border-[#444] animate-fade-in">
                         <h3 className="text-lg md:text-xl lg:text-2xl font-bold text-[#9131e7] mb-4 md:mb-6">Aadhar Card Details</h3>
-                        
+
                         <div className="space-y-4 md:space-y-6 lg:space-y-8">
                             {/* Aadhar Number */}
                             <div>
@@ -333,7 +357,7 @@ export default function KYC() {
                 {step === 3 && (
                     <div className="bg-gradient-to-br from-[#040408] to-[#1f1f1f] p-4 md:p-6 lg:p-8 rounded-xl border border-[#444] animate-fade-in">
                         <h3 className="text-lg md:text-xl lg:text-2xl font-bold text-[#9131e7] mb-4 md:mb-6">PAN Card Details</h3>
-                        
+
                         <div className="space-y-4 md:space-y-6 lg:space-y-8">
                             {/* PAN Number */}
                             <div>

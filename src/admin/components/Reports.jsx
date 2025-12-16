@@ -103,7 +103,7 @@ export default function Reports() {
                 <h3 className="text-xl font-bold text-white mb-6">Revenue Trend (Last 7 Days)</h3>
                 <div className="overflow-x-auto">
                     <table className="w-full">
-                        <thead className="bg-[#2b2b2b]">
+                        <thead className="bg-[#1a1a2e]">
                             <tr>
                                 <th className="px-6 py-4 text-left text-gray-400 font-semibold text-sm">Date</th>
                                 <th className="px-6 py-4 text-left text-gray-400 font-semibold text-sm">Deposits</th>
@@ -111,22 +111,22 @@ export default function Reports() {
                                 <th className="px-6 py-4 text-left text-gray-400 font-semibold text-sm">Net Revenue</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-[#3f3f3f]">
+                        <tbody className="divide-y divide-[#9131e7]/30">
                             {revenueData.map((row, index) => (
-                                <tr key={index} className="hover:bg-[#2b2b2b] transition-colors">
+                                <tr key={index} className="hover:bg-[#1a1a2e] transition-colors">
                                     <td className="px-6 py-4 text-white">{row.date}</td>
                                     <td className="px-6 py-4 text-green-500 font-semibold">${row.deposits.toLocaleString()}</td>
                                     <td className="px-6 py-4 text-red-500 font-semibold">${row.withdrawals.toLocaleString()}</td>
-                                    <td className="px-6 py-4 text-[#f3b232] font-bold">${row.netRevenue.toLocaleString()}</td>
+                                    <td className="px-6 py-4 text-[#9131e7] font-bold">${row.netRevenue.toLocaleString()}</td>
                                 </tr>
                             ))}
                         </tbody>
-                        <tfoot className="bg-[#2b2b2b]">
+                        <tfoot className="bg-[#1a1a2e]">
                             <tr>
                                 <td className="px-6 py-4 text-white font-bold">Total</td>
                                 <td className="px-6 py-4 text-green-500 font-bold">$406,000</td>
                                 <td className="px-6 py-4 text-red-500 font-bold">$215,900</td>
-                                <td className="px-6 py-4 text-[#f3b232] font-bold">$190,100</td>
+                                <td className="px-6 py-4 text-[#9131e7] font-bold">$190,100</td>
                             </tr>
                         </tfoot>
                     </table>
@@ -134,16 +134,16 @@ export default function Reports() {
             </div>
 
             {/* Top Countries */}
-            <div className="bg-[#1f1f1f] rounded-xl p-6 border border-[#3f3f3f]">
+            <div className="bg-[#0f0f1a] rounded-xl p-6 border border-[#9131e7]/30">
                 <h3 className="text-xl font-bold text-white mb-6">Top Countries by Revenue</h3>
                 <div className="space-y-4">
                     {topCountries.map((country, index) => (
                         <div
                             key={index}
-                            className="flex items-center justify-between p-4 bg-[#2b2b2b] rounded-lg hover:bg-[#3f3f3f] transition-all"
+                            className="flex items-center justify-between p-4 bg-[#1a1a2e] rounded-lg hover:bg-[#9131e7]/30 transition-all"
                         >
                             <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 bg-gradient-to-br from-[#f3b232] to-[#d4941f] rounded-lg flex items-center justify-center text-white font-bold">
+                                <div className="w-10 h-10 bg-gradient-to-br from-[#9131e7] to-[#7a28c2] rounded-lg flex items-center justify-center text-white font-bold">
                                     {index + 1}
                                 </div>
                                 <div>

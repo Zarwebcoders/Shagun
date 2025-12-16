@@ -1,36 +1,86 @@
-"use client"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import client from "../api/client"
 
 export default function Downline() {
-    const [userInfo] = useState({
-        userId: "SG2024001",
-        name: "NIRMALABEN SURESHBHAI PATEL",
-        email: "nirmalaben@example.com",
-        totalNetwork: 125,
-        activeLevels: 5,
-        overallBusiness: "₹15,75,000"
+    const [userInfo, setUserInfo] = useState({
+        userId: "",
+        name: "",
+        email: "",
+        totalNetwork: 0,
+        activeLevels: 0,
+        overallBusiness: "0"
     })
 
-    const [networkStats] = useState([
-        { level: 1, members: 45, business: "₹5,25,000", commission: "₹52,500" },
-        { level: 2, members: 32, business: "₹3,80,000", commission: "₹38,000" },
-        { level: 3, members: 25, business: "₹2,95,000", commission: "₹29,500" },
-        { level: 4, members: 15, business: "₹1,75,000", commission: "₹17,500" },
-        { level: 5, members: 8, business: "₹1,00,000", commission: "₹10,000" },
-    ])
+    const [networkStats, setNetworkStats] = useState([])
+    const [loading, setLoading] = useState(true)
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const [userRes, downlineRes] = await Promise.all([
+                    client.get('/auth/me'),
+                    client.get('/users/downline')
+                ]);
+
+                const userData = userRes.data;
+                const downlineData = downlineRes.data || [];
+
+                // Process downline data
+                const levels = [0, 0, 0, 0, 0]; // Counts for level 1-5
+                let totalMembers = 0;
+
+                downlineData.forEach(user => {
+                    const level = user.level; // 0-based from backend
+                    if (level >= 0 && level < 5) {
+                        levels[level]++;
+                        totalMembers++;
+                    }
+                });
+
+                // Mock stats for business/commission as we don't have that logic yet
+                const stats = levels.map((count, index) => ({
+                    level: index + 1,
+                    members: count,
+                    business: `₹${(count * 5000).toLocaleString()}`, // Mock multiplier
+                    commission: `₹${(count * 500).toLocaleString()}` // Mock multiplier
+                }));
+
+                const activeLevelsCount = levels.filter(l => l > 0).length;
+
+                setUserInfo({
+                    userId: userData._id.substring(userData._id.length - 8).toUpperCase(),
+                    name: userData.name,
+                    email: userData.email,
+                    totalNetwork: totalMembers,
+                    activeLevels: activeLevelsCount,
+                    overallBusiness: `₹${(totalMembers * 5000).toLocaleString()}`
+                });
+
+                setNetworkStats(stats);
+                setLoading(false);
+
+            } catch (error) {
+                console.error("Error fetching downline data:", error);
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+    }, []);
 
     const totalStats = {
         totalMembers: networkStats.reduce((sum, stat) => sum + stat.members, 0),
         totalBusiness: networkStats.reduce((sum, stat) => {
-            const business = parseInt(stat.business.replace(/[₹,]/g, ''));
+            const business = parseInt(stat.business.replace(/[₹,]/g, '')) || 0;
             return sum + business;
         }, 0),
         totalCommission: networkStats.reduce((sum, stat) => {
-            const commission = parseInt(stat.commission.replace(/[₹,]/g, ''));
+            const commission = parseInt(stat.commission.replace(/[₹,]/g, '')) || 0;
             return sum + commission;
         }, 0),
     }
+
+    if (loading) return <div className="text-white">Loading network data...</div>
 
     return (
         <div className="w-full space-y-6 md:space-y-8">
@@ -46,7 +96,7 @@ export default function Downline() {
                     <h3 className="text-xl md:text-2xl font-bold text-white">Your Profile Information</h3>
                     <p className="text-gray-400 text-sm md:text-base">Complete overview of your referral network account</p>
                 </div>
-                
+
                 <div className="p-4 md:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6">
                     <div className="space-y-1 md:space-y-2">
                         <div className="flex items-center gap-2">
@@ -154,7 +204,7 @@ export default function Downline() {
                                                     <span className="text-white font-bold text-sm md:text-base truncate block">Level {stat.level}</span>
                                                     <div className="flex items-center gap-1">
                                                         <div className="w-12 md:w-16 h-1 bg-gray-700 rounded-full overflow-hidden flex-shrink-0">
-                                                            <div 
+                                                            <div
                                                                 className="h-full bg-gradient-to-r from-[#9131e7] to-[#e84495] rounded-full"
                                                                 style={{ width: `${(stat.members / 50) * 100}%` }}
                                                             ></div>
@@ -192,7 +242,7 @@ export default function Downline() {
                                                 <div className="w-16 md:w-24 flex-shrink-0">
                                                     <div className="text-xs text-gray-400 mb-1 truncate">Growth</div>
                                                     <div className="w-full h-1.5 md:h-2 bg-gray-700 rounded-full overflow-hidden">
-                                                        <div 
+                                                        <div
                                                             className="h-full bg-gradient-to-r from-[#00b894] to-[#00cec9] rounded-full"
                                                             style={{ width: `${(stat.level / 5) * 100}%` }}
                                                         ></div>

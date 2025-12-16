@@ -1,46 +1,48 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import client from "../api/client"
 import WalletCard from "../components/WalletCard"
 import StatsCard from "../components/StatsCard"
-import IncomeChart from "../components/IncomeChart"
+import { UsersIcon, CheckCircleIcon, CurrencyDollarIcon, PresentationChartLineIcon } from '@heroicons/react/24/solid';
 
 export default function Dashboard() {
-    const [walletBalance, setWalletBalance] = useState(25500.5)
-    const [userName] = useState("John Doe")
+    const [walletBalance, setWalletBalance] = useState(0)
+    const [userName, setUserName] = useState("")
+    const [loading, setLoading] = useState(true)
 
     const [tokenStats, setTokenStats] = useState({
-        loyaltyToken: 1250,
-        sgnToken: 850,
-        stakedTokens: 420,
+        loyaltyToken: 0,
+        sgnToken: 0,
+        stakedTokens: 0,
         sgnRate: 2.5,
         currentPhase: "Phase 3",
-        shoppingPoint: 1560,
+        shoppingPoint: 0,
     })
 
     const [incomeBreakdown, setIncomeBreakdown] = useState({
-        miningBonus: 1200.5,
-        dailyMiningRewards: 450.25,
-        yearlyBonus: 800.0,
-        sponsorIncome: 650.75,
-        levelIncome: 800.25,
-        totalIncome: 3901.75,
+        miningBonus: 0,
+        dailyMiningRewards: 0,
+        yearlyBonus: 0,
+        sponsorIncome: 0,
+        levelIncome: 0,
+        totalIncome: 0,
     })
 
     const [miningCenter, setMiningCenter] = useState({
         status: "Active",
-        miningPower: "2.5 TH/s",
+        miningPower: "0 TH/s",
         uptime: "99.8%",
-        earningsToday: 45.50,
+        earningsToday: 0,
     })
 
     const [referralProgram, setReferralProgram] = useState({
-        referralId: "REF123456",
-        sponsor: "Alice Smith",
-        totalDirectTeam: 24,
-        levelIncomeEarned: 1200.5,
-        sponsorIncomeEarned: 650.75,
-        totalEarnedIncome: 1851.25,
+        referralId: "---",
+        sponsor: "None",
+        totalDirectTeam: 0,
+        levelIncomeEarned: 0,
+        sponsorIncomeEarned: 0,
+        totalEarnedIncome: 0,
     })
 
     const [phaseInfo, setPhaseInfo] = useState({
@@ -50,18 +52,54 @@ export default function Dashboard() {
         endDate: "Dec 31, 2024"
     })
 
-    const [recentLoyaltyPoints, setRecentLoyaltyPoints] = useState([
-        { date: "2024-01-10", activity: "Purchase", points: 50 },
-        { date: "2024-01-09", activity: "Referral", points: 100 },
-        { date: "2024-01-08", activity: "Staking Reward", points: 25 },
-        { date: "2024-01-07", activity: "Daily Mining", points: 15 },
-        { date: "2024-01-06", activity: "Shopping", points: 30 },
-    ])
+    useEffect(() => {
+        const fetchUserData = async () => {
+            try {
+                // Fetch user data and downline in parallel
+                const [userRes, downlineRes] = await Promise.all([
+                    client.get('/auth/me'),
+                    client.get('/users/downline')
+                ]);
+
+                const userData = userRes.data;
+                const downlineData = downlineRes.data || [];
+
+                setWalletBalance(userData.balance || 0);
+                setUserName(userData.name || "User");
+
+                setTokenStats(prev => ({
+                    ...prev,
+                    loyaltyToken: userData.loyaltyPoints || 0,
+                    sgnToken: userData.sgnToken || 0,
+                    shoppingPoint: userData.shoppingPoints || 0,
+                }));
+
+                // Calculate direct team size (Level 0 in downline response)
+                const directTeamCount = downlineData.filter(u => u.level === 0).length;
+
+                setReferralProgram(prev => ({
+                    ...prev,
+                    referralId: userData.referralCode || "---",
+                    sponsor: userData.referredBy ? userData.referredBy.name : "None",
+                    totalDirectTeam: directTeamCount,
+                    // Keeping other stats mock or 0 for now as they require Income logic
+                }));
+
+            } catch (error) {
+                console.error("Error fetching dashboard data:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchUserData();
+    }, []);
 
     const connectWallet = () => {
-        // Wallet connection logic here
         alert("Connect wallet functionality")
     }
+
+    if (loading) return <div className="text-white">Loading dashboard...</div>
 
     return (
         <div className="w-full space-y-6 md:space-y-8">
