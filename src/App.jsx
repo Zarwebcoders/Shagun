@@ -24,7 +24,7 @@ import PackageManagement from "./admin/components/PackageManagement"
 import TransactionMonitor from "./admin/components/TransactionMonitor"
 import Reports from "./admin/components/Reports"
 import SystemSettings from "./admin/components/SystemSetting"
-import AdminDashboard from "./admin/components/adminDashboard"
+import AdminDashboard from "./admin/components/AdminDashboard"
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -46,12 +46,12 @@ export default function App() {
 
         {/* Single Login Route for both User and Admin */}
         <Route path="/login" element={
-          isAuthenticated ? <Navigate to="/dashboard" /> : 
-          isAdminAuthenticated ? <Navigate to="/admin/dashboard" /> :
-            <Login
-              setIsAuthenticated={setIsAuthenticated}
-              setIsAdminAuthenticated={setIsAdminAuthenticated}
-            />
+          isAuthenticated ? <Navigate to="/dashboard" /> :
+            isAdminAuthenticated ? <Navigate to="/admin/dashboard" /> :
+              <Login
+                setIsAuthenticated={setIsAuthenticated}
+                setIsAdminAuthenticated={setIsAdminAuthenticated}
+              />
         } />
 
         <Route path="/signup" element={
