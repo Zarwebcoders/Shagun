@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const client = axios.create({
-    baseURL: '/api', // Proxy will handle forwarding to localhost:5000
+    baseURL: import.meta.env.PROD ? 'https://rex-token-backend.vercel.app/api' : '/api',
     headers: {
         'Content-Type': 'application/json',
     },
