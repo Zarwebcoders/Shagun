@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useLocation, useNavigate, Outlet } from "react-router-dom"
 import { IoIosLogOut } from "react-icons/io";
 
-export default function Layout({ children }) {
+export default function Layout({ children, setIsAuthenticated }) {
     const [sidebarOpen, setSidebarOpen] = useState(true)
     const location = useLocation()
     const navigate = useNavigate()
@@ -23,6 +23,8 @@ export default function Layout({ children }) {
     ]
 
     const handleLogout = () => {
+        localStorage.removeItem("user")
+        setIsAuthenticated(false)
         navigate("/login")
     }
 
@@ -53,8 +55,8 @@ export default function Layout({ children }) {
                         <button
                             key={item.path}
                             className={`w-full flex items-center gap-3 px-2 py-2 rounded-lg my-2 transition-all duration-300 ${location.pathname === item.path
-                                    ? "bg-[#9131e7] text-[#040408] font-bold shadow-lg shadow-[#9131e7]/50"
-                                    : "text-white hover:bg-[#333] hover:text-[#9131e7]"
+                                ? "bg-[#9131e7] text-[#040408] font-bold shadow-lg shadow-[#9131e7]/50"
+                                : "text-white hover:bg-[#333] hover:text-[#9131e7]"
                                 }`}
                             onClick={() => navigate(item.path)}
                         >

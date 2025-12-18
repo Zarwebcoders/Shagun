@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from "react-router-dom"
 import Layout from "./components/Layout"
 import Login from "./pages/Login"
@@ -30,10 +30,22 @@ export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false)
 
+  useEffect(() => {
+    const user = localStorage.getItem("user")
+    if (user) {
+      const userData = JSON.parse(user)
+      if (userData.role === "admin") {
+        setIsAdminAuthenticated(true)
+      } else {
+        setIsAuthenticated(true)
+      }
+    }
+  }, [])
+
   // Layout wrapper component for protected routes
   const ProtectedLayout = () => {
     return (
-      <Layout>
+      <Layout setIsAuthenticated={setIsAuthenticated}>
         <Outlet />
       </Layout>
     )
@@ -92,7 +104,7 @@ export default function App() {
 
         {/* Admin Protected Routes - Fixed Structure */}
         <Route path="/admin" element={
-          isAdminAuthenticated ? <AdminLayout /> : <Navigate to="/login" />
+          isAdminAuthenticated ? <AdminLayout setIsAdminAuthenticated={setIsAdminAuthenticated} /> : <Navigate to="/login" />
         }>
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<AdminDashboard />} />

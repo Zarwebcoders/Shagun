@@ -9,7 +9,7 @@ export default function Withdrawal() {
         name: "",
         points: {
             loyalty: 0,
-            sgn: 0,
+            rex: 0,
             shopping: 0,
             total: 0
         }
@@ -30,7 +30,7 @@ export default function Withdrawal() {
                     name: user.name,
                     points: {
                         loyalty: user.loyaltyPoints || 0,
-                        sgn: user.sgnToken || 0,
+                        rex: user.rexToken || 0,
                         shopping: user.shoppingPoints || 0,
                         total: user.balance || 0
                     }
@@ -128,7 +128,7 @@ export default function Withdrawal() {
                     </div>
                 </div>
 
-                {/* SGN Token Card */}
+                {/* REX Token Card */}
                 <div className="bg-gradient-to-br from-[#040408] to-[#1a1a2e] p-4 md:p-6 rounded-xl border border-[#00b894]/30 hover:border-[#00b894] transition-all group hover:shadow-lg hover:shadow-[#00b894]/20">
                     <div className="flex items-start justify-between mb-3 md:mb-4">
                         <div>
@@ -142,7 +142,7 @@ export default function Withdrawal() {
                         </div>
                     </div>
                     <div className="mb-2">
-                        <span className="text-2xl md:text-3xl font-bold text-white">{userData.points.sgn.toLocaleString()}</span>
+                        <span className="text-2xl md:text-3xl font-bold text-white">{userData.points.rex.toLocaleString()}</span>
                         <span className="text-gray-400 ml-2 text-sm md:text-base">REX</span>
                     </div>
                     <div className="w-full bg-[#444]/50 rounded-full h-1.5 md:h-2">

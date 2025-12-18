@@ -17,9 +17,9 @@ export default function WithdrawalForm({ onSubmit, walletPoints }) {
     }
 
     const getMaxAmount = () => {
-        switch(formData.source) {
+        switch (formData.source) {
             case "loyalty": return walletPoints.loyalty;
-            case "sgn": return walletPoints.sgn;
+            case "rex": return walletPoints.rex;
             case "shopping": return walletPoints.shopping;
             default: return 0;
         }
@@ -34,7 +34,7 @@ export default function WithdrawalForm({ onSubmit, walletPoints }) {
         if (formData.amount) {
             const amount = Number.parseFloat(formData.amount)
             const maxAmount = getMaxAmount()
-            
+
             if (amount > maxAmount) {
                 alert(`Amount exceeds available balance. Maximum: ${maxAmount}`)
                 return
@@ -48,15 +48,15 @@ export default function WithdrawalForm({ onSubmit, walletPoints }) {
             onSubmit({
                 amount: amount,
                 method: formData.method === "bank-transfer" ? "Bank Transfer" : "Crypto Wallet",
-                source: formData.source === "loyalty" ? "Loyalty Points" : 
-                       formData.source === "sgn" ? "SGN Token" : "Shopping Tokens"
+                source: formData.source === "loyalty" ? "Loyalty Points" :
+                    formData.source === "rex" ? "REX Token" : "Shopping Tokens"
             })
-            setFormData({ 
+            setFormData({
                 source: "loyalty",
-                amount: "", 
-                method: "bank-transfer", 
-                bankAccount: "", 
-                walletAddress: "" 
+                amount: "",
+                method: "bank-transfer",
+                bankAccount: "",
+                walletAddress: ""
             })
             alert("Withdrawal request submitted successfully!")
         }
@@ -79,8 +79,8 @@ export default function WithdrawalForm({ onSubmit, walletPoints }) {
                         <button
                             type="button"
                             onClick={() => setFormData(prev => ({ ...prev, source: "loyalty" }))}
-                            className={`p-2 md:p-3 rounded-lg border transition-all ${formData.source === "loyalty" 
-                                ? "border-[#9131e7] bg-[#9131e7]/20" 
+                            className={`p-2 md:p-3 rounded-lg border transition-all ${formData.source === "loyalty"
+                                ? "border-[#9131e7] bg-[#9131e7]/20"
                                 : "border-[#444] bg-[#1a1a1a] hover:border-[#9131e7]/50"}`}
                         >
                             <div className="flex flex-col items-center">
@@ -95,26 +95,26 @@ export default function WithdrawalForm({ onSubmit, walletPoints }) {
                         </button>
                         <button
                             type="button"
-                            onClick={() => setFormData(prev => ({ ...prev, source: "sgn" }))}
-                            className={`p-2 md:p-3 rounded-lg border transition-all ${formData.source === "sgn" 
-                                ? "border-[#00b894] bg-[#00b894]/20" 
+                            onClick={() => setFormData(prev => ({ ...prev, source: "rex" }))}
+                            className={`p-2 md:p-3 rounded-lg border transition-all ${formData.source === "rex"
+                                ? "border-[#00b894] bg-[#00b894]/20"
                                 : "border-[#444] bg-[#1a1a1a] hover:border-[#00b894]/50"}`}
                         >
                             <div className="flex flex-col items-center">
-                                <div className={`w-6 h-6 md:w-8 md:h-8 rounded-full mb-1 md:mb-2 flex items-center justify-center ${formData.source === "sgn" ? "bg-[#00b894]" : "bg-[#444]"}`}>
+                                <div className={`w-6 h-6 md:w-8 md:h-8 rounded-full mb-1 md:mb-2 flex items-center justify-center ${formData.source === "rex" ? "bg-[#00b894]" : "bg-[#444]"}`}>
                                     <svg className="w-3 h-3 md:w-4 md:h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                                     </svg>
                                 </div>
                                 <span className="text-white text-xs md:text-sm font-medium">REX Token</span>
-                                <span className="text-gray-400 text-xs mt-1">{walletPoints.sgn.toLocaleString()} SGN</span>
+                                <span className="text-gray-400 text-xs mt-1">{walletPoints.rex.toLocaleString()} REX</span>
                             </div>
                         </button>
                         <button
                             type="button"
                             onClick={() => setFormData(prev => ({ ...prev, source: "shopping" }))}
-                            className={`p-2 md:p-3 rounded-lg border transition-all ${formData.source === "shopping" 
-                                ? "border-[#fd79a8] bg-[#fd79a8]/20" 
+                            className={`p-2 md:p-3 rounded-lg border transition-all ${formData.source === "shopping"
+                                ? "border-[#fd79a8] bg-[#fd79a8]/20"
                                 : "border-[#444] bg-[#1a1a1a] hover:border-[#fd79a8]/50"}`}
                         >
                             <div className="flex flex-col items-center">
@@ -176,8 +176,8 @@ export default function WithdrawalForm({ onSubmit, walletPoints }) {
                         <button
                             type="button"
                             onClick={() => setFormData(prev => ({ ...prev, method: "bank-transfer" }))}
-                            className={`p-3 md:p-4 rounded-lg border flex items-center justify-center gap-1 md:gap-2 transition-all ${formData.method === "bank-transfer" 
-                                ? "border-blue-500 bg-blue-500/20" 
+                            className={`p-3 md:p-4 rounded-lg border flex items-center justify-center gap-1 md:gap-2 transition-all ${formData.method === "bank-transfer"
+                                ? "border-blue-500 bg-blue-500/20"
                                 : "border-[#444] bg-[#1a1a1a] hover:border-blue-500/50"}`}
                         >
                             <svg className="w-4 h-4 md:w-5 md:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -188,8 +188,8 @@ export default function WithdrawalForm({ onSubmit, walletPoints }) {
                         <button
                             type="button"
                             onClick={() => setFormData(prev => ({ ...prev, method: "crypto-wallet" }))}
-                            className={`p-3 md:p-4 rounded-lg border flex items-center justify-center gap-1 md:gap-2 transition-all ${formData.method === "crypto-wallet" 
-                                ? "border-yellow-500 bg-yellow-500/20" 
+                            className={`p-3 md:p-4 rounded-lg border flex items-center justify-center gap-1 md:gap-2 transition-all ${formData.method === "crypto-wallet"
+                                ? "border-yellow-500 bg-yellow-500/20"
                                 : "border-[#444] bg-[#1a1a1a] hover:border-yellow-500/50"}`}
                         >
                             <svg className="w-4 h-4 md:w-5 md:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">

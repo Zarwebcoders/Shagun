@@ -3,9 +3,9 @@
 import AdminLayout from "./components/AdminLayout"
 // import AdminDashboard from "./components/adminDashboard"
 
-export default function AdminPage() {
+export default function AdminPage(props) {
     return (
-        <AdminLayout>
+        <AdminLayout {...props}>
             {/* <AdminDashboard /> */}
         </AdminLayout>
     )

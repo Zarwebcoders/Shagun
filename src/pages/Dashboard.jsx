@@ -13,9 +13,9 @@ export default function Dashboard() {
 
     const [tokenStats, setTokenStats] = useState({
         loyaltyToken: 0,
-        sgnToken: 0,
+        rexToken: 0,
         stakedTokens: 0,
-        sgnRate: 2.5,
+        rexRate: 2.5,
         currentPhase: "Phase 3",
         shoppingPoint: 0,
     })
@@ -70,7 +70,7 @@ export default function Dashboard() {
                 setTokenStats(prev => ({
                     ...prev,
                     loyaltyToken: userData.loyaltyPoints || 0,
-                    sgnToken: userData.sgnToken || 0,
+                    rexToken: userData.rexToken || 0,
                     shoppingPoint: userData.shoppingPoints || 0,
                 }));
 
@@ -131,8 +131,8 @@ export default function Dashboard() {
                 <h3 className="text-xl md:text-2xl font-bold text-[#9131e7]">Token Overview</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4 md:gap-6">
                     <StatsCard title="Loyalty Points" amount={tokenStats.loyaltyToken.toString()} color="#9131e7" />
-                    <StatsCard title="REX Token" amount={tokenStats.sgnToken.toString()} color="#4caf50" />
-                    <StatsCard title="SGN Rate" amount={`$${tokenStats.sgnRate}`} color="#ff9800" />
+                    <StatsCard title="REX Token" amount={tokenStats.rexToken.toString()} color="#4caf50" />
+                    <StatsCard title="REX Rate" amount={`$${tokenStats.rexRate}`} color="#ff9800" />
                     <StatsCard title="Current Phase" amount={tokenStats.currentPhase} color="#9c27b0" />
                 </div>
             </section>

@@ -1,9 +1,10 @@
 "use client"
 
 import { useState } from "react"
-import { useNavigate, Outlet } from "react-router-dom" // Add Outlet import
+import { useNavigate, Outlet } from "react-router-dom"
+import { IoIosLogOut } from "react-icons/io";
 
-export default function AdminLayout({ children }) {
+export default function AdminLayout({ children, setIsAdminAuthenticated }) {
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const [activeMenu, setActiveMenu] = useState("dashboard")
     const navigate = useNavigate()
@@ -18,6 +19,12 @@ export default function AdminLayout({ children }) {
         { id: "settings", name: "System Settings", icon: "⚙️", path: "/admin/settings" },
         { id: "reports", name: "Reports & Analytics", icon: "📈", path: "/admin/reports" },
     ]
+
+    const handleLogout = () => {
+        localStorage.removeItem("user")
+        setIsAdminAuthenticated(false)
+        navigate("/login")
+    }
 
     const handleMenuClick = (item) => {
         setActiveMenu(item.id)
@@ -83,8 +90,8 @@ export default function AdminLayout({ children }) {
             </div>
 
             {/* Sidebar - Desktop */}
-            <div className="hidden lg:block fixed left-0 top-16 bottom-0 w-64 bg-[#0f0f1a] border-r border-[#9131e7]/30 overflow-y-auto">
-                <nav className="p-4 space-y-2">
+            <div className="hidden lg:flex fixed left-0 top-16 bottom-0 w-64 bg-[#0f0f1a] border-r border-[#9131e7]/30 flex-col">
+                <nav className="p-4 space-y-2 flex-1 overflow-y-auto">
                     {menuItems.map((item) => (
                         <button
                             key={item.id}
@@ -99,6 +106,17 @@ export default function AdminLayout({ children }) {
                         </button>
                     ))}
                 </nav>
+
+                {/* Logout Button */}
+                <div className="p-4 border-t border-[#9131e7]/30">
+                    <button
+                        className="w-full flex items-center gap-3 px-4 py-3 bg-red-600/10 hover:bg-red-600/20 text-red-500 hover:text-red-400 rounded-lg transition-all duration-300 font-semibold border border-red-600/20"
+                        onClick={handleLogout}
+                    >
+                        <span className="text-xl"><IoIosLogOut /></span>
+                        <span className="text-sm">Logout</span>
+                    </button>
+                </div>
             </div>
 
             {/* Sidebar - Mobile */}
@@ -108,8 +126,8 @@ export default function AdminLayout({ children }) {
                         className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40 animate-fadeIn"
                         onClick={() => setSidebarOpen(false)}
                     ></div>
-                    <div className="lg:hidden fixed left-0 top-16 bottom-0 w-64 bg-[#0f0f1a] border-r border-[#9131e7]/30 overflow-y-auto z-50 animate-slideIn">
-                        <nav className="p-4 space-y-2">
+                    <div className="lg:hidden fixed left-0 top-16 bottom-0 w-64 bg-[#0f0f1a] border-r border-[#9131e7]/30 z-50 animate-slideIn flex flex-col">
+                        <nav className="p-4 space-y-2 flex-1 overflow-y-auto">
                             {menuItems.map((item) => (
                                 <button
                                     key={item.id}
@@ -124,6 +142,17 @@ export default function AdminLayout({ children }) {
                                 </button>
                             ))}
                         </nav>
+
+                        {/* Logout Button Mobile */}
+                        <div className="p-4 border-t border-[#9131e7]/30">
+                            <button
+                                className="w-full flex items-center gap-3 px-4 py-3 bg-red-600/10 hover:bg-red-600/20 text-red-500 hover:text-red-400 rounded-lg transition-all duration-300 font-semibold border border-red-600/20"
+                                onClick={handleLogout}
+                            >
+                                <span className="text-xl"><IoIosLogOut /></span>
+                                <span className="text-sm">Logout</span>
+                            </button>
+                        </div>
                     </div>
                 </>
             )}
