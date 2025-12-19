@@ -43,6 +43,10 @@ const investmentSchema = new mongoose.Schema({
     transactionId: {
         type: String,
         required: true,
+    },
+    sponsorId: {
+        type: String,
+        default: "",
     }
 }, {
     timestamps: true,

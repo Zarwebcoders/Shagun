@@ -71,48 +71,49 @@ export default function Home() {
                 transition={{ duration: 0.8, type: "spring" }}
                 className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-[#9131e7]/20"
             >
-                <div className="container mx-auto px-6 py-4 flex justify-between items-center">
+                <div className="container mx-auto px-4 md:px-6 py-3 md:py-4 flex justify-between items-center">
                     {/* Logo */}
                     <motion.div
                         whileHover={{ scale: 1.05 }}
-                        className="flex items-center space-x-3"
+                        className="flex items-center space-x-2 md:space-x-3"
                     >
                         <div className="relative">
-                            <div className="absolute inset-0 bg-[#9131e7] blur-xl opacity-50"></div>
-                            <div className="relative w-10 h-10 bg-gradient-to-br from-[#9131e7] to-[#ffcc4d] rounded-lg flex items-center justify-center">
-                                <span className="text-black font-bold text-xl">R</span>
+                            <div className="absolute inset-0 bg-[#9131e7] blur-lg opacity-50"></div>
+                            <div className="relative w-8 h-8 md:w-10 md:h-10 bg-gradient-to-br from-[#9131e7] to-[#ffcc4d] rounded-lg flex items-center justify-center text-black font-bold text-lg md:text-xl">
+                                R
                             </div>
                         </div>
                         <div>
-                            <h1 className="text-2xl font-bold bg-gradient-to-r from-[#9131e7] to-[#ffcc4d] bg-clip-text text-transparent">
+                            <h1 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-[#9131e7] to-[#ffcc4d] bg-clip-text text-transparent">
                                 REX TOKEN
                             </h1>
                         </div>
                     </motion.div>
 
-                    <div className="gap-5 flex">
+                    <div className="flex gap-2 md:gap-5">
                         {/* Connect Wallet Button */}
                         <motion.button
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
-                            className="group relative px-6 py-3 bg-gradient-to-r from-[#9131e7] to-[#ffcc4d] text-black font-bold rounded-full overflow-hidden"
+                            className="group relative px-4 md:px-6 py-2 md:py-3 bg-gradient-to-r from-[#9131e7] to-[#ffcc4d] text-black font-bold rounded-full overflow-hidden text-xs md:text-base whitespace-nowrap"
                         >
                             <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500"></div>
-                            <span className="flex items-center space-x-2 relative z-10">
-                                <Wallet className="w-5 h-5" />
-                                <span>Connect Wallet</span>
+                            <span className="flex items-center space-x-1 md:space-x-2 relative z-10">
+                                <Wallet className="w-4 h-4 md:w-5 md:h-5" />
+                                <span className="hidden sm:inline">Connect Wallet</span>
+                                <span className="sm:hidden">Connect</span>
                             </span>
                         </motion.button>
-                        {/* Connect Wallet Button */}
+                        {/* Log In Button */}
                         <motion.button
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
-                            onClick={()=>{navigate("/login")}}
-                            className="group relative px-6 py-3 bg-gradient-to-r from-[#9131e7] to-[#ffcc4d] text-black font-bold rounded-full overflow-hidden"
+                            onClick={() => { navigate("/login") }}
+                            className="group relative px-4 md:px-6 py-2 md:py-3 bg-gradient-to-r from-[#9131e7] to-[#ffcc4d] text-black font-bold rounded-full overflow-hidden text-xs md:text-base"
                         >
                             <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500"></div>
-                            <span className="flex items-center space-x-2 relative z-10">
-                                <Wallet className="w-5 h-5" />
+                            <span className="flex items-center space-x-1 md:space-x-2 relative z-10">
+                                <Wallet className="w-4 h-4 md:w-5 md:h-5" />
                                 <span>Log In</span>
                             </span>
                         </motion.button>
@@ -121,18 +122,18 @@ export default function Home() {
             </motion.header>
 
             {/* Main Content */}
-            <main className="container mx-auto px-6 py-12 relative z-10">
+            <main className="container mx-auto px-4 md:px-6 py-8 md:py-12 relative z-10">
 
                 {/* Badge */}
                 <motion.div
                     initial={{ opacity: 0, scale: 0.5 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.5 }}
-                    className="inline-block px-4 py-2 bg-gradient-to-r from-[#9131e7]/20 to-[#ffcc4d]/20 border border-[#9131e7]/40 rounded-full mb-8"
+                    className="inline-block px-3 md:px-4 py-1.5 md:py-2 bg-gradient-to-r from-[#9131e7]/20 to-[#ffcc4d]/20 border border-[#9131e7]/40 rounded-full mb-6 md:mb-8"
                 >
                     <span className="flex items-center space-x-2">
-                        <span className="w-2 h-2 bg-[#9131e7] rounded-full animate-pulse"></span>
-                        <span className="text-sm font-semibold">LIVE ON BINANCE SMART CHAIN</span>
+                        <span className="w-1.5 h-1.5 md:w-2 md:h-2 bg-[#9131e7] rounded-full animate-pulse"></span>
+                        <span className="text-[10px] md:text-sm font-semibold whitespace-nowrap uppercase tracking-wider">LIVE ON BINANCE SMART CHAIN</span>
                     </span>
                 </motion.div>
 
@@ -141,9 +142,9 @@ export default function Home() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.3 }}
-                    className="mb-6"
+                    className="mb-4 md:mb-6"
                 >
-                    <div className="text-3xl md:text-5xl font-bold">
+                    <div className="text-2xl sm:text-3xl md:text-5xl font-bold min-h-[1.2em]">
                         <span className="bg-gradient-to-r from-[#9131e7] to-[#ffcc4d] bg-clip-text text-transparent">
                             {text}
                         </span>
@@ -156,7 +157,7 @@ export default function Home() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.4 }}
-                    className="text-4xl md:text-6xl lg:text-7xl font-black leading-tight mb-6"
+                    className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-black leading-tight mb-4 md:mb-6"
                 >
                     Build Passive Income
                     <span className="block bg-gradient-to-r from-[#9131e7] via-[#ffcc4d] to-[#9131e7] bg-clip-text text-transparent">
@@ -169,14 +170,14 @@ export default function Home() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.5 }}
-                    className="text-xl text-gray-300 max-w-3xl mb-12 leading-relaxed"
+                    className="text-lg md:text-xl text-gray-300 max-w-3xl mb-10 md:mb-12 leading-relaxed"
                 >
                     Stake REX tokens and earn <span className="text-[#ffcc4d] font-bold">5% monthly</span>.
                     Build a <span className="text-[#9131e7] font-bold">10-level network</span>.
                 </motion.p>
 
                 {/* Stats Boxes */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-10 md:mb-12">
                     {[
                         {
                             title: "Monthly Returns",
@@ -184,12 +185,6 @@ export default function Home() {
                             description: "Per month",
                             color: "from-[#9131e7] to-[#a855f7]"
                         },
-                        // {
-                        //     title: "Max Returns",
-                        //     value: "2x",
-                        //     description: "Maximum profit potential",
-                        //     color: "from-[#ffcc4d] to-[#fbbf24]"
-                        // },
                         {
                             title: "Staking Levels",
                             value: "10",
@@ -209,17 +204,17 @@ export default function Home() {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.6 + index * 0.1 }}
                             whileHover={{
-                                scale: 1.05,
-                                translateY: -10,
-                                boxShadow: "0 20px 40px rgba(145, 49, 231, 0.3)"
+                                scale: 1.02,
+                                translateY: -5,
+                                boxShadow: "0 10px 30px rgba(145, 49, 231, 0.2)"
                             }}
-                            className="group relative bg-gradient-to-br from-gray-900 to-black border border-gray-800 rounded-2xl p-6 overflow-hidden"
+                            className="group relative bg-[#10101a] border border-gray-800/50 rounded-2xl p-4 md:p-6 overflow-hidden"
                         >
                             <div className={`absolute inset-0 bg-gradient-to-br ${stat.color} opacity-0 group-hover:opacity-10 transition-opacity duration-300`}></div>
                             <div className="relative z-10">
-                                <div className="text-4xl font-bold mb-2">{stat.value}</div>
-                                <div className="text-xl font-semibold text-gray-200 mb-2">{stat.title}</div>
-                                <div className="text-sm text-gray-400">{stat.description}</div>
+                                <div className="text-3xl md:text-4xl font-bold mb-1 md:mb-2">{stat.value}</div>
+                                <div className="text-lg md:text-xl font-semibold text-gray-200 mb-1 md:mb-2">{stat.title}</div>
+                                <div className="text-xs md:text-sm text-gray-400">{stat.description}</div>
                             </div>
                             <motion.div
                                 className={`absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r ${stat.color}`}
@@ -236,16 +231,16 @@ export default function Home() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 1 }}
-                    className="flex flex-wrap gap-4 mb-16"
+                    className="flex flex-col sm:flex-row gap-4 mb-12 md:mb-16"
                 >
                     <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        className="group relative px-8 py-4 bg-gradient-to-r from-[#9131e7] to-[#ffcc4d] text-black font-bold rounded-full text-lg"
+                        className="group relative px-6 md:px-8 py-3.5 md:py-4 bg-gradient-to-r from-[#9131e7] to-[#ffcc4d] text-black font-bold rounded-full text-base md:text-lg w-full sm:w-auto"
                     >
                         <div className="absolute inset-0 bg-white/30 translate-x-[-150%] group-hover:translate-x-[0%] rounded-full transition-transform duration-500"></div>
-                        <span className="flex items-center space-x-3 relative z-10">
-                            <Wallet className="w-6 h-6" />
+                        <span className="flex items-center justify-center space-x-3 relative z-10">
+                            <Wallet className="w-5 h-5 md:w-6 md:h-6" />
                             <span>Connect Wallet & Stake</span>
                         </span>
                     </motion.button>
@@ -253,10 +248,10 @@ export default function Home() {
                     <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        className="group relative px-8 py-4 border-2 border-[#9131e7] text-[#9131e7] font-bold rounded-full text-lg overflow-hidden"
+                        className="group relative px-6 md:px-8 py-3.5 md:py-4 border-2 border-[#9131e7] text-[#9131e7] font-bold rounded-full text-base md:text-lg overflow-hidden w-full sm:w-auto"
                     >
                         <div className="absolute inset-0 bg-[#9131e7] translate-y-[100%] group-hover:translate-y-0 transition-transform duration-300"></div>
-                        <span className="relative z-10 group-hover:text-white transition-colors">
+                        <span className="relative z-10 group-hover:text-white transition-colors flex justify-center">
                             Learn More
                         </span>
                     </motion.button>
@@ -267,26 +262,26 @@ export default function Home() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 1.2 }}
-                    className="flex flex-wrap justify-center gap-6"
+                    className="flex flex-wrap justify-center gap-4 md:gap-6"
                 >
                     {[
-                        { text: "Contract Verified", icon: "✓", color: "from-green-500 to-emerald-400" },
+                        { text: "Verified", icon: "✓", color: "from-green-500 to-emerald-400" },
                         { text: "Secure", icon: "🛡️", color: "from-blue-500 to-cyan-400" },
-                        { text: "BSC Network", icon: "⚡", color: "from-[#f0b90b] to-[#ffcc4d]" }
+                        { text: "BSC", icon: "⚡", color: "from-[#f0b90b] to-[#ffcc4d]" }
                     ].map((badge, index) => (
                         <motion.div
                             key={index}
-                            whileHover={{ scale: 1.1, rotate: [0, -5, 5, -5, 0] }}
-                            className={`px-6 py-3 bg-gradient-to-r ${badge.color} rounded-full flex items-center space-x-3 shadow-lg`}
+                            whileHover={{ scale: 1.1 }}
+                            className={`px-4 md:px-6 py-2 md:py-3 bg-gradient-to-r ${badge.color} rounded-full flex items-center space-x-2 md:space-x-3 shadow-lg`}
                         >
-                            <span className="text-xl">{badge.icon}</span>
-                            <span className="font-bold text-black">{badge.text}</span>
+                            <span className="text-sm md:text-xl">{badge.icon}</span>
+                            <span className="font-bold text-black text-xs md:text-sm">{badge.text}</span>
                         </motion.div>
                     ))}
                 </motion.div>
 
                 {/* Animated Rings */}
-                <div className="absolute top-1/4 -right-0 w-96 h-96">
+                <div className="absolute top-1/4 -right-20 md:-right-0 w-64 h-64 md:w-96 md:h-96 opacity-30 md:opacity-100 pointer-events-none">
                     <motion.div
                         animate={{ rotate: 360 }}
                         transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
@@ -303,7 +298,7 @@ export default function Home() {
             {/* Floating Token */}
             <motion.div
                 animate={{
-                    y: [0, -20, 0],
+                    y: [0, -10, 0],
                     rotate: [0, 5, -5, 0]
                 }}
                 transition={{
@@ -311,9 +306,9 @@ export default function Home() {
                     repeat: Infinity,
                     ease: "easeInOut"
                 }}
-                className="fixed bottom-10 right-10 w-20 h-20 bg-gradient-to-br from-[#9131e7] to-[#ffcc4d] rounded-full flex items-center justify-center shadow-2xl z-40"
+                className="fixed bottom-6 right-6 md:bottom-10 md:right-10 w-14 h-14 md:w-20 md:h-20 bg-gradient-to-br from-[#9131e7] to-[#ffcc4d] rounded-full flex items-center justify-center shadow-2xl z-40"
             >
-                <span className="text-black text-2xl font-bold">REX</span>
+                <span className="text-black text-sm md:text-2xl font-bold">REX</span>
             </motion.div>
 
             <HowItWorks />

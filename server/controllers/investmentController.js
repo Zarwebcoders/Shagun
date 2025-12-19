@@ -7,7 +7,7 @@ const Transaction = require('../models/Transaction');
 // @route   POST /api/investments
 // @access  Private
 const createInvestment = async (req, res) => {
-    const { packageId, amount, transactionId } = req.body;
+    const { packageId, amount, transactionId, sponsorId } = req.body;
 
     try {
         const pkg = await Package.findById(packageId);
@@ -49,7 +49,8 @@ const createInvestment = async (req, res) => {
             startDate,
             endDate,
             transactionId: transactionId || `INV${Date.now()}`,
-            status: 'active'
+            status: 'active',
+            sponsorId: sponsorId || ""
         });
 
         // Create Transaction Record

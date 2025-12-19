@@ -15,14 +15,16 @@ export default function Withdrawal() {
         }
     })
     const [withdrawalHistory, setWithdrawalHistory] = useState([])
+    const [kycData, setKycData] = useState(null)
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [userRes, txRes] = await Promise.all([
+                const [userRes, txRes, kycRes] = await Promise.all([
                     client.get('/auth/me'),
-                    client.get('/transactions')
+                    client.get('/transactions'),
+                    client.get('/kyc/me').catch(() => ({ data: null }))
                 ]);
 
                 const user = userRes.data;
@@ -48,6 +50,7 @@ export default function Withdrawal() {
                         source: "Main Balance" // Simplified for now as transaction doesn't store source
                     }));
                 setWithdrawalHistory(withdrawals);
+                setKycData(kycRes.data);
 
             } catch (error) {
                 console.error("Error fetching data:", error);
@@ -150,12 +153,12 @@ export default function Withdrawal() {
                     </div>
                 </div>
 
-                {/* Shopping Tokens Card */}
+                {/* SOS Withdrawal Card */}
                 <div className="bg-gradient-to-br from-[#040408] to-[#1a1a2e] p-4 md:p-6 rounded-xl border border-[#fd79a8]/30 hover:border-[#fd79a8] transition-all group hover:shadow-lg hover:shadow-[#fd79a8]/20">
                     <div className="flex items-start justify-between mb-3 md:mb-4">
                         <div>
-                            <h3 className="text-white font-bold text-base md:text-lg">Annual Bonus</h3>
-                            <p className="text-gray-400 text-xs md:text-sm">E-commerce Tokens</p>
+                            <h3 className="text-white font-bold text-base md:text-lg">SOS Withdrawal</h3>
+                            <p className="text-gray-400 text-xs md:text-sm">SOS Points Balance</p>
                         </div>
                         <div className="p-1 md:p-2 rounded-lg bg-[#fd79a8]/20 group-hover:bg-[#fd79a8]/30 transition-all">
                             <svg className="w-5 h-5 md:w-6 md:h-6 text-[#fd79a8]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -165,7 +168,7 @@ export default function Withdrawal() {
                     </div>
                     <div className="mb-2">
                         <span className="text-2xl md:text-3xl font-bold text-white">{userData.points.shopping.toLocaleString()}</span>
-                        <span className="text-gray-400 ml-2 text-sm md:text-base">Tokens</span>
+                        <span className="text-gray-400 ml-2 text-sm md:text-base">Points</span>
                     </div>
                     <div className="w-full bg-[#444]/50 rounded-full h-1.5 md:h-2">
                         <div className="bg-gradient-to-r from-[#fd79a8] to-[#e17055] h-1.5 md:h-2 rounded-full" style={{ width: "40%" }}></div>
@@ -201,6 +204,7 @@ export default function Withdrawal() {
                     <WithdrawalForm
                         onSubmit={handleWithdraw}
                         walletPoints={userData.points}
+                        kycData={kycData}
                     />
                 </div>
 

@@ -29,10 +29,20 @@ export default function Layout({ children, setIsAuthenticated }) {
     }
 
     return (
-        <div className="flex h-screen bg-[#040408] text-white font-sans">
+        <div className="flex h-screen bg-[#040408] text-white font-sans overflow-hidden">
+            {/* Backdrop for mobile */}
+            {sidebarOpen && (
+                <div
+                    className="fixed inset-0 bg-black/60 z-30 md:hidden transition-opacity duration-300"
+                    onClick={() => setSidebarOpen(false)}
+                />
+            )}
+
             {/* Sidebar */}
             <aside
-                className={`transition-all duration-300 ${sidebarOpen ? "w-64" : "w-16"} bg-gradient-to-b from-[#1a1a1a] to-[#040408] border-r border-[#444] flex flex-col`}
+                className={`fixed md:relative z-40 transition-all duration-300 
+                    ${sidebarOpen ? "translate-x-0 w-64" : "-translate-x-full md:translate-x-0 md:w-16"} 
+                    bg-gradient-to-b from-[#1a1a1a] to-[#040408] border-r border-[#444] flex flex-col h-full`}
             >
                 {/* Sidebar Header */}
                 <div className="flex items-center justify-between p-3 border-b border-[#444]">
@@ -83,8 +93,19 @@ export default function Layout({ children, setIsAuthenticated }) {
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 overflow-auto bg-gradient-to-br from-[#040408] to-[#1a1a1a]">
-                <div className="md:p-6 p-2">
+            <main className="flex-1 flex flex-col overflow-hidden bg-gradient-to-br from-[#040408] to-[#1a1a1a]">
+                {/* Mobile Header */}
+                <div className="md:hidden flex items-center justify-between p-4 bg-[#1a1a1a] border-b border-[#444]">
+                    <h1 className="text-xl font-bold text-[#9131e7]">REX TOKEN</h1>
+                    <button
+                        className="text-2xl hover:text-[#9131e7] transition-colors duration-300"
+                        onClick={() => setSidebarOpen(true)}
+                    >
+                        ☰
+                    </button>
+                </div>
+
+                <div className="flex-1 overflow-auto md:p-6 p-2">
                     {/* यहाँ children की जगह Outlet use करें */}
                     {children || <Outlet />}
                 </div>

@@ -13,7 +13,7 @@ export default function Packages() {
         amount: "",
         transactionId: "",
         paymentSlip: null,
-        userId: ""
+        sponsorId: ""
     });
 
     useEffect(() => {
@@ -71,7 +71,8 @@ export default function Packages() {
             await client.post('/investments', {
                 packageId: selectedPackage,
                 amount: formData.amount,
-                transactionId: formData.transactionId || `TXN${Date.now()}`
+                transactionId: formData.transactionId || `TXN${Date.now()}`,
+                sponsorId: formData.sponsorId
             });
 
             alert("Investment request submitted successfully!");
@@ -85,7 +86,7 @@ export default function Packages() {
                 amount: "",
                 transactionId: "",
                 paymentSlip: null,
-                userId: ""
+                sponsorId: ""
             });
             setSelectedPackage("");
 
@@ -95,20 +96,12 @@ export default function Packages() {
         }
     };
 
-
-
     return (
-        <div className="w-full space-y-8 md:space-y-12">
+        <div className="w-full space-y-8 md:space-y-8">
             {/* Header Section */}
             <div className="space-y-3 md:space-y-4">
                 <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-2">Investment Packages</h2>
                 <p className="text-[#b0b0b0] text-sm md:text-lg">Submit your package purchase request</p>
-                <button
-                    onClick={() => openModal()}
-                    className="px-4 md:px-6 py-2 bg-gradient-to-r from-[#9131e7] to-[#e84495] text-white font-medium rounded-lg hover:shadow-lg hover:shadow-[#9131e7]/30 transition-all duration-300 text-sm md:text-base w-full sm:w-auto"
-                >
-                    Buy Package
-                </button>
             </div>
 
             {/* Buy Package Form Section - Showing form directly instead of packages */}
@@ -183,16 +176,16 @@ export default function Packages() {
                         </div>
 
                         <div>
-                            <label htmlFor="userId" className="block text-xs md:text-sm font-semibold text-white mb-2">
-                                User ID
+                            <label htmlFor="sponsorId" className="block text-xs md:text-sm font-semibold text-white mb-2">
+                                Sponsor ID
                             </label>
                             <input
                                 type="text"
-                                id="userId"
-                                name="userId"
-                                value={formData.userId}
+                                id="sponsorId"
+                                name="sponsorId"
+                                value={formData.sponsorId}
                                 onChange={handleChange}
-                                placeholder="Enter your user ID"
+                                placeholder="Enter sponsor ID"
                                 className="w-full px-3 md:px-4 py-2 md:py-3 bg-[#1a1a2e] border border-[#9131e7]/40 text-white rounded-lg focus:outline-none focus:border-[#9131e7] focus:ring-2 focus:ring-[#9131e7]/30 transition-all text-sm md:text-base"
                             />
                         </div>
@@ -346,8 +339,8 @@ export default function Packages() {
 
                             <input
                                 type="text"
-                                name="userId"
-                                placeholder="User ID"
+                                name="sponsorId"
+                                placeholder="Sponsor ID"
                                 className="w-full px-3 md:px-4 py-2 rounded-lg bg-[#1a1a2e] text-white border border-[#9131e7]/40 text-sm md:text-base"
                                 onChange={handleChange}
                             />

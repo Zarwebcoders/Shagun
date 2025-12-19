@@ -1,10 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 
-export default function WithdrawalForm({ onSubmit, walletPoints }) {
+export default function WithdrawalForm({ onSubmit, walletPoints, kycData }) {
     const [formData, setFormData] = useState({
-        source: "loyalty",
+        source: "rex",
         amount: "",
         method: "bank-transfer",
         bankAccount: "",
@@ -16,11 +16,19 @@ export default function WithdrawalForm({ onSubmit, walletPoints }) {
         setFormData((prev) => ({ ...prev, [name]: value }))
     }
 
+    useEffect(() => {
+        if (kycData?.status === 'approved' && kycData?.bankDetails?.accountNumber) {
+            setFormData(prev => ({
+                ...prev,
+                bankAccount: kycData.bankDetails.accountNumber
+            }))
+        }
+    }, [kycData])
+
     const getMaxAmount = () => {
         switch (formData.source) {
-            case "loyalty": return walletPoints.loyalty;
             case "rex": return walletPoints.rex;
-            case "shopping": return walletPoints.shopping;
+            case "sos": return walletPoints.shopping;
             default: return 0;
         }
     }
@@ -47,12 +55,11 @@ export default function WithdrawalForm({ onSubmit, walletPoints }) {
 
             onSubmit({
                 amount: amount,
-                method: formData.method === "bank-transfer" ? "Bank Transfer" : "Crypto Wallet",
-                source: formData.source === "loyalty" ? "Loyalty Points" :
-                    formData.source === "rex" ? "REX Token" : "Shopping Tokens"
+                method: "Bank Transfer",
+                source: formData.source === "rex" ? "REX Token" : "SOS Withdrawal"
             })
             setFormData({
-                source: "loyalty",
+                source: "rex",
                 amount: "",
                 method: "bank-transfer",
                 bankAccount: "",
@@ -75,24 +82,7 @@ export default function WithdrawalForm({ onSubmit, walletPoints }) {
                     <label htmlFor="source" className="block text-xs md:text-sm font-semibold text-white mb-2 md:mb-3">
                         Select Source
                     </label>
-                    <div className="grid grid-cols-3 gap-2 md:gap-3 mb-3 md:mb-4">
-                        <button
-                            type="button"
-                            onClick={() => setFormData(prev => ({ ...prev, source: "loyalty" }))}
-                            className={`p-2 md:p-3 rounded-lg border transition-all ${formData.source === "loyalty"
-                                ? "border-[#9131e7] bg-[#9131e7]/20"
-                                : "border-[#444] bg-[#1a1a1a] hover:border-[#9131e7]/50"}`}
-                        >
-                            <div className="flex flex-col items-center">
-                                <div className={`w-6 h-6 md:w-8 md:h-8 rounded-full mb-1 md:mb-2 flex items-center justify-center ${formData.source === "loyalty" ? "bg-[#9131e7]" : "bg-[#444]"}`}>
-                                    <svg className="w-3 h-3 md:w-4 md:h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                </div>
-                                <span className="text-white text-xs md:text-sm font-medium">Loyalty</span>
-                                <span className="text-gray-400 text-xs mt-1">{walletPoints.loyalty.toLocaleString()} Pts</span>
-                            </div>
-                        </button>
+                    <div className="grid grid-cols-2 gap-2 md:gap-3 mb-3 md:mb-4">
                         <button
                             type="button"
                             onClick={() => setFormData(prev => ({ ...prev, source: "rex" }))}
@@ -112,18 +102,18 @@ export default function WithdrawalForm({ onSubmit, walletPoints }) {
                         </button>
                         <button
                             type="button"
-                            onClick={() => setFormData(prev => ({ ...prev, source: "shopping" }))}
-                            className={`p-2 md:p-3 rounded-lg border transition-all ${formData.source === "shopping"
+                            onClick={() => setFormData(prev => ({ ...prev, source: "sos" }))}
+                            className={`p-2 md:p-3 rounded-lg border transition-all ${formData.source === "sos"
                                 ? "border-[#fd79a8] bg-[#fd79a8]/20"
                                 : "border-[#444] bg-[#1a1a1a] hover:border-[#fd79a8]/50"}`}
                         >
                             <div className="flex flex-col items-center">
-                                <div className={`w-6 h-6 md:w-8 md:h-8 rounded-full mb-1 md:mb-2 flex items-center justify-center ${formData.source === "shopping" ? "bg-[#fd79a8]" : "bg-[#444]"}`}>
+                                <div className={`w-6 h-6 md:w-8 md:h-8 rounded-full mb-1 md:mb-2 flex items-center justify-center ${formData.source === "sos" ? "bg-[#fd79a8]" : "bg-[#444]"}`}>
                                     <svg className="w-3 h-3 md:w-4 md:h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                                     </svg>
                                 </div>
-                                <span className="text-white text-xs md:text-sm font-medium">Shopping</span>
+                                <span className="text-white text-xs md:text-sm font-medium">SOS Withdrawal</span>
                                 <span className="text-gray-400 text-xs mt-1">{walletPoints.shopping.toLocaleString()} Tokens</span>
                             </div>
                         </button>
@@ -185,27 +175,25 @@ export default function WithdrawalForm({ onSubmit, walletPoints }) {
                             </svg>
                             <span className="text-white text-xs md:text-sm">Bank Transfer</span>
                         </button>
-                        <button
-                            type="button"
-                            onClick={() => setFormData(prev => ({ ...prev, method: "crypto-wallet" }))}
-                            className={`p-3 md:p-4 rounded-lg border flex items-center justify-center gap-1 md:gap-2 transition-all ${formData.method === "crypto-wallet"
-                                ? "border-yellow-500 bg-yellow-500/20"
-                                : "border-[#444] bg-[#1a1a1a] hover:border-yellow-500/50"}`}
-                        >
-                            <svg className="w-4 h-4 md:w-5 md:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            <span className="text-white text-xs md:text-sm">Crypto Wallet</span>
-                        </button>
                     </div>
                 </div>
 
                 {/* Payment Details */}
                 {formData.method === "bank-transfer" ? (
                     <div>
-                        <label htmlFor="bankAccount" className="block text-xs md:text-sm font-semibold text-white mb-2">
-                            Bank Account Details
-                        </label>
+                        <div className="flex justify-between items-center mb-2">
+                            <label htmlFor="bankAccount" className="block text-xs md:text-sm font-semibold text-white">
+                                Bank Account Details
+                            </label>
+                            {kycData?.status === 'approved' && kycData?.bankDetails?.accountNumber === formData.bankAccount && (
+                                <span className="text-[10px] text-green-400 font-bold flex items-center gap-1">
+                                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                    </svg>
+                                    Verified account from KYC
+                                </span>
+                            )}
+                        </div>
                         <input
                             id="bankAccount"
                             type="text"
@@ -213,8 +201,13 @@ export default function WithdrawalForm({ onSubmit, walletPoints }) {
                             value={formData.bankAccount}
                             onChange={handleChange}
                             placeholder="Enter your bank account number"
-                            className="w-full px-3 md:px-4 py-2 md:py-3 bg-[#1a1a1a] border border-[#444] text-white rounded-lg focus:outline-none focus:border-[#9131e7] focus:ring-2 focus:ring-[#9131e7]/30 transition-all text-sm md:text-base"
+                            className="w-full px-3 md:px-4 py-2 md:py-3 bg-[#1a1a1a] border border-[#444] text-white rounded-lg focus:outline-none focus:border-[#9131e7] focus:ring-2 focus:ring-[#9131e7]/30 transition-all text-sm md:text-base font-mono"
                         />
+                        <p className="text-[10px] text-gray-400 mt-2">
+                            {kycData?.status === 'approved'
+                                ? "Auto-filled from your approved KYC. You can modify it if you want to withdraw to a different account."
+                                : "Please enter the bank account number for withdrawal."}
+                        </p>
                     </div>
                 ) : (
                     <div>

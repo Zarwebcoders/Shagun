@@ -1,10 +1,12 @@
 "use client"
 
 import { useState } from "react"
+import client from "../api/client"
 
 export default function KYC() {
     const [step, setStep] = useState(1)
-    const [isEditingBank, setIsEditingBank] = useState(false)
+    const [showSuccess, setShowSuccess] = useState(false) // Add this state
+    const [isSubmitting, setIsSubmitting] = useState(false) // Add loading state
 
     const [formData, setFormData] = useState({
         // Aadhar Details
@@ -79,6 +81,13 @@ export default function KYC() {
 
     const handleSubmit = async (e) => {
         e.preventDefault()
+        
+        // Only submit when we're on the final step (4)
+        if (step !== 4) {
+            return;
+        }
+
+        setIsSubmitting(true)
 
         try {
             await client.post('/kyc', {
@@ -99,25 +108,47 @@ export default function KYC() {
                     agreement: previewUrls.agreement
                 }
             });
-            alert("KYC verification submitted successfully!")
+            
+            // Show success modal
+            setShowSuccess(true)
+            
+            // Reset form after 3 seconds
+            setTimeout(() => {
+                setShowSuccess(false)
+                // Reset form if needed
+                setFormData({
+                    aadharNumber: "",
+                    aadharFrontFile: null,
+                    aadharBackFile: null,
+                    panNumber: "",
+                    panFile: null,
+                    profilePhoto: null,
+                    agreementPhoto: null,
+                    accountName: "",
+                    bankName: "",
+                    accountNumber: "",
+                    branch: "",
+                    ifscCode: "",
+                })
+                setPreviewUrls({
+                    aadharFront: null,
+                    aadharBack: null,
+                    pan: null,
+                    profile: null,
+                    agreement: null,
+                })
+                setStep(1)
+            }, 3000)
 
         } catch (error) {
             console.error("Error submitting KYC:", error);
             alert(error.response?.data?.message || "Failed to submit KYC");
+        } finally {
+            setIsSubmitting(false)
         }
     }
 
-    const handleSaveBank = () => {
-        setIsEditingBank(false)
-        // Bank details are part of the main form state, so just closing edit mode
-    }
-
-    const handleCancelEdit = () => {
-        setIsEditingBank(false)
-    }
-
     const removeFile = (field) => {
-        // Map the preview field name to the correct formData field name
         const formDataFieldMap = {
             'profile': 'profilePhoto',
             'aadharFront': 'aadharFrontFile',
@@ -132,10 +163,67 @@ export default function KYC() {
         setPreviewUrls((prev) => ({ ...prev, [field]: null }))
     }
 
+    // Reset form function
+    const resetForm = () => {
+        setFormData({
+            aadharNumber: "",
+            aadharFrontFile: null,
+            aadharBackFile: null,
+            panNumber: "",
+            panFile: null,
+            profilePhoto: null,
+            agreementPhoto: null,
+            accountName: "",
+            bankName: "",
+            accountNumber: "",
+            branch: "",
+            ifscCode: "",
+        })
+        setPreviewUrls({
+            aadharFront: null,
+            aadharBack: null,
+            pan: null,
+            profile: null,
+            agreement: null,
+        })
+        setStep(1)
+        setShowSuccess(false)
+    }
+
     return (
         <div className="w-full space-y-4 md:space-y-8">
             <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-2">KYC Verification</h2>
             <p className="text-[#b0b0b0] text-sm md:text-lg">Complete your identity verification to unlock all features</p>
+
+            {/* Success Modal */}
+            {showSuccess && (
+                <div className="fixed inset-0 flex items-center justify-center bg-black/70 z-50 animate-fade-in p-4">
+                    <div className="bg-gradient-to-br from-[#040408] to-[#1a1a1a] p-6 md:p-8 rounded-2xl border border-[#9131e7] max-w-md w-full mx-auto shadow-2xl shadow-[#9131e7]/30">
+                        <div className="text-center">
+                            {/* Success Icon */}
+                            <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-r from-[#9131e7] to-[#e84495] rounded-full flex items-center justify-center mx-auto mb-4 md:mb-6">
+                                <svg className="w-8 h-8 md:w-10 md:h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+                            
+                            {/* Success Message */}
+                            <h3 className="text-xl md:text-2xl font-bold text-white mb-2">KYC Submitted Successfully!</h3>
+                            <p className="text-gray-300 mb-6 md:mb-8 text-sm md:text-base">
+                                Your KYC verification has been submitted successfully. Our team will review your documents and notify you once verification is complete.
+                            </p>
+                            
+                            {/* OK Button */}
+                            <button
+                                onClick={() => setShowSuccess(false)}
+                                className="px-6 md:px-8 py-2 md:py-3 bg-gradient-to-r from-[#9131e7] to-[#e84495] text-white font-bold rounded-lg hover:shadow-lg hover:shadow-[#9131e7]/50 transition-all duration-300 w-full"
+                            >
+                                OK
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Progress Steps */}
             <div className="flex items-center justify-between mb-4 md:mb-8">
@@ -172,14 +260,13 @@ export default function KYC() {
                 </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4 md:space-y-8">
+            <div className="space-y-4 md:space-y-8">
                 {/* Step 1: Profile Photo */}
                 {step === 1 && (
                     <div className="bg-gradient-to-br from-[#040408] to-[#1f1f1f] p-4 md:p-6 lg:p-8 rounded-xl border border-[#444] animate-fade-in">
                         <h3 className="text-lg md:text-xl lg:text-2xl font-bold text-[#9131e7] mb-4 md:mb-6">Profile Photo</h3>
 
                         <div className="space-y-4 md:space-y-6">
-                            {/* Profile Photo Upload */}
                             <div>
                                 <label className="block text-xs md:text-sm font-semibold text-white mb-2">
                                     Upload Your Profile Photo
@@ -229,7 +316,6 @@ export default function KYC() {
                                     </div>
                                 </div>
                             </div>
-
                             <div className="text-center text-gray-400 text-xs md:text-sm">
                                 <p>Please upload a clear, recent photo of yourself</p>
                                 <p>Max file size: 5MB | Supported formats: JPG, PNG</p>
@@ -242,9 +328,7 @@ export default function KYC() {
                 {step === 2 && (
                     <div className="bg-gradient-to-br from-[#040408] to-[#1f1f1f] p-4 md:p-6 lg:p-8 rounded-xl border border-[#444] animate-fade-in">
                         <h3 className="text-lg md:text-xl lg:text-2xl font-bold text-[#9131e7] mb-4 md:mb-6">Aadhar Card Details</h3>
-
                         <div className="space-y-4 md:space-y-6 lg:space-y-8">
-                            {/* Aadhar Number */}
                             <div>
                                 <label htmlFor="aadharNumber" className="block text-xs md:text-sm font-semibold text-white mb-2">
                                     Aadhar Number
@@ -259,8 +343,6 @@ export default function KYC() {
                                     className="w-full px-3 md:px-4 py-2 md:py-3 bg-[#1a1a1a] border border-[#444] text-white rounded-lg focus:outline-none focus:border-[#9131e7] focus:ring-2 focus:ring-[#9131e7]/30 transition-all text-sm md:text-base"
                                 />
                             </div>
-
-                            {/* Aadhar Front */}
                             <div>
                                 <label className="block text-xs md:text-sm font-semibold text-white mb-2">
                                     Aadhar Card Front Page
@@ -304,8 +386,6 @@ export default function KYC() {
                                     </label>
                                 </div>
                             </div>
-
-                            {/* Aadhar Back */}
                             <div>
                                 <label className="block text-xs md:text-sm font-semibold text-white mb-2">
                                     Aadhar Card Back Page
@@ -357,9 +437,7 @@ export default function KYC() {
                 {step === 3 && (
                     <div className="bg-gradient-to-br from-[#040408] to-[#1f1f1f] p-4 md:p-6 lg:p-8 rounded-xl border border-[#444] animate-fade-in">
                         <h3 className="text-lg md:text-xl lg:text-2xl font-bold text-[#9131e7] mb-4 md:mb-6">PAN Card Details</h3>
-
                         <div className="space-y-4 md:space-y-6 lg:space-y-8">
-                            {/* PAN Number */}
                             <div>
                                 <label htmlFor="panNumber" className="block text-xs md:text-sm font-semibold text-white mb-2">
                                     PAN Number
@@ -374,8 +452,6 @@ export default function KYC() {
                                     className="w-full px-3 md:px-4 py-2 md:py-3 bg-[#1a1a1a] border border-[#444] text-white rounded-lg focus:outline-none focus:border-[#9131e7] focus:ring-2 focus:ring-[#9131e7]/30 transition-all text-sm md:text-base"
                                 />
                             </div>
-
-                            {/* PAN Card Photo */}
                             <div>
                                 <label className="block text-xs md:text-sm font-semibold text-white mb-2">
                                     PAN Card Photo
@@ -419,8 +495,6 @@ export default function KYC() {
                                     </label>
                                 </div>
                             </div>
-
-                            {/* Agreement Photo */}
                             <div>
                                 <label className="block text-xs md:text-sm font-semibold text-white mb-2">
                                     Agreement Photo
@@ -470,18 +544,9 @@ export default function KYC() {
 
                 {/* Step 4: Bank Details */}
                 {step === 4 && (
-                    <div className="bg-gradient-to-br from-[#040408] to-[#1f1f1f] p-4 md:p-6 lg:p-8 rounded-xl border border-[#444] animate-fade-in">
+                    <form onSubmit={handleSubmit} className="bg-gradient-to-br from-[#040408] to-[#1f1f1f] p-4 md:p-6 lg:p-8 rounded-xl border border-[#444] animate-fade-in">
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 md:mb-6 gap-3">
                             <h3 className="text-lg md:text-xl lg:text-2xl font-bold text-[#9131e7]">Bank Details</h3>
-                            {!isEditingBank && (
-                                <button
-                                    type="button"
-                                    onClick={() => setIsEditingBank(true)}
-                                    className="px-3 md:px-4 py-1 md:py-2 bg-[#9131e7]/20 text-[#9131e7] font-bold rounded-lg hover:bg-[#9131e7]/30 transition-all text-sm md:text-base"
-                                >
-                                    Edit
-                                </button>
-                            )}
                         </div>
 
                         <div className="space-y-4 md:space-y-6">
@@ -497,8 +562,7 @@ export default function KYC() {
                                         value={formData.accountName}
                                         onChange={handleChange}
                                         placeholder="John Doe"
-                                        disabled={!isEditingBank}
-                                        className="w-full px-3 md:px-4 py-2 md:py-3 bg-[#1a1a1a] border border-[#444] text-white rounded-lg focus:outline-none focus:border-[#9131e7] focus:ring-2 focus:ring-[#9131e7]/30 transition-all disabled:opacity-60 disabled:cursor-not-allowed text-sm md:text-base"
+                                        className="w-full px-3 md:px-4 py-2 md:py-3 bg-[#1a1a1a] border border-[#444] text-white rounded-lg focus:outline-none focus:border-[#9131e7] focus:ring-2 focus:ring-[#9131e7]/30 transition-all text-sm md:text-base"
                                     />
                                 </div>
                                 <div>
@@ -512,8 +576,7 @@ export default function KYC() {
                                         value={formData.bankName}
                                         onChange={handleChange}
                                         placeholder="State Bank of India"
-                                        disabled={!isEditingBank}
-                                        className="w-full px-3 md:px-4 py-2 md:py-3 bg-[#1a1a1a] border border-[#444] text-white rounded-lg focus:outline-none focus:border-[#9131e7] focus:ring-2 focus:ring-[#9131e7]/30 transition-all disabled:opacity-60 disabled:cursor-not-allowed text-sm md:text-base"
+                                        className="w-full px-3 md:px-4 py-2 md:py-3 bg-[#1a1a1a] border border-[#444] text-white rounded-lg focus:outline-none focus:border-[#9131e7] focus:ring-2 focus:ring-[#9131e7]/30 transition-all text-sm md:text-base"
                                     />
                                 </div>
                             </div>
@@ -529,8 +592,7 @@ export default function KYC() {
                                         value={formData.accountNumber}
                                         onChange={handleChange}
                                         placeholder="1234567890"
-                                        disabled={!isEditingBank}
-                                        className="w-full px-3 md:px-4 py-2 md:py-3 bg-[#1a1a1a] border border-[#444] text-white rounded-lg focus:outline-none focus:border-[#9131e7] focus:ring-2 focus:ring-[#9131e7]/30 transition-all disabled:opacity-60 disabled:cursor-not-allowed text-sm md:text-base"
+                                        className="w-full px-3 md:px-4 py-2 md:py-3 bg-[#1a1a1a] border border-[#444] text-white rounded-lg focus:outline-none focus:border-[#9131e7] focus:ring-2 focus:ring-[#9131e7]/30 transition-all text-sm md:text-base"
                                     />
                                 </div>
                                 <div>
@@ -544,8 +606,7 @@ export default function KYC() {
                                         value={formData.branch}
                                         onChange={handleChange}
                                         placeholder="Main Branch"
-                                        disabled={!isEditingBank}
-                                        className="w-full px-3 md:px-4 py-2 md:py-3 bg-[#1a1a1a] border border-[#444] text-white rounded-lg focus:outline-none focus:border-[#9131e7] focus:ring-2 focus:ring-[#9131e7]/30 transition-all disabled:opacity-60 disabled:cursor-not-allowed text-sm md:text-base"
+                                        className="w-full px-3 md:px-4 py-2 md:py-3 bg-[#1a1a1a] border border-[#444] text-white rounded-lg focus:outline-none focus:border-[#9131e7] focus:ring-2 focus:ring-[#9131e7]/30 transition-all text-sm md:text-base"
                                     />
                                 </div>
                             </div>
@@ -560,45 +621,55 @@ export default function KYC() {
                                     value={formData.ifscCode}
                                     onChange={handleChange}
                                     placeholder="SBIN0001234"
-                                    disabled={!isEditingBank}
-                                    className="w-full px-3 md:px-4 py-2 md:py-3 bg-[#1a1a1a] border border-[#444] text-white rounded-lg focus:outline-none focus:border-[#9131e7] focus:ring-2 focus:ring-[#9131e7]/30 transition-all disabled:opacity-60 disabled:cursor-not-allowed text-sm md:text-base"
+                                    className="w-full px-3 md:px-4 py-2 md:py-3 bg-[#1a1a1a] border border-[#444] text-white rounded-lg focus:outline-none focus:border-[#9131e7] focus:ring-2 focus:ring-[#9131e7]/30 transition-all text-sm md:text-base"
                                 />
                             </div>
-
-                            {isEditingBank && (
-                                <div className="flex flex-col sm:flex-row gap-3 md:gap-4 pt-3 md:pt-4 border-t border-[#444]">
-                                    <button
-                                        type="button"
-                                        onClick={handleSaveBank}
-                                        className="flex-1 px-4 md:px-6 py-2 md:py-3 bg-gradient-to-r from-[#9131e7] to-[#e84495] text-white font-bold rounded-lg hover:shadow-lg hover:shadow-[#9131e7]/50 transition-all text-sm md:text-base"
-                                    >
-                                        Save Changes
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={handleCancelEdit}
-                                        className="flex-1 px-4 md:px-6 py-2 md:py-3 border border-[#9131e7] text-[#9131e7] font-bold rounded-lg hover:bg-[#9131e7]/10 transition-all text-sm md:text-base"
-                                    >
-                                        Cancel
-                                    </button>
-                                </div>
-                            )}
                         </div>
-                    </div>
+
+                        {/* Navigation Buttons */}
+                        <div className="flex gap-3 md:gap-4 mt-6 md:mt-8">
+                            {step > 1 && (
+                                <button
+                                    type="button"
+                                    onClick={handleBack}
+                                    className="px-4 md:px-6 py-2 md:py-3 border border-[#9131e7] text-[#9131e7] font-bold rounded-lg hover:bg-[#9131e7]/10 transition-all duration-300 text-sm md:text-base w-full sm:w-auto"
+                                >
+                                    Back
+                                </button>
+                            )}
+                            <button
+                                type="submit"
+                                disabled={isSubmitting}
+                                className={`flex-1 px-4 md:px-6 py-2 md:py-3 bg-gradient-to-r from-[#9131e7] to-[#e84495] text-white font-bold rounded-lg transition-all duration-300 hover:-translate-y-1 active:translate-y-0 text-sm md:text-base ${isSubmitting ? 'opacity-70 cursor-not-allowed' : 'hover:shadow-lg hover:shadow-[#9131e7]/50'}`}
+                            >
+                                {isSubmitting ? (
+                                    <span className="flex items-center justify-center gap-2">
+                                        <svg className="animate-spin h-4 w-4 md:h-5 md:w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Submitting...
+                                    </span>
+                                ) : (
+                                    "Submit KYC"
+                                )}
+                            </button>
+                        </div>
+                    </form>
                 )}
 
-                {/* Navigation Buttons */}
-                <div className="flex gap-3 md:gap-4">
-                    {step > 1 && (
-                        <button
-                            type="button"
-                            onClick={handleBack}
-                            className="px-4 md:px-6 py-2 md:py-3 border border-[#9131e7] text-[#9131e7] font-bold rounded-lg hover:bg-[#9131e7]/10 transition-all duration-300 text-sm md:text-base w-full sm:w-auto"
-                        >
-                            Back
-                        </button>
-                    )}
-                    {step < 4 ? (
+                {/* Navigation Buttons for steps 1-3 */}
+                {step < 4 && (
+                    <div className="flex gap-3 md:gap-4">
+                        {step > 1 && (
+                            <button
+                                type="button"
+                                onClick={handleBack}
+                                className="px-4 md:px-6 py-2 md:py-3 border border-[#9131e7] text-[#9131e7] font-bold rounded-lg hover:bg-[#9131e7]/10 transition-all duration-300 text-sm md:text-base w-full sm:w-auto"
+                            >
+                                Back
+                            </button>
+                        )}
                         <button
                             type="button"
                             onClick={handleNext}
@@ -606,16 +677,9 @@ export default function KYC() {
                         >
                             Next
                         </button>
-                    ) : (
-                        <button
-                            type="submit"
-                            className="flex-1 px-4 md:px-6 py-2 md:py-3 bg-gradient-to-r from-[#9131e7] to-[#e84495] text-white font-bold rounded-lg hover:shadow-lg hover:shadow-[#9131e7]/50 transition-all duration-300 hover:-translate-y-1 active:translate-y-0 text-sm md:text-base"
-                        >
-                            Submit KYC
-                        </button>
-                    )}
-                </div>
-            </form>
+                    </div>
+                )}
+            </div>
 
             <style>{`
                 @keyframes fadeIn {

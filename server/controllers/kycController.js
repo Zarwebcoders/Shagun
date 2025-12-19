@@ -45,6 +45,21 @@ const getPendingKYC = async (req, res) => {
     }
 };
 
+// @desc    Get current user KYC
+// @route   GET /api/kyc/me
+// @access  Private
+const getMyKYC = async (req, res) => {
+    try {
+        const kyc = await KYC.findOne({ user: req.user.id });
+        if (!kyc) {
+            return res.status(404).json({ message: 'KYC not found' });
+        }
+        res.json(kyc);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 // @desc    Update KYC status (Admin)
 // @route   PUT /api/kyc/:id
 // @access  Private/Admin
@@ -78,5 +93,6 @@ const updateKYCStatus = async (req, res) => {
 module.exports = {
     submitKYC,
     getPendingKYC,
+    getMyKYC,
     updateKYCStatus,
 };

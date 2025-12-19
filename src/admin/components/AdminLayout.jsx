@@ -17,6 +17,7 @@ export default function AdminLayout({ children, setIsAdminAuthenticated }) {
         { id: "packages", name: "Package Management", icon: "📦", path: "/admin/packages" },
         { id: "transactions", name: "Transaction Monitor", icon: "💳", path: "/admin/transactions" },
         { id: "settings", name: "System Settings", icon: "⚙️", path: "/admin/settings" },
+        { id: "token-management", name: "Token Management", icon: "🪙", path: "/admin/token-management" },
         { id: "reports", name: "Reports & Analytics", icon: "📈", path: "/admin/reports" },
     ]
 

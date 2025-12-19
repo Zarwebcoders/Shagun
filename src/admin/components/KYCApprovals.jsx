@@ -95,7 +95,7 @@ export default function KYCApprovals() {
                             >
                                 <div className="flex items-center gap-3 mb-2">
                                     <div className="w-10 h-10 bg-gradient-to-br from-[#9131e7] to-[#e3459b] rounded-full flex items-center justify-center text-white font-bold">
-                                        {request.name.charAt(0)}
+                                        {(request.user?.name || request.name || "U").charAt(0)}
                                     </div>
                                     <div className="flex-1">
                                         <p className="font-semibold">{request.user?.name || request.name}</p>
@@ -106,7 +106,7 @@ export default function KYCApprovals() {
                                 </div>
                                 <div className="flex items-center justify-between text-xs">
                                     <span className={selectedKYC?._id === request._id ? "text-[#1f1f1f]" : "text-gray-400"}>
-                                        {request.documentType}
+                                        {request.documentType || "Verification"}
                                     </span>
                                     <span className={selectedKYC?._id === request._id ? "text-[#1f1f1f]" : "text-gray-500"}>
                                         {new Date(request.createdAt || request.submittedDate).toLocaleDateString()}
@@ -141,7 +141,7 @@ export default function KYCApprovals() {
 
                             {/* User Info */}
                             <div className="bg-[#1a1a2e] rounded-lg p-4">
-                                <h4 className="text-white font-semibold mb-3">Personal Information</h4>
+                                <h4 className="text-white font-semibold mb-3">Personal & Identity Information</h4>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <p className="text-gray-400 text-sm">Full Name</p>
@@ -152,16 +152,39 @@ export default function KYCApprovals() {
                                         <p className="text-white font-medium">{selectedKYC.user?.email || selectedKYC.email}</p>
                                     </div>
                                     <div>
-                                        <p className="text-gray-400 text-sm">Date of Birth</p>
-                                        <p className="text-white font-medium">{selectedKYC.personalInfo.dob}</p>
+                                        <p className="text-gray-400 text-sm">Aadhar Number</p>
+                                        <p className="text-white font-medium">{selectedKYC.aadharNumber || "N/A"}</p>
                                     </div>
                                     <div>
-                                        <p className="text-gray-400 text-sm">Phone</p>
-                                        <p className="text-white font-medium">{selectedKYC.personalInfo.phone}</p>
+                                        <p className="text-gray-400 text-sm">PAN Number</p>
+                                        <p className="text-white font-medium">{selectedKYC.panNumber || "N/A"}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Bank Details */}
+                            <div className="bg-[#1a1a2e] rounded-lg p-4">
+                                <h4 className="text-white font-semibold mb-3">Bank Account Information</h4>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <p className="text-gray-400 text-sm">Account Name</p>
+                                        <p className="text-white font-medium">{selectedKYC.bankDetails?.accountName || "N/A"}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-gray-400 text-sm">Bank Name</p>
+                                        <p className="text-white font-medium">{selectedKYC.bankDetails?.bankName || "N/A"}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-gray-400 text-sm">Account Number</p>
+                                        <p className="text-white font-medium">{selectedKYC.bankDetails?.accountNumber || "N/A"}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-gray-400 text-sm">IFSC Code</p>
+                                        <p className="text-white font-medium">{selectedKYC.bankDetails?.ifscCode || "N/A"}</p>
                                     </div>
                                     <div className="col-span-2">
-                                        <p className="text-gray-400 text-sm">Address</p>
-                                        <p className="text-white font-medium">{selectedKYC.personalInfo.address}</p>
+                                        <p className="text-gray-400 text-sm">Branch</p>
+                                        <p className="text-white font-medium">{selectedKYC.bankDetails?.branch || "N/A"}</p>
                                     </div>
                                 </div>
                             </div>
@@ -169,46 +192,64 @@ export default function KYCApprovals() {
                             {/* Documents */}
                             <div>
                                 <h4 className="text-white font-semibold mb-3">Uploaded Documents</h4>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <div className="bg-[#1a1a2e] rounded-lg p-4">
-                                        <p className="text-gray-400 text-sm mb-2">ID Front</p>
-                                        <div className="aspect-video bg-[#3f3f3f] rounded-lg overflow-hidden">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {/* Aadhar Front */}
+                                    <div className="bg-[#1a1a2e] rounded-lg p-4 border border-[#9131e7]/20">
+                                        <p className="text-gray-400 text-sm mb-2">Aadhar Front</p>
+                                        <div className="aspect-video bg-[#3f3f3f] rounded-lg overflow-hidden border border-[#444]">
                                             <img
-                                                src={selectedKYC.documents.idFront || "/placeholder.svg"}
-                                                alt="ID Front"
-                                                className="w-full h-full object-cover"
+                                                src={selectedKYC.documents.aadharFront || "/placeholder.svg"}
+                                                alt="Aadhar Front"
+                                                className="w-full h-full object-contain"
                                             />
                                         </div>
-                                        <button className="w-full mt-2 px-3 py-2 bg-[#9131e7] text-white rounded-lg text-sm font-semibold hover:bg-[#d4941f] transition-all">
-                                            View Full Size
-                                        </button>
                                     </div>
-                                    <div className="bg-[#1a1a2e] rounded-lg p-4">
-                                        <p className="text-gray-400 text-sm mb-2">ID Back</p>
-                                        <div className="aspect-video bg-[#3f3f3f] rounded-lg overflow-hidden">
+                                    {/* Aadhar Back */}
+                                    <div className="bg-[#1a1a2e] rounded-lg p-4 border border-[#9131e7]/20">
+                                        <p className="text-gray-400 text-sm mb-2">Aadhar Back</p>
+                                        <div className="aspect-video bg-[#3f3f3f] rounded-lg overflow-hidden border border-[#444]">
                                             <img
-                                                src={selectedKYC.documents.idBack || "/placeholder.svg"}
-                                                alt="ID Back"
-                                                className="w-full h-full object-cover"
+                                                src={selectedKYC.documents.aadharBack || "/placeholder.svg"}
+                                                alt="Aadhar Back"
+                                                className="w-full h-full object-contain"
                                             />
                                         </div>
-                                        <button className="w-full mt-2 px-3 py-2 bg-[#9131e7] text-white rounded-lg text-sm font-semibold hover:bg-[#d4941f] transition-all">
-                                            View Full Size
-                                        </button>
                                     </div>
-                                    <div className="bg-[#1a1a2e] rounded-lg p-4">
-                                        <p className="text-gray-400 text-sm mb-2">Selfie Verification</p>
-                                        <div className="aspect-video bg-[#3f3f3f] rounded-lg overflow-hidden">
+                                    {/* PAN Card */}
+                                    <div className="bg-[#1a1a2e] rounded-lg p-4 border border-[#9131e7]/20">
+                                        <p className="text-gray-400 text-sm mb-2">PAN Card</p>
+                                        <div className="aspect-video bg-[#3f3f3f] rounded-lg overflow-hidden border border-[#444]">
                                             <img
-                                                src={selectedKYC.documents.selfie || "/placeholder.svg"}
-                                                alt="Selfie"
-                                                className="w-full h-full object-cover"
+                                                src={selectedKYC.documents.panCard || "/placeholder.svg"}
+                                                alt="PAN Card"
+                                                className="w-full h-full object-contain"
                                             />
                                         </div>
-                                        <button className="w-full mt-2 px-3 py-2 bg-[#9131e7] text-white rounded-lg text-sm font-semibold hover:bg-[#d4941f] transition-all">
-                                            View Full Size
-                                        </button>
                                     </div>
+                                    {/* Profile Photo */}
+                                    <div className="bg-[#1a1a2e] rounded-lg p-4 border border-[#9131e7]/20">
+                                        <p className="text-gray-400 text-sm mb-2">Profile Photo (Selfie)</p>
+                                        <div className="aspect-video bg-[#3f3f3f] rounded-lg overflow-hidden border border-[#444]">
+                                            <img
+                                                src={selectedKYC.documents.profilePhoto || "/placeholder.svg"}
+                                                alt="Profile Photo"
+                                                className="w-full h-full object-contain"
+                                            />
+                                        </div>
+                                    </div>
+                                    {/* Agreement */}
+                                    {selectedKYC.documents.agreement && (
+                                        <div className="bg-[#1a1a2e] rounded-lg p-4 border border-[#9131e7]/20">
+                                            <p className="text-gray-400 text-sm mb-2">Agreement</p>
+                                            <div className="aspect-video bg-[#3f3f3f] rounded-lg overflow-hidden border border-[#444]">
+                                                <img
+                                                    src={selectedKYC.documents.agreement || "/placeholder.svg"}
+                                                    alt="Agreement"
+                                                    className="w-full h-full object-contain"
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 

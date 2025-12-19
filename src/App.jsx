@@ -24,6 +24,7 @@ import PackageManagement from "./admin/components/PackageManagement"
 import TransactionMonitor from "./admin/components/TransactionMonitor"
 import Reports from "./admin/components/Reports"
 import SystemSettings from "./admin/components/SystemSetting"
+import TokenManagement from "./admin/components/TokenManagement"
 import AdminDashboard from "./admin/components/AdminDashboard"
 
 export default function App() {
@@ -114,6 +115,7 @@ export default function App() {
           <Route path="packages" element={<PackageManagement />} />
           <Route path="transactions" element={<TransactionMonitor />} />
           <Route path="settings" element={<SystemSettings />} />
+          <Route path="token-management" element={<TokenManagement />} />
           <Route path="reports" element={<Reports />} />
         </Route>
 
