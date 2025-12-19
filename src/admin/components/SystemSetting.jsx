@@ -97,7 +97,7 @@ export default function SystemSettings() {
                 <h3 className="text-xl font-bold text-white mb-6">Financial Settings</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <label className="block text-gray-400 text-sm mb-2">Min Withdrawal ($)</label>
+                        <label className="block text-gray-400 text-sm mb-2">Min Withdrawal (₹)</label>
                         <input
                             type="number"
                             value={settings.minWithdrawal}
@@ -106,7 +106,7 @@ export default function SystemSettings() {
                         />
                     </div>
                     <div>
-                        <label className="block text-gray-400 text-sm mb-2">Max Withdrawal ($)</label>
+                        <label className="block text-gray-400 text-sm mb-2">Max Withdrawal (₹)</label>
                         <input
                             type="number"
                             value={settings.maxWithdrawal}

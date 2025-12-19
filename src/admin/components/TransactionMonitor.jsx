@@ -58,7 +58,7 @@ export default function TransactionMonitor() {
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         {[
           { label: "Total Transactions", value: "45,234", icon: "📊" },
-          { label: "Total Volume", value: "$12.4M", icon: "💰" },
+          { label: "Total Volume", value: "₹12.4M", icon: "💰" },
           { label: "Pending", value: "23", icon: "⏳" },
           { label: "Failed", value: "5", icon: "❌" },
           { label: "Today", value: "1,234", icon: "📅" },
@@ -121,7 +121,7 @@ export default function TransactionMonitor() {
                   <td className="px-6 py-4 text-white">{tx.user?.email || tx.user}</td>
                   <td className="px-6 py-4">
                     <span className={`font-bold ${tx.type === "deposit" ? "text-green-500" : "text-white"}`}>
-                      {tx.amount}
+                      ₹{tx.amount}
                     </span>
                   </td>
                   <td className="px-6 py-4">

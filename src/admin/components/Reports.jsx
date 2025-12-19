@@ -85,10 +85,10 @@ export default function Reports() {
             {/* Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 {[
-                    { label: "Total Revenue", value: "$234.5K", change: "+12.5%", color: "green" },
-                    { label: "Total Deposits", value: "$405.9K", change: "+8.2%", color: "blue" },
-                    { label: "Total Withdrawals", value: "$215.6K", change: "+5.7%", color: "red" },
-                    { label: "Net Profit", value: "$190.3K", change: "+15.3%", color: "yellow" },
+                    { label: "Total Revenue", value: "₹234.5K", change: "+12.5%", color: "green" },
+                    { label: "Total Deposits", value: "₹405.9K", change: "+8.2%", color: "blue" },
+                    { label: "Total Withdrawals", value: "₹215.6K", change: "+5.7%", color: "red" },
+                    { label: "Net Profit", value: "₹190.3K", change: "+15.3%", color: "yellow" },
                 ].map((stat, index) => (
                     <div key={index} className="bg-[#1f1f1f] rounded-xl p-6 border border-[#3f3f3f]">
                         <p className="text-gray-400 text-sm mb-1">{stat.label}</p>
@@ -115,18 +115,18 @@ export default function Reports() {
                             {revenueData.map((row, index) => (
                                 <tr key={index} className="hover:bg-[#1a1a2e] transition-colors">
                                     <td className="px-6 py-4 text-white">{row.date}</td>
-                                    <td className="px-6 py-4 text-green-500 font-semibold">${row.deposits.toLocaleString()}</td>
-                                    <td className="px-6 py-4 text-red-500 font-semibold">${row.withdrawals.toLocaleString()}</td>
-                                    <td className="px-6 py-4 text-[#9131e7] font-bold">${row.netRevenue.toLocaleString()}</td>
+                                    <td className="px-6 py-4 text-green-500 font-semibold">₹{row.deposits.toLocaleString()}</td>
+                                    <td className="px-6 py-4 text-red-500 font-semibold">₹{row.withdrawals.toLocaleString()}</td>
+                                    <td className="px-6 py-4 text-[#9131e7] font-bold">₹{row.netRevenue.toLocaleString()}</td>
                                 </tr>
                             ))}
                         </tbody>
                         <tfoot className="bg-[#1a1a2e]">
                             <tr>
                                 <td className="px-6 py-4 text-white font-bold">Total</td>
-                                <td className="px-6 py-4 text-green-500 font-bold">$406,000</td>
-                                <td className="px-6 py-4 text-red-500 font-bold">$215,900</td>
-                                <td className="px-6 py-4 text-[#9131e7] font-bold">$190,100</td>
+                                <td className="px-6 py-4 text-green-500 font-bold">₹406,000</td>
+                                <td className="px-6 py-4 text-red-500 font-bold">₹215,900</td>
+                                <td className="px-6 py-4 text-[#9131e7] font-bold">₹190,100</td>
                             </tr>
                         </tfoot>
                     </table>

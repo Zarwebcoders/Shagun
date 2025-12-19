@@ -14,7 +14,7 @@ export default function WalletCard({ balance }) {
             </div>
             <div className="mb-4 md:mb-6">
                 <p className="text-[#b0b0b0] text-xs md:text-sm mb-2">Available Balance</p>
-                <p className="text-3xl md:text-5xl font-bold text-[#9131e7]">${balance.toFixed(2)}</p>
+                <p className="text-3xl md:text-5xl font-bold text-[#9131e7]">₹{balance.toFixed(2)}</p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
                 <button className="w-full sm:flex-1 px-4 md:px-6 py-3 bg-gradient-to-r from-[#9131e7] to-[#e84495] text-[#040408] font-bold rounded-lg hover:shadow-lg hover:shadow-[#9131e7]/50 transition-all duration-300 hover:-translate-y-1 active:translate-y-0 text-sm md:text-base">

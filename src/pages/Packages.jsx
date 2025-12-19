@@ -126,7 +126,7 @@ export default function Packages() {
                                 <option value="">-- Select a Package --</option>
                                 {packages.map(pkg => (
                                     <option key={pkg._id} value={pkg._id}>
-                                        {pkg.name} (Min: ${pkg.minInvestment} - Max: {pkg.maxInvestment === 'Unlimited' ? 'Unlimited' : '$' + pkg.maxInvestment}) - {pkg.dailyReturn}% Daily
+                                        {pkg.name} (Min: ₹{pkg.minInvestment} - Max: {pkg.maxInvestment === 'Unlimited' ? 'Unlimited' : '₹' + pkg.maxInvestment}) - {pkg.dailyReturn}% Daily
                                     </option>
                                 ))}
                             </select>
@@ -235,7 +235,7 @@ export default function Packages() {
                                         className="border-b border-[#444]/30 hover:bg-[#9131e7]/10 transition-colors duration-300 group"
                                     >
                                         <td className="p-3 md:p-4">
-                                            <span className="text-lg md:text-xl font-bold text-[#9131e7]">${item.amount}</span>
+                                            <span className="text-lg md:text-xl font-bold text-[#9131e7]">₹{item.amount}</span>
                                         </td>
                                         <td className="p-3 md:p-4 text-gray-300 text-xs md:text-sm">{new Date(item.createdAt).toLocaleDateString()}</td>
                                         <td className="p-3 md:p-4">

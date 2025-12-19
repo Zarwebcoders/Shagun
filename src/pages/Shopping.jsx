@@ -76,7 +76,7 @@ export default function Shopping() {
                                     >
                                         <div>
                                             <p className="font-semibold text-white">{item.symbol}</p>
-                                            <p className="text-sm text-[#b0b0b0]">${item.price.toFixed(2)}</p>
+                                            <p className="text-sm text-[#b0b0b0]">₹{item.price.toFixed(2)}</p>
                                         </div>
                                         <button
                                             onClick={() => handleRemoveFromCart(index)}
@@ -89,7 +89,7 @@ export default function Shopping() {
                             </div>
                             <div className="border-t border-[#444] pt-4 mb-4">
                                 <p className="text-white font-bold">
-                                    Total: <span className="text-[#9131e7]">${totalCartValue.toFixed(2)}</span>
+                                    Total: <span className="text-[#9131e7]">₹{totalCartValue.toFixed(2)}</span>
                                 </p>
                             </div>
                             <button

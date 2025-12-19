@@ -105,7 +105,7 @@ export default function TokenManagement() {
                     ) : (
                         <form onSubmit={handleUpdatePrice} className="space-y-4">
                             <div>
-                                <label className="block text-gray-400 text-sm mb-2">Token Price (USD)</label>
+                                <label className="block text-gray-400 text-sm mb-2">Token Price (INR)</label>
                                 <input
                                     type="number"
                                     step="0.00001"
@@ -148,7 +148,7 @@ export default function TokenManagement() {
                     </div>
 
                     <p className="text-gray-400 text-sm mb-6">
-                        Transfer all REX tokens and USD balance from a lost account to a new one.
+                        Transfer all REX tokens and INR balance from a lost account to a new one.
                         The lost account will be suspended.
                     </p>
 

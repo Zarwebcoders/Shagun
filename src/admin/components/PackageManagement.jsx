@@ -80,8 +80,8 @@ export default function PackageManagement() {
                 {[
                     { label: "Active Packages", value: "6" },
                     { label: "Total Subscribers", value: "8,140" },
-                    { label: "Total Invested", value: "$12.4M" },
-                    { label: "Daily Payouts", value: "$34.2K" },
+                    { label: "Total Invested", value: "₹12.4M" },
+                    { label: "Daily Payouts", value: "₹34.2K" },
                 ].map((stat, index) => (
                     <div key={index} className="bg-[#0f0f1a] rounded-xl p-6 border border-[#9131e7]/30">
                         <p className="text-gray-400 text-sm mb-1">{stat.label}</p>
@@ -107,11 +107,11 @@ export default function PackageManagement() {
                         <div className="space-y-3 mb-6">
                             <div className="flex justify-between text-sm">
                                 <span className="text-gray-400">Min Investment</span>
-                                <span className="text-white font-semibold">{pkg.minInvestment}</span>
+                                <span className="text-white font-semibold">₹{pkg.minInvestment}</span>
                             </div>
                             <div className="flex justify-between text-sm">
                                 <span className="text-gray-400">Max Investment</span>
-                                <span className="text-white font-semibold">{pkg.maxInvestment}</span>
+                                <span className="text-white font-semibold">₹{pkg.maxInvestment}</span>
                             </div>
                             <div className="flex justify-between text-sm">
                                 <span className="text-gray-400">Daily Return</span>

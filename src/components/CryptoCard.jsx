@@ -15,7 +15,7 @@ export default function CryptoCard({ crypto, onAddToCart }) {
                 </div>
             </div>
             <div className="mb-4">
-                <p className="text-2xl font-bold text-white">${crypto.price.toFixed(2)}</p>
+                <p className="text-2xl font-bold text-white">₹{crypto.price.toFixed(2)}</p>
                 <p className={`text-sm font-bold ${isPositive ? "text-green-400" : "text-red-400"}`}>
                     {isPositive ? "↑" : "↓"} {Math.abs(crypto.change)}%
                 </p>

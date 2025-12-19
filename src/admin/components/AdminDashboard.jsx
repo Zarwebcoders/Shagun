@@ -7,7 +7,7 @@ export default function AdminDashboard() {
 
     const stats = [
         { label: "Total Users", value: "12,450", change: "+12%", icon: "👥", color: "from-blue-500 to-blue-600" },
-        { label: "Total Revenue", value: "$1.2M", change: "+8%", icon: "💰", color: "from-green-500 to-green-600" },
+        { label: "Total Revenue", value: "₹1.2M", change: "+8%", icon: "💰", color: "from-green-500 to-green-600" },
         { label: "Pending KYC", value: "145", change: "-5%", icon: "⏳", color: "from-yellow-500 to-yellow-600" },
         { label: "Active Packages", value: "8,234", change: "+15%", icon: "📦", color: "from-purple-500 to-purple-600" },
         { label: "Pending Withdrawals", value: "67", change: "+3%", icon: "💳", color: "from-red-500 to-red-600" },
@@ -53,11 +53,11 @@ export default function AdminDashboard() {
     ]
 
     const topUsers = [
-        { name: "Alice Johnson", investment: "$45,200", returns: "$8,340", level: "Diamond" },
-        { name: "Bob Smith", investment: "$38,900", returns: "$7,120", level: "Platinum" },
-        { name: "Carol Davis", investment: "$32,500", returns: "$6,450", level: "Gold" },
-        { name: "David Wilson", investment: "$28,100", returns: "$5,280", level: "Gold" },
-        { name: "Emma Brown", investment: "$24,800", returns: "$4,890", level: "Silver" },
+        { name: "Alice Johnson", investment: "₹45,200", returns: "₹8,340", level: "Diamond" },
+        { name: "Bob Smith", investment: "₹38,900", returns: "₹7,120", level: "Platinum" },
+        { name: "Carol Davis", investment: "₹32,500", returns: "₹6,450", level: "Gold" },
+        { name: "David Wilson", investment: "₹28,100", returns: "₹5,280", level: "Gold" },
+        { name: "Emma Brown", investment: "₹24,800", returns: "₹4,890", level: "Silver" },
     ]
 
     return (

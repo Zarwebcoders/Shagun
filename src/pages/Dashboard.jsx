@@ -130,9 +130,9 @@ export default function Dashboard() {
             <section className="space-y-4">
                 <h3 className="text-xl md:text-2xl font-bold text-[#9131e7]">Token Overview</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4 md:gap-6">
-                    <StatsCard title="Loyalty Points" amount={tokenStats.loyaltyToken.toString()} color="#9131e7" />
+                    {/* <StatsCard title="Loyalty Points" amount={tokenStats.loyaltyToken.toString()} color="#9131e7" /> */}
                     <StatsCard title="REX Token" amount={tokenStats.rexToken.toString()} color="#4caf50" />
-                    <StatsCard title="REX Rate" amount={`$${tokenStats.rexRate}`} color="#ff9800" />
+                    <StatsCard title="REX Rate" amount={`₹${tokenStats.rexRate}`} color="#ff9800" />
                     <StatsCard title="Current Phase" amount={tokenStats.currentPhase} color="#9c27b0" />
                 </div>
             </section>
@@ -149,11 +149,11 @@ export default function Dashboard() {
                     </div>
                     <div className="bg-[#1a1a2e] border border-[#9131e7]/30 rounded-2xl p-4 md:p-6 space-y-4">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
-                            <StatsCard title="ROI" amount={`$${incomeBreakdown.miningBonus.toFixed(2)}`} color="#9131e7" />
-                            <StatsCard title="Yearly Bonus" amount={`$${incomeBreakdown.yearlyBonus.toFixed(2)}`} color="#2196f3" />
-                            <StatsCard title="Sponsor Income" amount={`$${incomeBreakdown.sponsorIncome.toFixed(2)}`} color="#ff9800" />
-                            <StatsCard title="Level Income" amount={`$${incomeBreakdown.levelIncome.toFixed(2)}`} color="#9c27b0" />
-                            <StatsCard title="Total Income" amount={`$${incomeBreakdown.totalIncome.toFixed(2)}`} color="#e91e63" />
+                            <StatsCard title="ROI" amount={`₹${incomeBreakdown.miningBonus.toFixed(2)}`} color="#9131e7" />
+                            <StatsCard title="Yearly Bonus" amount={`₹${incomeBreakdown.yearlyBonus.toFixed(2)}`} color="#2196f3" />
+                            <StatsCard title="Sponsor Income" amount={`₹${incomeBreakdown.sponsorIncome.toFixed(2)}`} color="#ff9800" />
+                            <StatsCard title="Level Income" amount={`₹${incomeBreakdown.levelIncome.toFixed(2)}`} color="#9c27b0" />
+                            <StatsCard title="Total Income" amount={`₹${incomeBreakdown.totalIncome.toFixed(2)}`} color="#e91e63" />
                         </div>
                     </div>
                 </section>
@@ -185,7 +185,7 @@ export default function Dashboard() {
                             </div>
                             <div className="bg-[#0f0f1a] p-3 md:p-4 rounded-xl border border-[#9131e7]/20">
                                 <p className="text-gray-400 text-xs md:text-sm">Total Income</p>
-                                <p className="text-xl md:text-2xl font-bold text-[#9131e7]">${miningCenter.earningsToday.toFixed(2)}</p>
+                                <p className="text-xl md:text-2xl font-bold text-[#9131e7]">₹{miningCenter.earningsToday.toFixed(2)}</p>
                             </div>
                         </div>
                     </div>
@@ -232,15 +232,15 @@ export default function Dashboard() {
                             </div>
                             <div className="bg-[#0f0f1a] p-3 md:p-4 rounded-xl border border-[#9131e7]/20">
                                 <p className="text-gray-400 text-xs md:text-sm">Level Income Earned</p>
-                                <p className="text-xl md:text-2xl font-bold text-[#4caf50]">${referralProgram.levelIncomeEarned.toFixed(2)}</p>
+                                <p className="text-xl md:text-2xl font-bold text-[#4caf50]">₹{referralProgram.levelIncomeEarned.toFixed(2)}</p>
                             </div>
                             <div className="bg-[#0f0f1a] p-3 md:p-4 rounded-xl border border-[#9131e7]/20">
                                 <p className="text-gray-400 text-xs md:text-sm">Sponsor Income Earned</p>
-                                <p className="text-xl md:text-2xl font-bold text-[#2196f3]">${referralProgram.sponsorIncomeEarned.toFixed(2)}</p>
+                                <p className="text-xl md:text-2xl font-bold text-[#2196f3]">₹{referralProgram.sponsorIncomeEarned.toFixed(2)}</p>
                             </div>
                             <div className="bg-[#0f0f1a] p-3 md:p-4 rounded-xl border border-[#9131e7]/20">
                                 <p className="text-gray-400 text-xs md:text-sm">Total Earned Income</p>
-                                <p className="text-xl md:text-2xl font-bold text-[#e91e63]">${referralProgram.totalEarnedIncome.toFixed(2)}</p>
+                                <p className="text-xl md:text-2xl font-bold text-[#e91e63]">₹{referralProgram.totalEarnedIncome.toFixed(2)}</p>
                             </div>
                         </div>
                     </div>

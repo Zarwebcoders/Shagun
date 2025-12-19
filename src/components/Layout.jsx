@@ -68,7 +68,10 @@ export default function Layout({ children, setIsAuthenticated }) {
                                 ? "bg-[#9131e7] text-[#040408] font-bold shadow-lg shadow-[#9131e7]/50"
                                 : "text-white hover:bg-[#333] hover:text-[#9131e7]"
                                 }`}
-                            onClick={() => navigate(item.path)}
+                            onClick={() => {
+                                navigate(item.path)
+                                if (window.innerWidth < 768) setSidebarOpen(false)
+                            }}
                         >
                             <span className="text-xl flex-shrink-0">{item.icon}</span>
                             <span className={`transition-all duration-300 ${sidebarOpen ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"}`}>
