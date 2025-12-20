@@ -4,13 +4,46 @@ const User = require('../models/User');
 // @desc    Get all transactions (Admin: all, User: own)
 // @route   GET /api/transactions
 // @access  Private
+const KYC = require('../models/KYC');
+
+// @desc    Get all transactions (Admin: all, User: own)
+// @route   GET /api/transactions
+// @access  Private
 const getTransactions = async (req, res) => {
     try {
         let transactions;
         if (req.user.role === 'admin') {
-            transactions = await Transaction.find({}).populate('user', 'name email').populate('relatedUser', 'name').sort({ createdAt: -1 });
+            transactions = await Transaction.find({})
+                .populate('user', 'name email wallet')
+                .populate('relatedUser', 'name')
+                .sort({ createdAt: -1 })
+                .lean();
+
+            // Fetch KYC details for users to get bank info
+            // Get unique user IDs from transactions
+            const userIds = [...new Set(transactions.map(t => t.user?._id))];
+
+            const kycRecords = await KYC.find({ user: { $in: userIds } }).lean();
+
+            // Map KYC to user ID for easy lookup
+            const kycMap = {};
+            kycRecords.forEach(kyc => {
+                if (kyc.user) kycMap[kyc.user.toString()] = kyc;
+            });
+
+            // Attach bank details to transactions
+            transactions = transactions.map(t => {
+                const kyc = kycMap[t.user?._id?.toString()];
+                return {
+                    ...t,
+                    bankDetails: kyc?.bankDetails || null
+                };
+            });
+
         } else {
-            transactions = await Transaction.find({ user: req.user.id }).populate('relatedUser', 'name').sort({ createdAt: -1 });
+            transactions = await Transaction.find({ user: req.user.id })
+                .populate('relatedUser', 'name')
+                .sort({ createdAt: -1 });
         }
         res.json(transactions);
     } catch (error) {

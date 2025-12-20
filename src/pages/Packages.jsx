@@ -7,24 +7,28 @@ export default function Packages() {
     const [packages, setPackages] = useState([])
     const [investments, setInvestments] = useState([])
     const [loading, setLoading] = useState(true)
-    const [selectedPackage, setSelectedPackage] = useState("")
+    const [userSponsorId, setUserSponsorId] = useState("")
 
     const [formData, setFormData] = useState({
         amount: "",
         transactionId: "",
-        paymentSlip: null,
-        sponsorId: ""
+        paymentSlip: null
     });
 
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [packagesRes, investmentsRes] = await Promise.all([
+                const [packagesRes, investmentsRes, userRes] = await Promise.all([
                     client.get('/packages'),
-                    client.get('/investments')
+                    client.get('/investments'),
+                    client.get('/auth/me')
                 ]);
                 setPackages(packagesRes.data);
                 setInvestments(investmentsRes.data);
+                // Set sponsor ID from user data
+                if (userRes.data && userRes.data.sponsorId) {
+                    setUserSponsorId(userRes.data.sponsorId);
+                }
             } catch (error) {
                 console.error("Error fetching data:", error);
             } finally {
@@ -43,24 +47,18 @@ export default function Packages() {
         });
     };
 
-    const handlePackageChange = (e) => {
-        const pkgId = e.target.value;
-        setSelectedPackage(pkgId);
-        const pkg = packages.find(p => p._id === pkgId);
-        if (pkg) {
-            setFormData(prev => ({ ...prev, amount: pkg.minInvestment }));
-        }
-    };
+
 
     // submit form
     const handleSubmit = async () => {
         try {
-            if (!selectedPackage) {
-                alert("Please select a package");
-                return;
-            }
+
             if (!formData.amount) {
                 alert("Please enter amount");
+                return;
+            }
+            if (formData.amount < 500) {
+                alert("Minimum amount is ₹500");
                 return;
             }
 
@@ -69,10 +67,9 @@ export default function Packages() {
             // Since the form asks for Transaction ID, we pass it.
 
             await client.post('/investments', {
-                packageId: selectedPackage,
                 amount: formData.amount,
                 transactionId: formData.transactionId || `TXN${Date.now()}`,
-                sponsorId: formData.sponsorId
+                sponsorId: userSponsorId
             });
 
             alert("Investment request submitted successfully!");
@@ -85,10 +82,8 @@ export default function Packages() {
             setFormData({
                 amount: "",
                 transactionId: "",
-                paymentSlip: null,
-                sponsorId: ""
+                paymentSlip: null
             });
-            setSelectedPackage("");
 
         } catch (error) {
             console.error("Error creating investment:", error);
@@ -96,44 +91,37 @@ export default function Packages() {
         }
     };
 
+    const handleConnect = async () => {
+        try {
+            // Add your wallet connection logic here
+            alert("Connect wallet functionality to be implemented");
+        } catch (error) {
+            console.error("Error connecting:", error);
+            alert("Failed to connect");
+        }
+    };
+
     return (
         <div className="w-full space-y-8 md:space-y-8">
             {/* Header Section */}
             <div className="space-y-3 md:space-y-4">
-                <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-2">Investment Packages</h2>
-                <p className="text-[#b0b0b0] text-sm md:text-lg">Submit your package purchase request</p>
+                <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-2">Investment Plans</h2>
+                <p className="text-[#b0b0b0] text-sm md:text-lg">Submit your investment request</p>
             </div>
 
-            {/* Buy Package Form Section - Showing form directly instead of packages */}
+            {/* Investment Form Section */}
             <div className="bg-gradient-to-br from-[#040408] to-[#1a1a2e] rounded-2xl border border-[#9131e7]/30 overflow-hidden">
                 <div className="p-4 md:p-6 border-b border-[#9131e7]/30 bg-gradient-to-r from-[#9131e7]/10 to-[#e84495]/10">
-                    <h3 className="text-xl md:text-2xl font-bold text-white">Package Purchase Request</h3>
-                    <p className="text-gray-400 text-sm md:text-base">Fill the form below to purchase a package</p>
+                    <h3 className="text-xl md:text-2xl font-bold text-white">Investment Request</h3>
+                    <p className="text-gray-400 text-sm md:text-base">Fill the form below to make an investment</p>
                 </div>
 
                 <div className="p-4 md:p-6">
                     <div className="space-y-4 md:space-y-6">
-                        <div>
-                            <label htmlFor="package" className="block text-xs md:text-sm font-semibold text-white mb-2">
-                                Select Package
-                            </label>
-                            <select
-                                id="package"
-                                value={selectedPackage}
-                                onChange={handlePackageChange}
-                                className="w-full px-3 md:px-4 py-2 md:py-3 bg-[#1a1a2e] border border-[#9131e7]/40 text-white rounded-lg focus:outline-none focus:border-[#9131e7] focus:ring-2 focus:ring-[#9131e7]/30 transition-all text-sm md:text-base"
-                            >
-                                <option value="">-- Select a Package --</option>
-                                {packages.map(pkg => (
-                                    <option key={pkg._id} value={pkg._id}>
-                                        {pkg.name} (Min: ₹{pkg.minInvestment} - Max: {pkg.maxInvestment === 'Unlimited' ? 'Unlimited' : '₹' + pkg.maxInvestment}) - {pkg.dailyReturn}% Daily
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
+
                         <div>
                             <label htmlFor="amount" className="block text-xs md:text-sm font-semibold text-white mb-2">
-                                Package Amount (₹)
+                                Investment Amount (₹)
                             </label>
                             <input
                                 type="number"
@@ -141,9 +129,11 @@ export default function Packages() {
                                 name="amount"
                                 value={formData.amount}
                                 onChange={handleChange}
-                                placeholder="Enter package amount"
+                                placeholder="Enter investment amount (Min: ₹500)"
+                                min="500"
                                 className="w-full px-3 md:px-4 py-2 md:py-3 bg-[#1a1a2e] border border-[#9131e7]/40 text-white rounded-lg focus:outline-none focus:border-[#9131e7] focus:ring-2 focus:ring-[#9131e7]/30 transition-all text-sm md:text-base"
                             />
+                            <p className="text-gray-400 text-xs mt-2">Minimum investment amount: ₹500</p>
                         </div>
 
                         <div>
@@ -183,22 +173,31 @@ export default function Packages() {
                                 type="text"
                                 id="sponsorId"
                                 name="sponsorId"
-                                value={formData.sponsorId}
-                                onChange={handleChange}
-                                placeholder="Enter sponsor ID"
-                                className="w-full px-3 md:px-4 py-2 md:py-3 bg-[#1a1a2e] border border-[#9131e7]/40 text-white rounded-lg focus:outline-none focus:border-[#9131e7] focus:ring-2 focus:ring-[#9131e7]/30 transition-all text-sm md:text-base"
+                                value={userSponsorId}
+                                readOnly
+                                placeholder="Loading sponsor ID..."
+                                className="w-full px-3 md:px-4 py-2 md:py-3 bg-[#1a1a2e]/50 border border-[#9131e7]/40 text-gray-400 rounded-lg cursor-not-allowed text-sm md:text-base"
                             />
+                            <p className="text-gray-400 text-xs mt-2">Your sponsor ID is automatically fetched from your profile</p>
                         </div>
 
                         <div className="pt-4 border-t border-[#444]">
-                            <button
-                                onClick={handleSubmit}
-                                className="w-full px-4 md:px-6 py-2 md:py-3 bg-gradient-to-r from-[#9131e7] to-[#e84495] text-white font-bold rounded-lg hover:shadow-lg hover:shadow-[#9131e7]/50 transition-all duration-300 hover:-translate-y-1 active:translate-y-0 text-sm md:text-base"
-                            >
-                                Submit Purchase Request
-                            </button>
+                            <div className="flex flex-col sm:flex-row gap-3">
+                                <button
+                                    onClick={handleConnect}
+                                    className="flex-1 px-4 md:px-6 py-2 md:py-3 bg-gradient-to-r from-[#e84495] to-[#9131e7] text-white font-bold rounded-lg hover:shadow-lg hover:shadow-[#e84495]/50 transition-all duration-300 hover:-translate-y-1 active:translate-y-0 text-sm md:text-base"
+                                >
+                                    Connect Wallet
+                                </button>
+                                <button
+                                    onClick={handleSubmit}
+                                    className="flex-1 px-4 md:px-6 py-2 md:py-3 bg-gradient-to-r from-[#9131e7] to-[#e84495] text-white font-bold rounded-lg hover:shadow-lg hover:shadow-[#9131e7]/50 transition-all duration-300 hover:-translate-y-1 active:translate-y-0 text-sm md:text-base"
+                                >
+                                    Submit Investment Request
+                                </button>
+                            </div>
                             <p className="text-gray-400 text-xs mt-3 text-center">
-                                Note: Your request will be processed within 24 hours after verification
+                                Note: Your investment request will be processed within 24 hours after verification
                             </p>
                         </div>
                     </div>
@@ -208,7 +207,7 @@ export default function Packages() {
             {/* Purchase History Section */}
             <div className="mt-8 md:mt-16">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 md:mb-6 gap-3">
-                    <h2 className="text-xl md:text-2xl lg:text-3xl font-bold text-white">Purchase History</h2>
+                    <h2 className="text-xl md:text-2xl lg:text-3xl font-bold text-white">Investment History</h2>
                     <button className="px-4 py-2 bg-gradient-to-r from-[#9131e7] to-[#e84495] text-white font-medium rounded-lg hover:shadow-lg hover:shadow-[#9131e7]/30 transition-all duration-300 text-sm md:text-base w-full sm:w-auto">
                         Export CSV
                     </button>
@@ -271,7 +270,7 @@ export default function Packages() {
                     {/* Table Footer */}
                     <div className="p-3 md:p-4 bg-[#0f0f1a] border-t border-[#9131e7]/30 flex flex-col sm:flex-row justify-between items-center gap-3">
                         <div className="text-gray-400 text-xs md:text-sm">
-                            Showing {investments.length} purchases
+                            Showing {investments.length} investments
                         </div>
                         <div className="flex gap-1 md:gap-2">
                             <button className="px-2 md:px-3 py-1 bg-[#9131e7]/20 text-[#9131e7] rounded-lg hover:bg-[#9131e7]/30 transition-colors text-xs md:text-sm">
@@ -294,10 +293,10 @@ export default function Packages() {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                 </svg>
                             </div>
-                            <h3 className="text-lg md:text-xl font-bold text-white mb-2">No Purchase History</h3>
-                            <p className="text-gray-400 mb-4 md:mb-6 text-sm md:text-base">Your purchase history will appear here once you make your first investment</p>
+                            <h3 className="text-lg md:text-xl font-bold text-white mb-2">No Investment History</h3>
+                            <p className="text-gray-400 mb-4 md:mb-6 text-sm md:text-base">Your investment history will appear here once you make your first investment</p>
                             <button className="px-4 md:px-6 py-2 bg-gradient-to-r from-[#9131e7] to-[#e84495] text-white rounded-lg hover:shadow-lg hover:shadow-[#9131e7]/30 transition-all duration-300 text-sm md:text-base">
-                                Explore Packages
+                                Explore Investments
                             </button>
                         </div>
                     )}
@@ -310,7 +309,7 @@ export default function Packages() {
                     <div className="bg-[#0f0f1a] p-4 md:p-6 rounded-2xl border border-[#9131e7]/40 w-full max-w-md max-h-[90vh] overflow-y-auto">
 
                         <h2 className="text-xl md:text-2xl text-white font-bold mb-4">
-                            Purchase Package
+                            Make Investment
                         </h2>
 
                         <div className="space-y-3 md:space-y-4">

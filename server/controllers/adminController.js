@@ -39,8 +39,55 @@ const getDashboardStats = async (req, res) => {
 // @route   GET /api/admin/reports
 // @access  Private/Admin
 const getReports = async (req, res) => {
-    // Placeholder for more complex reporting logic (group by date, country etc.)
-    res.json({ message: 'Reports endpoint ready' });
+    try {
+        const endDate = new Date();
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - 7);
+
+        // Aggregate daily deposits and withdrawals for the last 7 days
+        const transactions = await Transaction.aggregate([
+            {
+                $match: {
+                    createdAt: { $gte: startDate, $lte: endDate },
+                    status: 'completed',
+                    type: { $in: ['deposit', 'withdrawal'] }
+                }
+            },
+            {
+                $group: {
+                    _id: {
+                        $dateToString: { format: "%Y-%m-%d", date: "$createdAt" }
+                    },
+                    deposits: {
+                        $sum: {
+                            $cond: [{ $eq: ["$type", "deposit"] }, "$amount", 0]
+                        }
+                    },
+                    withdrawals: {
+                        $sum: {
+                            $cond: [{ $eq: ["$type", "withdrawal"] }, "$amount", 0]
+                        }
+                    }
+                }
+            },
+            { $sort: { _id: 1 } }
+        ]);
+
+        // Format data for chart
+        const revenueData = transactions.map(t => ({
+            date: t._id,
+            deposits: t.deposits,
+            withdrawals: t.withdrawals,
+            netRevenue: t.deposits - t.withdrawals
+        }));
+
+        res.json({
+            revenueData,
+            topCountries: [] // Placeholder as we don't track country yet
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
 };
 
 module.exports = {

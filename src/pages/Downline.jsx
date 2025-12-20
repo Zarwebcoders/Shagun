@@ -8,7 +8,8 @@ export default function Downline() {
         email: "",
         totalNetwork: 0,
         activeLevels: 0,
-        overallBusiness: "0"
+        overallBusiness: "0",
+        networkGrowth: 0
     })
 
     const [networkStats, setNetworkStats] = useState([])
@@ -17,33 +18,77 @@ export default function Downline() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [userRes, downlineRes] = await Promise.all([
+                const [userRes, downlineRes, incomeRes] = await Promise.all([
                     client.get('/auth/me'),
-                    client.get('/users/downline')
+                    client.get('/users/downline'),
+                    client.get('/income/level-income').catch(() => ({ data: [] }))
                 ]);
 
                 const userData = userRes.data;
                 const downlineData = downlineRes.data || [];
+                const incomeData = incomeRes.data || [];
 
-                // Process downline data
+                // Process downline data by levels
                 const levels = [0, 0, 0, 0, 0]; // Counts for level 1-5
+                const levelBusiness = [0, 0, 0, 0, 0]; // Business volume per level
+                const levelCommission = [0, 0, 0, 0, 0]; // Commission per level
                 let totalMembers = 0;
+                let totalBusiness = 0;
+                let totalCommission = 0;
 
+                // Count members per level
                 downlineData.forEach(user => {
                     const level = user.level; // 0-based from backend
                     if (level >= 0 && level < 5) {
                         levels[level]++;
                         totalMembers++;
+                        // Calculate business from user's investments
+                        const userBusiness = user.totalInvestment || 0;
+                        levelBusiness[level] += userBusiness;
+                        totalBusiness += userBusiness;
                     }
                 });
 
-                // Mock stats for business/commission as we don't have that logic yet
-                const stats = levels.map((count, index) => ({
-                    level: index + 1,
-                    members: count,
-                    business: `₹${(count * 5000).toLocaleString()}`, // Mock multiplier
-                    commission: `₹${(count * 500).toLocaleString()}` // Mock multiplier
-                }));
+                // Calculate commission from income data
+                incomeData.forEach(income => {
+                    const level = income.level - 1; // Convert to 0-based
+                    if (level >= 0 && level < 5) {
+                        levelCommission[level] += income.amount || 0;
+                        totalCommission += income.amount || 0;
+                    }
+                });
+
+                // Calculate network growth (compare current month to previous)
+                const currentDate = new Date();
+                const lastMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1);
+                const currentMonthMembers = downlineData.filter(user =>
+                    new Date(user.createdAt) >= new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
+                ).length;
+                const lastMonthMembers = downlineData.filter(user =>
+                    new Date(user.createdAt) >= lastMonth &&
+                    new Date(user.createdAt) < new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
+                ).length;
+
+                const networkGrowth = lastMonthMembers > 0
+                    ? Math.round((currentMonthMembers / lastMonthMembers) * 100)
+                    : 0;
+
+                // Build stats array with real data
+                const stats = levels.map((count, index) => {
+                    const business = levelBusiness[index];
+                    const commission = levelCommission[index];
+
+                    // Calculate growth percentage for this level
+                    const levelGrowth = count > 0 ? Math.min(Math.round((count / 10) * 100), 100) : 0;
+
+                    return {
+                        level: index + 1,
+                        members: count,
+                        business: `₹${business.toLocaleString()}`,
+                        commission: `₹${commission.toLocaleString()}`,
+                        growth: levelGrowth
+                    };
+                });
 
                 const activeLevelsCount = levels.filter(l => l > 0).length;
 
@@ -53,7 +98,8 @@ export default function Downline() {
                     email: userData.email,
                     totalNetwork: totalMembers,
                     activeLevels: activeLevelsCount,
-                    overallBusiness: `₹${(totalMembers * 5000).toLocaleString()}`
+                    overallBusiness: `₹${totalBusiness.toLocaleString()}`,
+                    networkGrowth: networkGrowth
                 });
 
                 setNetworkStats(stats);
@@ -145,7 +191,9 @@ export default function Downline() {
                         </div>
                         <div className="flex items-baseline gap-1 md:gap-2">
                             <p className="text-white text-xl md:text-2xl font-bold">{userInfo.totalNetwork}</p>
-                            <span className="text-green-400 text-xs md:text-sm">+12%</span>
+                            {userInfo.networkGrowth > 0 && (
+                                <span className="text-green-400 text-xs md:text-sm">+{userInfo.networkGrowth}%</span>
+                            )}
                         </div>
                     </div>
 
@@ -223,32 +271,34 @@ export default function Downline() {
                                         <td className="py-3 md:py-4 px-3 md:px-6">
                                             <div className="space-y-1">
                                                 <span className="text-lg md:text-xl font-bold text-white truncate block">{stat.business}</span>
-                                                <div className="flex items-center gap-1">
-                                                    <svg className="w-2 h-2 md:w-3 md:h-3 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                                                    </svg>
-                                                    <span className="text-green-400 text-xs truncate">+15% growth</span>
-                                                </div>
+                                                {stat.growth > 0 && (
+                                                    <div className="flex items-center gap-1">
+                                                        <svg className="w-2 h-2 md:w-3 md:h-3 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                                                        </svg>
+                                                        <span className="text-green-400 text-xs truncate">Active level</span>
+                                                    </div>
+                                                )}
                                             </div>
                                         </td>
                                         <td className="py-3 md:py-4 px-3 md:px-6">
                                             <div className="space-y-1">
                                                 <span className="text-lg md:text-xl font-bold text-[#00b894] truncate block">{stat.commission}</span>
-                                                <span className="text-gray-400 text-xs truncate">10% commission rate</span>
+                                                <span className="text-gray-400 text-xs truncate">Level {stat.level} earnings</span>
                                             </div>
                                         </td>
                                         <td className="py-3 md:py-4 px-3 md:px-6">
                                             <div className="flex items-center gap-2 md:gap-3 min-w-0">
                                                 <div className="w-16 md:w-24 flex-shrink-0">
-                                                    <div className="text-xs text-gray-400 mb-1 truncate">Growth</div>
+                                                    <div className="text-xs text-gray-400 mb-1 truncate">Activity</div>
                                                     <div className="w-full h-1.5 md:h-2 bg-gray-700 rounded-full overflow-hidden">
                                                         <div
                                                             className="h-full bg-gradient-to-r from-[#00b894] to-[#00cec9] rounded-full"
-                                                            style={{ width: `${(stat.level / 5) * 100}%` }}
+                                                            style={{ width: `${stat.growth}%` }}
                                                         ></div>
                                                     </div>
                                                 </div>
-                                                <span className="text-white font-bold text-sm md:text-base flex-shrink-0">{Math.round((stat.level / 5) * 100)}%</span>
+                                                <span className="text-white font-bold text-sm md:text-base flex-shrink-0">{stat.growth}%</span>
                                             </div>
                                         </td>
                                     </tr>

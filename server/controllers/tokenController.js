@@ -47,60 +47,45 @@ const getTokenPrice = async (req, res) => {
     }
 };
 
-// @desc    Recover tokens from lost account to new account
+// @desc    Recover tokens from user account (Deduct amount)
 // @route   POST /api/token/recover
 // @access  Private/Admin
 const recoverTokens = async (req, res) => {
-    const { oldUserIdentifier, newUserIdentifier } = req.body;
+    const { wallet, amount } = req.body;
 
     try {
-        // Find old user by email, name or wallet
-        const oldUser = await User.findOne({
+        // Find user by wallet or email (reuse wallet field for flexibility if needed, but primarily wallet)
+        const user = await User.findOne({
             $or: [
-                { email: oldUserIdentifier },
-                { wallet: oldUserIdentifier }
+                { wallet: wallet },
+                { email: wallet } // Allow email as fallback identifier
             ]
         });
 
-        if (!oldUser) {
-            return res.status(404).json({ message: 'Old user not found' });
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
         }
 
-        // Find new user
-        const newUser = await User.findOne({
-            $or: [
-                { email: newUserIdentifier },
-                { wallet: newUserIdentifier }
-            ]
-        });
+        const amountToRecover = parseFloat(amount);
 
-        if (!newUser) {
-            return res.status(404).json({ message: 'New user not found' });
+        if (isNaN(amountToRecover) || amountToRecover <= 0) {
+            return res.status(400).json({ message: 'Invalid amount' });
         }
 
-        if (oldUser._id.equals(newUser._id)) {
-            return res.status(400).json({ message: 'Old and new users are the same' });
+        if (user.rexToken < amountToRecover) {
+            return res.status(400).json({ message: 'Insufficient token balance' });
         }
 
-        // Transfer balances
-        const amountToTransfer = oldUser.rexToken;
-        const balanceToTransfer = oldUser.balance;
+        // Deduct tokens
+        user.rexToken -= amountToRecover;
 
-        newUser.rexToken += amountToTransfer;
-        newUser.balance += balanceToTransfer;
-
-        // Reset old user
-        oldUser.rexToken = 0;
-        oldUser.balance = 0;
-        oldUser.status = 'suspended'; // Suspend lost account for security
-
-        await newUser.save();
-        await oldUser.save();
+        // Log action (Optional: could create a transaction record here)
+        // For now just save user
+        await user.save();
 
         res.json({
-            message: `Successfully recovered ${amountToTransfer} REX and $${balanceToTransfer} from ${oldUser.email} to ${newUser.email}`,
-            transferredTokens: amountToTransfer,
-            transferredBalance: balanceToTransfer
+            message: `Successfully recovered ${amountToRecover} REX tokens from ${user.name}`,
+            remainingBalance: user.rexToken
         });
     } catch (error) {
         res.status(500).json({ message: error.message });

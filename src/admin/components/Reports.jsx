@@ -1,28 +1,45 @@
 "use client"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import client from "../../api/client"
 
 export default function Reports() {
     const [reportType, setReportType] = useState("revenue")
     const [dateRange, setDateRange] = useState("7days")
+    const [stats, setStats] = useState(null)
+    const [revenueData, setRevenueData] = useState([])
+    const [topCountries, setTopCountries] = useState([])
+    const [loading, setLoading] = useState(true)
 
-    const revenueData = [
-        { date: "2024-03-09", deposits: 45200, withdrawals: 23400, netRevenue: 21800 },
-        { date: "2024-03-10", deposits: 52100, withdrawals: 28900, netRevenue: 23200 },
-        { date: "2024-03-11", deposits: 48700, withdrawals: 25600, netRevenue: 23100 },
-        { date: "2024-03-12", deposits: 61500, withdrawals: 32100, netRevenue: 29400 },
-        { date: "2024-03-13", deposits: 58900, withdrawals: 31200, netRevenue: 27700 },
-        { date: "2024-03-14", deposits: 67200, withdrawals: 35800, netRevenue: 31400 },
-        { date: "2024-03-15", deposits: 72400, withdrawals: 38900, netRevenue: 33500 },
-    ]
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                // Fetch Dashboard Stats
+                const statsRes = await client.get('/admin/stats');
+                setStats(statsRes.data);
 
-    const topCountries = [
-        { country: "United States", users: 3420, revenue: "$456,200" },
-        { country: "United Kingdom", users: 2890, revenue: "$389,100" },
-        { country: "Germany", users: 2340, revenue: "$312,800" },
-        { country: "Canada", users: 1890, revenue: "$245,600" },
-        { country: "Australia", users: 1560, revenue: "$198,400" },
-    ]
+                // Fetch Reports Data
+                const reportsRes = await client.get('/admin/reports');
+                setRevenueData(reportsRes.data.revenueData || []);
+                setTopCountries(reportsRes.data.topCountries || []);
+
+            } catch (error) {
+                console.error("Error fetching reports:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+    }, []);
+
+    if (loading) return <div className="text-white">Loading reports...</div>;
+
+    // Calculate detailed stats if needed or use from stats API
+    // stats: { totalUsers, activeUsers, totalInvestment, totalWithdrawals, pendingKYC }
+    const totalRevenue = (stats?.totalInvestment || 0) // Revenue usually implies income, here maybe investment?
+    const totalDeposits = stats?.totalInvestment || 0
+    const totalWithdrawals = stats?.totalWithdrawals || 0
+    const netProfit = totalDeposits - totalWithdrawals
 
     return (
         <div className="space-y-6 animate-fadeIn">
@@ -63,7 +80,7 @@ export default function Reports() {
                             <option value="revenue">Revenue Report</option>
                             <option value="users">User Growth</option>
                             <option value="transactions">Transactions</option>
-                            <option value="packages">Package Performance</option>
+                            <option value="packages">Investment Performance</option>
                         </select>
                     </div>
                     <div>
@@ -85,15 +102,16 @@ export default function Reports() {
             {/* Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 {[
-                    { label: "Total Revenue", value: "₹234.5K", change: "+12.5%", color: "green" },
-                    { label: "Total Deposits", value: "₹405.9K", change: "+8.2%", color: "blue" },
-                    { label: "Total Withdrawals", value: "₹215.6K", change: "+5.7%", color: "red" },
-                    { label: "Net Profit", value: "₹190.3K", change: "+15.3%", color: "yellow" },
+                    { label: "Total Revenue", value: `₹${totalDeposits.toLocaleString()}`, change: "+12.5%", color: "green" }, // Using deposits as revenue
+                    { label: "Total Deposits", value: `₹${totalDeposits.toLocaleString()}`, change: "+8.2%", color: "blue" },
+                    { label: "Total Withdrawals", value: `₹${totalWithdrawals.toLocaleString()}`, change: "+5.7%", color: "red" },
+                    { label: "Net Profit", value: `₹${netProfit.toLocaleString()}`, change: "+15.3%", color: "yellow" },
                 ].map((stat, index) => (
                     <div key={index} className="bg-[#1f1f1f] rounded-xl p-6 border border-[#3f3f3f]">
                         <p className="text-gray-400 text-sm mb-1">{stat.label}</p>
                         <h3 className="text-3xl font-bold text-white mb-1">{stat.value}</h3>
-                        <p className="text-green-500 text-sm font-medium">{stat.change}</p>
+                        {/* Change filtering logically or hiding if no historical data for comparison */}
+                        <p className="text-green-500 text-sm font-medium">Real Data</p>
                     </div>
                 ))}
             </div>
@@ -112,23 +130,21 @@ export default function Reports() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-[#9131e7]/30">
-                            {revenueData.map((row, index) => (
-                                <tr key={index} className="hover:bg-[#1a1a2e] transition-colors">
-                                    <td className="px-6 py-4 text-white">{row.date}</td>
-                                    <td className="px-6 py-4 text-green-500 font-semibold">₹{row.deposits.toLocaleString()}</td>
-                                    <td className="px-6 py-4 text-red-500 font-semibold">₹{row.withdrawals.toLocaleString()}</td>
-                                    <td className="px-6 py-4 text-[#9131e7] font-bold">₹{row.netRevenue.toLocaleString()}</td>
+                            {revenueData.length === 0 ? (
+                                <tr>
+                                    <td colSpan="4" className="px-6 py-8 text-center text-gray-400">No data available for the last 7 days</td>
                                 </tr>
-                            ))}
+                            ) : (
+                                revenueData.map((row, index) => (
+                                    <tr key={index} className="hover:bg-[#1a1a2e] transition-colors">
+                                        <td className="px-6 py-4 text-white">{row.date}</td>
+                                        <td className="px-6 py-4 text-green-500 font-semibold">₹{row.deposits.toLocaleString()}</td>
+                                        <td className="px-6 py-4 text-red-500 font-semibold">₹{row.withdrawals.toLocaleString()}</td>
+                                        <td className="px-6 py-4 text-[#9131e7] font-bold">₹{row.netRevenue.toLocaleString()}</td>
+                                    </tr>
+                                ))
+                            )}
                         </tbody>
-                        <tfoot className="bg-[#1a1a2e]">
-                            <tr>
-                                <td className="px-6 py-4 text-white font-bold">Total</td>
-                                <td className="px-6 py-4 text-green-500 font-bold">₹406,000</td>
-                                <td className="px-6 py-4 text-red-500 font-bold">₹215,900</td>
-                                <td className="px-6 py-4 text-[#9131e7] font-bold">₹190,100</td>
-                            </tr>
-                        </tfoot>
                     </table>
                 </div>
             </div>
@@ -137,23 +153,27 @@ export default function Reports() {
             <div className="bg-[#0f0f1a] rounded-xl p-6 border border-[#9131e7]/30">
                 <h3 className="text-xl font-bold text-white mb-6">Top Countries by Revenue</h3>
                 <div className="space-y-4">
-                    {topCountries.map((country, index) => (
-                        <div
-                            key={index}
-                            className="flex items-center justify-between p-4 bg-[#1a1a2e] rounded-lg hover:bg-[#9131e7]/30 transition-all"
-                        >
-                            <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 bg-gradient-to-br from-[#9131e7] to-[#7a28c2] rounded-lg flex items-center justify-center text-white font-bold">
-                                    {index + 1}
+                    {topCountries.length === 0 ? (
+                        <p className="text-gray-400">No country data available.</p>
+                    ) : (
+                        topCountries.map((country, index) => (
+                            <div
+                                key={index}
+                                className="flex items-center justify-between p-4 bg-[#1a1a2e] rounded-lg hover:bg-[#9131e7]/30 transition-all"
+                            >
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 bg-gradient-to-br from-[#9131e7] to-[#7a28c2] rounded-lg flex items-center justify-center text-white font-bold">
+                                        {index + 1}
+                                    </div>
+                                    <div>
+                                        <p className="text-white font-semibold">{country.country}</p>
+                                        <p className="text-gray-400 text-sm">{country.users.toLocaleString()} users</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <p className="text-white font-semibold">{country.country}</p>
-                                    <p className="text-gray-400 text-sm">{country.users.toLocaleString()} users</p>
-                                </div>
+                                <span className="text-green-500 font-bold text-lg">{country.revenue}</span>
                             </div>
-                            <span className="text-green-500 font-bold text-lg">{country.revenue}</span>
-                        </div>
-                    ))}
+                        ))
+                    )}
                 </div>
             </div>
         </div>

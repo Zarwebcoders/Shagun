@@ -7,14 +7,20 @@ import WithdrawalForm from "../components/WithdrawalForm"
 export default function Withdrawal() {
     const [userData, setUserData] = useState({
         name: "",
-        points: {
-            loyalty: 0,
-            rex: 0,
-            shopping: 0,
-            total: 0
-        }
+        monthlyROI: 0,
+        levelIncomeROI: 0,
+        normalWithdrawal: 0,
+        sosWithdrawal: 0,
+        totalWithdrawal: 0,
+        totalIncome: 0,
+        stakeROI: 0,
+        stakeToken: 0
     })
     const [withdrawalHistory, setWithdrawalHistory] = useState([])
+    const [withdrawalStats, setWithdrawalStats] = useState({
+        totalWithdrawn: 0,
+        pendingWithdrawals: 0
+    })
     const [kycData, setKycData] = useState(null)
     const [loading, setLoading] = useState(true)
 
@@ -30,12 +36,14 @@ export default function Withdrawal() {
                 const user = userRes.data;
                 setUserData({
                     name: user.name,
-                    points: {
-                        loyalty: user.loyaltyPoints || 0,
-                        rex: user.rexToken || 0,
-                        shopping: user.shoppingPoints || 0,
-                        total: user.balance || 0
-                    }
+                    monthlyROI: user.monthlyROI || 0,
+                    levelIncomeROI: user.levelIncomeROI || 0,
+                    normalWithdrawal: user.normalWithdrawal || user.balance || 0,
+                    sosWithdrawal: user.sosWithdrawal || user.shoppingPoints || 0,
+                    totalWithdrawal: user.totalWithdrawal || 0,
+                    totalIncome: user.totalIncome || user.rexToken || 0,
+                    stakeROI: user.stakeROI || 0,
+                    stakeToken: user.stakeToken || 0
                 });
 
                 // Filter withdrawals from transactions
@@ -50,6 +58,23 @@ export default function Withdrawal() {
                         source: "Main Balance" // Simplified for now as transaction doesn't store source
                     }));
                 setWithdrawalHistory(withdrawals);
+
+                // Calculate withdrawal statistics
+                const completedWithdrawals = txRes.data.filter(
+                    tx => tx.type === 'withdrawal' && tx.status === 'completed'
+                );
+                const pendingWithdrawals = txRes.data.filter(
+                    tx => tx.type === 'withdrawal' && tx.status === 'pending'
+                );
+
+                const totalWithdrawn = completedWithdrawals.reduce((sum, tx) => sum + tx.amount, 0);
+                const pendingAmount = pendingWithdrawals.reduce((sum, tx) => sum + tx.amount, 0);
+
+                setWithdrawalStats({
+                    totalWithdrawn,
+                    pendingWithdrawals: pendingAmount
+                });
+
                 setKycData(kycRes.data);
 
             } catch (error) {
@@ -67,11 +92,12 @@ export default function Withdrawal() {
                 type: 'withdrawal',
                 amount: data.amount,
                 description: `Withdrawal via ${data.method} from ${data.source}`,
+                bankDetails: data.bankDetails, // Include bank details
                 status: 'pending' // Default to pending
             });
             alert("Withdrawal request submitted successfully!");
 
-            // Refresh history
+            // Refresh history and stats
             const { data: txData } = await client.get('/transactions');
             const withdrawals = txData
                 .filter(tx => tx.type === 'withdrawal')
@@ -84,6 +110,19 @@ export default function Withdrawal() {
                     source: "Main Balance"
                 }));
             setWithdrawalHistory(withdrawals);
+
+            // Recalculate stats
+            const completedWithdrawals = txData.filter(
+                tx => tx.type === 'withdrawal' && tx.status === 'completed'
+            );
+            const pendingWithdrawals = txData.filter(
+                tx => tx.type === 'withdrawal' && tx.status === 'pending'
+            );
+
+            setWithdrawalStats({
+                totalWithdrawn: completedWithdrawals.reduce((sum, tx) => sum + tx.amount, 0),
+                pendingWithdrawals: pendingWithdrawals.reduce((sum, tx) => sum + tx.amount, 0)
+            });
 
         } catch (error) {
             console.error("Error submitting withdrawal:", error);
@@ -109,47 +148,66 @@ export default function Withdrawal() {
 
             {/* Wallet Stats Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-                {/* Loyalty Points Card */}
+                {/* Monthly ROI Card */}
                 <div className="bg-gradient-to-br from-[#040408] to-[#1a1a2e] p-4 md:p-6 rounded-xl border border-[#9131e7]/30 hover:border-[#9131e7] transition-all group hover:shadow-lg hover:shadow-[#9131e7]/20">
                     <div className="flex items-start justify-between mb-3 md:mb-4">
                         <div>
-                            <h3 className="text-white font-bold text-base md:text-lg">Monthly Income</h3>
-                            <p className="text-gray-400 text-xs md:text-sm">Reward Points</p>
+                            <h3 className="text-white font-bold text-base md:text-lg">Monthly ROI</h3>
+                            <p className="text-gray-400 text-xs md:text-sm">Return on Investment</p>
                         </div>
                         <div className="p-1 md:p-2 rounded-lg bg-[#9131e7]/20 group-hover:bg-[#9131e7]/30 transition-all">
                             <svg className="w-5 h-5 md:w-6 md:h-6 text-[#9131e7]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                             </svg>
                         </div>
                     </div>
                     <div className="mb-2">
-                        <span className="text-2xl md:text-3xl font-bold text-white">{userData.points.loyalty.toLocaleString()}</span>
-                        <span className="text-gray-400 ml-2 text-sm md:text-base">Points</span>
+                        <span className="text-2xl md:text-3xl font-bold text-white">₹{userData.monthlyROI.toLocaleString()}</span>
                     </div>
                     <div className="w-full bg-[#444]/50 rounded-full h-1.5 md:h-2">
                         <div className="bg-gradient-to-r from-[#9131e7] to-[#e84495] h-1.5 md:h-2 rounded-full" style={{ width: "75%" }}></div>
                     </div>
                 </div>
 
-                {/* REX Token Card */}
+                {/* Level Income ROI Card */}
                 <div className="bg-gradient-to-br from-[#040408] to-[#1a1a2e] p-4 md:p-6 rounded-xl border border-[#00b894]/30 hover:border-[#00b894] transition-all group hover:shadow-lg hover:shadow-[#00b894]/20">
                     <div className="flex items-start justify-between mb-3 md:mb-4">
                         <div>
-                            <h3 className="text-white font-bold text-base md:text-lg">REX Token</h3>
-                            <p className="text-gray-400 text-xs md:text-sm">Mining Tokens</p>
+                            <h3 className="text-white font-bold text-base md:text-lg">Level Income ROI</h3>
+                            <p className="text-gray-400 text-xs md:text-sm">Level Earnings</p>
                         </div>
                         <div className="p-1 md:p-2 rounded-lg bg-[#00b894]/20 group-hover:bg-[#00b894]/30 transition-all">
                             <svg className="w-5 h-5 md:w-6 md:h-6 text-[#00b894]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                             </svg>
                         </div>
                     </div>
                     <div className="mb-2">
-                        <span className="text-2xl md:text-3xl font-bold text-white">{userData.points.rex.toLocaleString()}</span>
-                        <span className="text-gray-400 ml-2 text-sm md:text-base">REX</span>
+                        <span className="text-2xl md:text-3xl font-bold text-white">₹{userData.levelIncomeROI.toLocaleString()}</span>
                     </div>
                     <div className="w-full bg-[#444]/50 rounded-full h-1.5 md:h-2">
                         <div className="bg-gradient-to-r from-[#00b894] to-[#00cec9] h-1.5 md:h-2 rounded-full" style={{ width: "60%" }}></div>
+                    </div>
+                </div>
+
+                {/* Normal Withdrawal Card */}
+                <div className="bg-gradient-to-br from-[#040408] to-[#1a1a2e] p-4 md:p-6 rounded-xl border border-[#0984e3]/30 hover:border-[#0984e3] transition-all group hover:shadow-lg hover:shadow-[#0984e3]/20">
+                    <div className="flex items-start justify-between mb-3 md:mb-4">
+                        <div>
+                            <h3 className="text-white font-bold text-base md:text-lg">Normal Withdrawal</h3>
+                            <p className="text-gray-400 text-xs md:text-sm">Available Balance</p>
+                        </div>
+                        <div className="p-1 md:p-2 rounded-lg bg-[#0984e3]/20 group-hover:bg-[#0984e3]/30 transition-all">
+                            <svg className="w-5 h-5 md:w-6 md:h-6 text-[#0984e3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div className="mb-2">
+                        <span className="text-2xl md:text-3xl font-bold text-white">₹{userData.normalWithdrawal.toLocaleString()}</span>
+                    </div>
+                    <div className="w-full bg-[#444]/50 rounded-full h-1.5 md:h-2">
+                        <div className="bg-gradient-to-r from-[#0984e3] to-[#74b9ff] h-1.5 md:h-2 rounded-full" style={{ width: "85%" }}></div>
                     </div>
                 </div>
 
@@ -158,42 +216,103 @@ export default function Withdrawal() {
                     <div className="flex items-start justify-between mb-3 md:mb-4">
                         <div>
                             <h3 className="text-white font-bold text-base md:text-lg">SOS Withdrawal</h3>
-                            <p className="text-gray-400 text-xs md:text-sm">SOS Points Balance</p>
+                            <p className="text-gray-400 text-xs md:text-sm">Emergency Fund</p>
                         </div>
                         <div className="p-1 md:p-2 rounded-lg bg-[#fd79a8]/20 group-hover:bg-[#fd79a8]/30 transition-all">
                             <svg className="w-5 h-5 md:w-6 md:h-6 text-[#fd79a8]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                             </svg>
                         </div>
                     </div>
                     <div className="mb-2">
-                        <span className="text-2xl md:text-3xl font-bold text-white">{userData.points.shopping.toLocaleString()}</span>
-                        <span className="text-gray-400 ml-2 text-sm md:text-base">Points</span>
+                        <span className="text-2xl md:text-3xl font-bold text-white">₹{userData.sosWithdrawal.toLocaleString()}</span>
                     </div>
                     <div className="w-full bg-[#444]/50 rounded-full h-1.5 md:h-2">
                         <div className="bg-gradient-to-r from-[#fd79a8] to-[#e17055] h-1.5 md:h-2 rounded-full" style={{ width: "40%" }}></div>
                     </div>
                 </div>
 
-                {/* Total Withdrawable Card */}
-                <div className="bg-gradient-to-br from-[#040408] to-[#1a1a2e] p-4 md:p-6 rounded-xl border border-[#0984e3]/30 hover:border-[#0984e3] transition-all group hover:shadow-lg hover:shadow-[#0984e3]/20">
+                {/* Total Withdrawal Card */}
+                <div className="bg-gradient-to-br from-[#040408] to-[#1a1a2e] p-4 md:p-6 rounded-xl border border-[#a29bfe]/30 hover:border-[#a29bfe] transition-all group hover:shadow-lg hover:shadow-[#a29bfe]/20">
                     <div className="flex items-start justify-between mb-3 md:mb-4">
                         <div>
-                            <h3 className="text-white font-bold text-base md:text-lg">Total Withdrawable</h3>
-                            <p className="text-gray-400 text-xs md:text-sm">Available Balance</p>
+                            <h3 className="text-white font-bold text-base md:text-lg">Total Withdrawal</h3>
+                            <p className="text-gray-400 text-xs md:text-sm">Lifetime Withdrawn</p>
                         </div>
-                        <div className="p-1 md:p-2 rounded-lg bg-[#0984e3]/20 group-hover:bg-[#0984e3]/30 transition-all">
-                            <svg className="w-5 h-5 md:w-6 md:h-6 text-[#0984e3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="p-1 md:p-2 rounded-lg bg-[#a29bfe]/20 group-hover:bg-[#a29bfe]/30 transition-all">
+                            <svg className="w-5 h-5 md:w-6 md:h-6 text-[#a29bfe]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                         </div>
                     </div>
                     <div className="mb-2">
-                        <span className="text-2xl md:text-3xl font-bold text-white">₹{userData.points.total.toLocaleString()}</span>
-                        <span className="text-gray-400 ml-2 text-sm md:text-base">INR</span>
+                        <span className="text-2xl md:text-3xl font-bold text-white">₹{userData.totalWithdrawal.toLocaleString()}</span>
                     </div>
                     <div className="w-full bg-[#444]/50 rounded-full h-1.5 md:h-2">
-                        <div className="bg-gradient-to-r from-[#0984e3] to-[#00cec9] h-1.5 md:h-2 rounded-full" style={{ width: "90%" }}></div>
+                        <div className="bg-gradient-to-r from-[#a29bfe] to-[#6c5ce7] h-1.5 md:h-2 rounded-full" style={{ width: "90%" }}></div>
+                    </div>
+                </div>
+
+                {/* Total Income Card (renamed from REX Token) */}
+                <div className="bg-gradient-to-br from-[#040408] to-[#1a1a2e] p-4 md:p-6 rounded-xl border border-[#ffeaa7]/30 hover:border-[#ffeaa7] transition-all group hover:shadow-lg hover:shadow-[#ffeaa7]/20">
+                    <div className="flex items-start justify-between mb-3 md:mb-4">
+                        <div>
+                            <h3 className="text-white font-bold text-base md:text-lg">Total Income</h3>
+                            <p className="text-gray-400 text-xs md:text-sm">Total Earnings</p>
+                        </div>
+                        <div className="p-1 md:p-2 rounded-lg bg-[#ffeaa7]/20 group-hover:bg-[#ffeaa7]/30 transition-all">
+                            <svg className="w-5 h-5 md:w-6 md:h-6 text-[#fdcb6e]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div className="mb-2">
+                        <span className="text-2xl md:text-3xl font-bold text-white">₹{userData.totalIncome.toLocaleString()}</span>
+                    </div>
+                    <div className="w-full bg-[#444]/50 rounded-full h-1.5 md:h-2">
+                        <div className="bg-gradient-to-r from-[#ffeaa7] to-[#fdcb6e] h-1.5 md:h-2 rounded-full" style={{ width: "70%" }}></div>
+                    </div>
+                </div>
+
+                {/* Stake ROI Card */}
+                <div className="bg-gradient-to-br from-[#040408] to-[#1a1a2e] p-4 md:p-6 rounded-xl border border-[#55efc4]/30 hover:border-[#55efc4] transition-all group hover:shadow-lg hover:shadow-[#55efc4]/20">
+                    <div className="flex items-start justify-between mb-3 md:mb-4">
+                        <div>
+                            <h3 className="text-white font-bold text-base md:text-lg">Stake ROI</h3>
+                            <p className="text-gray-400 text-xs md:text-sm">Staking Returns</p>
+                        </div>
+                        <div className="p-1 md:p-2 rounded-lg bg-[#55efc4]/20 group-hover:bg-[#55efc4]/30 transition-all">
+                            <svg className="w-5 h-5 md:w-6 md:h-6 text-[#55efc4]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div className="mb-2">
+                        <span className="text-2xl md:text-3xl font-bold text-white">₹{userData.stakeROI.toLocaleString()}</span>
+                    </div>
+                    <div className="w-full bg-[#444]/50 rounded-full h-1.5 md:h-2">
+                        <div className="bg-gradient-to-r from-[#55efc4] to-[#00b894] h-1.5 md:h-2 rounded-full" style={{ width: "55%" }}></div>
+                    </div>
+                </div>
+
+                {/* Stake Token Card */}
+                <div className="bg-gradient-to-br from-[#040408] to-[#1a1a2e] p-4 md:p-6 rounded-xl border border-[#fab1a0]/30 hover:border-[#fab1a0] transition-all group hover:shadow-lg hover:shadow-[#fab1a0]/20">
+                    <div className="flex items-start justify-between mb-3 md:mb-4">
+                        <div>
+                            <h3 className="text-white font-bold text-base md:text-lg">Stake Token</h3>
+                            <p className="text-gray-400 text-xs md:text-sm">Staked Balance</p>
+                        </div>
+                        <div className="p-1 md:p-2 rounded-lg bg-[#fab1a0]/20 group-hover:bg-[#fab1a0]/30 transition-all">
+                            <svg className="w-5 h-5 md:w-6 md:h-6 text-[#fab1a0]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div className="mb-2">
+                        <span className="text-2xl md:text-3xl font-bold text-white">₹{userData.stakeToken.toLocaleString()}</span>
+                    </div>
+                    <div className="w-full bg-[#444]/50 rounded-full h-1.5 md:h-2">
+                        <div className="bg-gradient-to-r from-[#fab1a0] to-[#ff7675] h-1.5 md:h-2 rounded-full" style={{ width: "50%" }}></div>
                     </div>
                 </div>
             </div>
@@ -203,7 +322,7 @@ export default function Withdrawal() {
                 <div className="lg:col-span-1">
                     <WithdrawalForm
                         onSubmit={handleWithdraw}
-                        walletPoints={userData.points}
+                        userData={userData}
                         kycData={kycData}
                     />
                 </div>
@@ -328,7 +447,7 @@ export default function Withdrawal() {
                             <h4 className="text-white font-bold text-base md:text-lg">Total Withdrawn</h4>
                             <p className="text-gray-400 text-xs md:text-sm">All Time</p>
                         </div>
-                        <div className="text-2xl md:text-3xl font-bold text-[#9131e7]">₹2,800</div>
+                        <div className="text-2xl md:text-3xl font-bold text-[#9131e7]">₹{withdrawalStats.totalWithdrawn.toLocaleString()}</div>
                     </div>
                 </div>
                 <div className="bg-gradient-to-br from-[#040408] to-[#1a1a2e] p-4 md:p-6 rounded-xl border border-[#00b894]/30">
@@ -337,7 +456,7 @@ export default function Withdrawal() {
                             <h4 className="text-white font-bold text-base md:text-lg">Pending Withdrawals</h4>
                             <p className="text-gray-400 text-xs md:text-sm">Awaiting Processing</p>
                         </div>
-                        <div className="text-2xl md:text-3xl font-bold text-[#00b894]">₹1,000</div>
+                        <div className="text-2xl md:text-3xl font-bold text-[#00b894]">₹{withdrawalStats.pendingWithdrawals.toLocaleString()}</div>
                     </div>
                 </div>
                 <div className="bg-gradient-to-br from-[#040408] to-[#1a1a2e] p-4 md:p-6 rounded-xl border border-[#0984e3]/30">
@@ -353,5 +472,3 @@ export default function Withdrawal() {
         </div>
     )
 }
-
-

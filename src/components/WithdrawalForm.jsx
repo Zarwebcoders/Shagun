@@ -2,13 +2,19 @@
 
 import { useState, useEffect } from "react"
 
-export default function WithdrawalForm({ onSubmit, walletPoints, kycData }) {
+export default function WithdrawalForm({ onSubmit, userData, kycData }) {
     const [formData, setFormData] = useState({
         source: "rex",
         amount: "",
         method: "bank-transfer",
-        bankAccount: "",
-        walletAddress: "",
+        useKYCAccount: true,
+        bankDetails: {
+            accountNumber: "",
+            accountHolderName: "",
+            ifscCode: "",
+            bankName: "",
+            branchName: ""
+        }
     })
 
     const handleChange = (e) => {
@@ -16,19 +22,36 @@ export default function WithdrawalForm({ onSubmit, walletPoints, kycData }) {
         setFormData((prev) => ({ ...prev, [name]: value }))
     }
 
+    const handleBankDetailsChange = (e) => {
+        const { name, value } = e.target
+        setFormData((prev) => ({
+            ...prev,
+            bankDetails: {
+                ...prev.bankDetails,
+                [name]: value
+            }
+        }))
+    }
+
     useEffect(() => {
-        if (kycData?.status === 'approved' && kycData?.bankDetails?.accountNumber) {
+        if (kycData?.status === 'approved' && kycData?.bankDetails) {
             setFormData(prev => ({
                 ...prev,
-                bankAccount: kycData.bankDetails.accountNumber
+                bankDetails: {
+                    accountNumber: kycData.bankDetails.accountNumber || "",
+                    accountHolderName: kycData.bankDetails.accountHolderName || "",
+                    ifscCode: kycData.bankDetails.ifscCode || "",
+                    bankName: kycData.bankDetails.bankName || "",
+                    branchName: kycData.bankDetails.branchName || ""
+                }
             }))
         }
     }, [kycData])
 
     const getMaxAmount = () => {
         switch (formData.source) {
-            case "rex": return walletPoints.rex;
-            case "sos": return walletPoints.shopping;
+            case "rex": return userData.totalIncome || 0;
+            case "sos": return userData.sosWithdrawal || 0;
             default: return 0;
         }
     }
@@ -56,14 +79,21 @@ export default function WithdrawalForm({ onSubmit, walletPoints, kycData }) {
             onSubmit({
                 amount: amount,
                 method: "Bank Transfer",
-                source: formData.source === "rex" ? "REX Token" : "SOS Withdrawal"
+                source: formData.source === "rex" ? "Total Income" : "SOS Withdrawal",
+                bankDetails: formData.useKYCAccount ? null : formData.bankDetails
             })
             setFormData({
                 source: "rex",
                 amount: "",
                 method: "bank-transfer",
-                bankAccount: "",
-                walletAddress: ""
+                useKYCAccount: true,
+                bankDetails: {
+                    accountNumber: "",
+                    accountHolderName: "",
+                    ifscCode: "",
+                    bankName: "",
+                    branchName: ""
+                }
             })
             alert("Withdrawal request submitted successfully!")
         }
@@ -96,8 +126,8 @@ export default function WithdrawalForm({ onSubmit, walletPoints, kycData }) {
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                                     </svg>
                                 </div>
-                                <span className="text-white text-xs md:text-sm font-medium">REX Token</span>
-                                <span className="text-gray-400 text-xs mt-1">{walletPoints.rex.toLocaleString()} REX</span>
+                                <span className="text-white text-xs md:text-sm font-medium">Total Income</span>
+                                <span className="text-gray-400 text-xs mt-1">₹{(userData.totalIncome || 0).toLocaleString()}</span>
                             </div>
                         </button>
                         <button
@@ -114,7 +144,7 @@ export default function WithdrawalForm({ onSubmit, walletPoints, kycData }) {
                                     </svg>
                                 </div>
                                 <span className="text-white text-xs md:text-sm font-medium">SOS Withdrawal</span>
-                                <span className="text-gray-400 text-xs mt-1">{walletPoints.shopping.toLocaleString()} Tokens</span>
+                                <span className="text-gray-400 text-xs mt-1">₹{(userData.sosWithdrawal || 0).toLocaleString()}</span>
                             </div>
                         </button>
                     </div>
@@ -180,34 +210,116 @@ export default function WithdrawalForm({ onSubmit, walletPoints, kycData }) {
 
                 {/* Payment Details */}
                 {formData.method === "bank-transfer" ? (
-                    <div>
-                        <div className="flex justify-between items-center mb-2">
-                            <label htmlFor="bankAccount" className="block text-xs md:text-sm font-semibold text-white">
-                                Bank Account Details
-                            </label>
-                            {kycData?.status === 'approved' && kycData?.bankDetails?.accountNumber === formData.bankAccount && (
-                                <span className="text-[10px] text-green-400 font-bold flex items-center gap-1">
-                                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                    <div className="space-y-4">
+                        {/* Toggle for using KYC account */}
+                        {kycData?.status === 'approved' && kycData?.bankDetails && (
+                            <div className="flex items-center justify-between p-3 bg-[#9131e7]/10 border border-[#9131e7]/30 rounded-lg">
+                                <div className="flex items-center gap-2">
+                                    <svg className="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20">
                                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                                     </svg>
-                                    Verified account from KYC
-                                </span>
+                                    <span className="text-xs md:text-sm text-white font-medium">Use KYC verified account</span>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={formData.useKYCAccount}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, useKYCAccount: e.target.checked }))}
+                                        className="sr-only peer"
+                                    />
+                                    <div className="w-11 h-6 bg-[#444] peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#9131e7] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#9131e7]"></div>
+                                </label>
+                            </div>
+                        )}
+
+                        {/* Bank Details Fields */}
+                        <div className="space-y-4">
+                            <div>
+                                <label htmlFor="accountNumber" className="block text-xs md:text-sm font-semibold text-white mb-2">
+                                    Account Number
+                                </label>
+                                <input
+                                    id="accountNumber"
+                                    type="text"
+                                    name="accountNumber"
+                                    value={formData.bankDetails.accountNumber}
+                                    onChange={handleBankDetailsChange}
+                                    placeholder="Enter account number"
+                                    disabled={formData.useKYCAccount && kycData?.status === 'approved'}
+                                    className="w-full px-3 md:px-4 py-2 md:py-3 bg-[#1a1a1a] border border-[#444] text-white rounded-lg focus:outline-none focus:border-[#9131e7] focus:ring-2 focus:ring-[#9131e7]/30 transition-all text-sm md:text-base font-mono disabled:opacity-50 disabled:cursor-not-allowed"
+                                />
+                            </div>
+
+                            {!formData.useKYCAccount && (
+                                <>
+                                    <div>
+                                        <label htmlFor="accountHolderName" className="block text-xs md:text-sm font-semibold text-white mb-2">
+                                            Account Holder Name
+                                        </label>
+                                        <input
+                                            id="accountHolderName"
+                                            type="text"
+                                            name="accountHolderName"
+                                            value={formData.bankDetails.accountHolderName}
+                                            onChange={handleBankDetailsChange}
+                                            placeholder="Enter account holder name"
+                                            className="w-full px-3 md:px-4 py-2 md:py-3 bg-[#1a1a1a] border border-[#444] text-white rounded-lg focus:outline-none focus:border-[#9131e7] focus:ring-2 focus:ring-[#9131e7]/30 transition-all text-sm md:text-base"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label htmlFor="ifscCode" className="block text-xs md:text-sm font-semibold text-white mb-2">
+                                            IFSC Code
+                                        </label>
+                                        <input
+                                            id="ifscCode"
+                                            type="text"
+                                            name="ifscCode"
+                                            value={formData.bankDetails.ifscCode}
+                                            onChange={handleBankDetailsChange}
+                                            placeholder="Enter IFSC code"
+                                            className="w-full px-3 md:px-4 py-2 md:py-3 bg-[#1a1a1a] border border-[#444] text-white rounded-lg focus:outline-none focus:border-[#9131e7] focus:ring-2 focus:ring-[#9131e7]/30 transition-all text-sm md:text-base font-mono uppercase"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label htmlFor="bankName" className="block text-xs md:text-sm font-semibold text-white mb-2">
+                                            Bank Name
+                                        </label>
+                                        <input
+                                            id="bankName"
+                                            type="text"
+                                            name="bankName"
+                                            value={formData.bankDetails.bankName}
+                                            onChange={handleBankDetailsChange}
+                                            placeholder="Enter bank name"
+                                            className="w-full px-3 md:px-4 py-2 md:py-3 bg-[#1a1a1a] border border-[#444] text-white rounded-lg focus:outline-none focus:border-[#9131e7] focus:ring-2 focus:ring-[#9131e7]/30 transition-all text-sm md:text-base"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label htmlFor="branchName" className="block text-xs md:text-sm font-semibold text-white mb-2">
+                                            Branch Name
+                                        </label>
+                                        <input
+                                            id="branchName"
+                                            type="text"
+                                            name="branchName"
+                                            value={formData.bankDetails.branchName}
+                                            onChange={handleBankDetailsChange}
+                                            placeholder="Enter branch name"
+                                            className="w-full px-3 md:px-4 py-2 md:py-3 bg-[#1a1a1a] border border-[#444] text-white rounded-lg focus:outline-none focus:border-[#9131e7] focus:ring-2 focus:ring-[#9131e7]/30 transition-all text-sm md:text-base"
+                                        />
+                                    </div>
+                                </>
                             )}
+
+                            <p className="text-[10px] text-gray-400">
+                                {formData.useKYCAccount && kycData?.status === 'approved'
+                                    ? "Using your KYC verified bank account. Toggle off to use a different account."
+                                    : "Please provide complete bank details for withdrawal to a different account."}
+                            </p>
                         </div>
-                        <input
-                            id="bankAccount"
-                            type="text"
-                            name="bankAccount"
-                            value={formData.bankAccount}
-                            onChange={handleChange}
-                            placeholder="Enter your bank account number"
-                            className="w-full px-3 md:px-4 py-2 md:py-3 bg-[#1a1a1a] border border-[#444] text-white rounded-lg focus:outline-none focus:border-[#9131e7] focus:ring-2 focus:ring-[#9131e7]/30 transition-all text-sm md:text-base font-mono"
-                        />
-                        <p className="text-[10px] text-gray-400 mt-2">
-                            {kycData?.status === 'approved'
-                                ? "Auto-filled from your approved KYC. You can modify it if you want to withdraw to a different account."
-                                : "Please enter the bank account number for withdrawal."}
-                        </p>
                     </div>
                 ) : (
                     <div>
@@ -218,7 +330,7 @@ export default function WithdrawalForm({ onSubmit, walletPoints, kycData }) {
                             id="walletAddress"
                             type="text"
                             name="walletAddress"
-                            value={formData.walletAddress}
+                            value={formData.walletAddress || ""}
                             onChange={handleChange}
                             placeholder="Enter your crypto wallet address"
                             className="w-full px-3 md:px-4 py-2 md:py-3 bg-[#1a1a1a] border border-[#444] text-white rounded-lg focus:outline-none focus:border-[#9131e7] focus:ring-2 focus:ring-[#9131e7]/30 transition-all text-sm md:text-base"

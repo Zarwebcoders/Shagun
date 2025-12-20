@@ -152,7 +152,7 @@ export default function Dashboard() {
                             <StatsCard title="ROI" amount={`₹${incomeBreakdown.miningBonus.toFixed(2)}`} color="#9131e7" />
                             <StatsCard title="Yearly Bonus" amount={`₹${incomeBreakdown.yearlyBonus.toFixed(2)}`} color="#2196f3" />
                             <StatsCard title="Sponsor Income" amount={`₹${incomeBreakdown.sponsorIncome.toFixed(2)}`} color="#ff9800" />
-                            <StatsCard title="Level Income" amount={`₹${incomeBreakdown.levelIncome.toFixed(2)}`} color="#9c27b0" />
+                            {/* <StatsCard title="Level Income" amount={`₹${incomeBreakdown.levelIncome.toFixed(2)}`} color="#9c27b0" /> */}
                             <StatsCard title="Total Income" amount={`₹${incomeBreakdown.totalIncome.toFixed(2)}`} color="#e91e63" />
                         </div>
                     </div>

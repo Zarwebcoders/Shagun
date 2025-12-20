@@ -1,64 +1,117 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import client from "../../api/client"
 
 export default function AdminDashboard() {
     const [timeRange, setTimeRange] = useState("24h")
+    const [stats, setStats] = useState({
+        totalUsers: 0,
+        totalRevenue: 0,
+        pendingKYC: 0,
+        activeInvestments: 0,
+        pendingWithdrawals: 0,
+        totalTransactions: 0
+    })
+    const [recentActivities, setRecentActivities] = useState([])
+    const [topUsers, setTopUsers] = useState([])
+    const [loading, setLoading] = useState(true)
 
-    const stats = [
-        { label: "Total Users", value: "12,450", change: "+12%", icon: "👥", color: "from-blue-500 to-blue-600" },
-        { label: "Total Revenue", value: "₹1.2M", change: "+8%", icon: "💰", color: "from-green-500 to-green-600" },
-        { label: "Pending KYC", value: "145", change: "-5%", icon: "⏳", color: "from-yellow-500 to-yellow-600" },
-        { label: "Active Packages", value: "8,234", change: "+15%", icon: "📦", color: "from-purple-500 to-purple-600" },
-        { label: "Pending Withdrawals", value: "67", change: "+3%", icon: "💳", color: "from-red-500 to-red-600" },
-        { label: "Total Transactions", value: "45.2K", change: "+22%", icon: "🔄", color: "from-[#9131e7] to-[#e3459b]" },
-    ]
+    useEffect(() => {
+        fetchDashboardData();
+    }, []);
 
-    const recentActivities = [
-        {
-            type: "user",
-            action: "New user registration",
-            user: "john.doe@email.com",
-            time: "2 mins ago",
-            status: "success",
-        },
-        {
-            type: "kyc",
-            action: "KYC verification pending",
-            user: "jane.smith@email.com",
-            time: "5 mins ago",
-            status: "pending",
-        },
-        {
-            type: "withdrawal",
-            action: "Withdrawal request",
-            user: "mike.wilson@email.com",
-            time: "12 mins ago",
-            status: "pending",
-        },
-        {
-            type: "package",
-            action: "Package purchased",
-            user: "sarah.jones@email.com",
-            time: "18 mins ago",
-            status: "success",
-        },
-        {
-            type: "transaction",
-            action: "Transaction completed",
-            user: "alex.brown@email.com",
-            time: "25 mins ago",
-            status: "success",
-        },
-    ]
+    const fetchDashboardData = async () => {
+        try {
+            const [usersRes, transactionsRes, kycRes, investmentsRes] = await Promise.all([
+                client.get('/users'),
+                client.get('/transactions/all').catch(() => ({ data: [] })),
+                client.get('/kyc/all').catch(() => ({ data: [] })),
+                client.get('/investments/all').catch(() => ({ data: [] }))
+            ]);
 
-    const topUsers = [
-        { name: "Alice Johnson", investment: "₹45,200", returns: "₹8,340", level: "Diamond" },
-        { name: "Bob Smith", investment: "₹38,900", returns: "₹7,120", level: "Platinum" },
-        { name: "Carol Davis", investment: "₹32,500", returns: "₹6,450", level: "Gold" },
-        { name: "David Wilson", investment: "₹28,100", returns: "₹5,280", level: "Gold" },
-        { name: "Emma Brown", investment: "₹24,800", returns: "₹4,890", level: "Silver" },
-    ]
+            const users = usersRes.data || [];
+            const transactions = transactionsRes.data || [];
+            const kycRequests = kycRes.data || [];
+            const investments = investmentsRes.data || [];
+
+            // Calculate stats
+            const totalRevenue = investments
+                .filter(inv => inv.status === 'approved')
+                .reduce((sum, inv) => sum + inv.amount, 0);
+
+            const pendingKYC = kycRequests.filter(kyc => kyc.status === 'pending').length;
+            const activeInvestments = investments.filter(inv => inv.status === 'approved').length;
+            const pendingWithdrawals = transactions.filter(tx => tx.type === 'withdrawal' && tx.status === 'pending').length;
+
+            setStats({
+                totalUsers: users.length,
+                totalRevenue: totalRevenue,
+                pendingKYC: pendingKYC,
+                activeInvestments: activeInvestments,
+                pendingWithdrawals: pendingWithdrawals,
+                totalTransactions: transactions.length
+            });
+
+            // Get recent activities (last 5 transactions/registrations)
+            const recentTx = transactions
+                .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+                .slice(0, 5)
+                .map(tx => ({
+                    type: tx.type,
+                    action: `${tx.type.charAt(0).toUpperCase() + tx.type.slice(1)} ${tx.status}`,
+                    user: tx.user?.email || 'Unknown',
+                    time: getTimeAgo(tx.createdAt),
+                    status: tx.status
+                }));
+
+            setRecentActivities(recentTx);
+
+            // Get top users by investment
+            const userInvestments = users
+                .map(user => {
+                    const userInvs = investments.filter(inv => inv.user?._id === user._id && inv.status === 'approved');
+                    const totalInvestment = userInvs.reduce((sum, inv) => sum + inv.amount, 0);
+                    return {
+                        name: user.name,
+                        investment: totalInvestment,
+                        returns: totalInvestment * 0.15, // Mock 15% returns
+                        level: totalInvestment > 50000 ? 'Diamond' : totalInvestment > 30000 ? 'Platinum' : totalInvestment > 15000 ? 'Gold' : 'Silver'
+                    };
+                })
+                .filter(user => user.investment > 0)
+                .sort((a, b) => b.investment - a.investment)
+                .slice(0, 5);
+
+            setTopUsers(userInvestments);
+            setLoading(false);
+        } catch (error) {
+            console.error("Error fetching dashboard data:", error);
+            setLoading(false);
+        }
+    };
+
+    const getTimeAgo = (date) => {
+        const seconds = Math.floor((new Date() - new Date(date)) / 1000);
+        if (seconds < 60) return `${seconds} secs ago`;
+        const minutes = Math.floor(seconds / 60);
+        if (minutes < 60) return `${minutes} mins ago`;
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) return `${hours} hours ago`;
+        const days = Math.floor(hours / 24);
+        return `${days} days ago`;
+    };
+
+    const statsConfig = [
+        { label: "Total Users", value: stats.totalUsers, change: "+12%", icon: "👥", color: "from-blue-500 to-blue-600" },
+        { label: "Total Revenue", value: `₹${(stats.totalRevenue / 1000).toFixed(1)}K`, change: "+8%", icon: "💰", color: "from-green-500 to-green-600" },
+        { label: "Pending KYC", value: stats.pendingKYC, change: "-5%", icon: "⏳", color: "from-yellow-500 to-yellow-600" },
+        { label: "Active Investments", value: stats.activeInvestments, change: "+15%", icon: "📦", color: "from-purple-500 to-purple-600" },
+        { label: "Pending Withdrawals", value: stats.pendingWithdrawals, change: "+3%", icon: "💳", color: "from-red-500 to-red-600" },
+        { label: "Total Transactions", value: stats.totalTransactions, change: "+22%", icon: "🔄", color: "from-[#9131e7] to-[#e3459b]" },
+    ];
+
+    if (loading) return <div className="text-white">Loading dashboard...</div>;
 
     return (
         <div className="space-y-6 animate-fadeIn">
@@ -97,7 +150,7 @@ export default function AdminDashboard() {
 
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {stats.map((stat, index) => (
+                {statsConfig.map((stat, index) => (
                     <div
                         key={index}
                         className="bg-[#0f0f1a] rounded-xl p-6 border border-[#9131e7]/30 hover:border-[#9131e7] transition-all hover:shadow-lg hover:shadow-[#9131e7]/20"
@@ -126,28 +179,32 @@ export default function AdminDashboard() {
                 <div className="lg:col-span-2 bg-[#0f0f1a] rounded-xl p-6 border border-[#9131e7]/30">
                     <h3 className="text-xl font-bold text-white mb-4">Recent Activity</h3>
                     <div className="space-y-3">
-                        {recentActivities.map((activity, index) => (
-                            <div
-                                key={index}
-                                className="flex items-center justify-between p-4 bg-[#1a1a2e] rounded-lg hover:bg-[#2a2a3e] transition-all"
-                            >
-                                <div className="flex items-center gap-4">
-                                    <div
-                                        className={`w-10 h-10 rounded-lg flex items-center justify-center ${activity.status === "success"
-                                            ? "bg-green-500/20 text-green-500"
-                                            : "bg-yellow-500/20 text-yellow-500"
-                                            }`}
-                                    >
-                                        {activity.status === "success" ? "✓" : "⏳"}
+                        {recentActivities.length === 0 ? (
+                            <p className="text-gray-400 text-center py-4">No recent activities</p>
+                        ) : (
+                            recentActivities.map((activity, index) => (
+                                <div
+                                    key={index}
+                                    className="flex items-center justify-between p-4 bg-[#1a1a2e] rounded-lg hover:bg-[#2a2a3e] transition-all"
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <div
+                                            className={`w-10 h-10 rounded-lg flex items-center justify-center ${activity.status === "completed" || activity.status === "approved"
+                                                ? "bg-green-500/20 text-green-500"
+                                                : "bg-yellow-500/20 text-yellow-500"
+                                                }`}
+                                        >
+                                            {activity.status === "completed" || activity.status === "approved" ? "✓" : "⏳"}
+                                        </div>
+                                        <div>
+                                            <p className="text-white font-medium">{activity.action}</p>
+                                            <p className="text-gray-400 text-sm">{activity.user}</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p className="text-white font-medium">{activity.action}</p>
-                                        <p className="text-gray-400 text-sm">{activity.user}</p>
-                                    </div>
+                                    <span className="text-gray-500 text-sm">{activity.time}</span>
                                 </div>
-                                <span className="text-gray-500 text-sm">{activity.time}</span>
-                            </div>
-                        ))}
+                            ))
+                        )}
                     </div>
                 </div>
 
@@ -155,26 +212,30 @@ export default function AdminDashboard() {
                 <div className="bg-[#0f0f1a] rounded-xl p-6 border border-[#9131e7]/30">
                     <h3 className="text-xl font-bold text-white mb-4">Top Investors</h3>
                     <div className="space-y-3">
-                        {topUsers.map((user, index) => (
-                            <div key={index} className="p-3 bg-[#1a1a2e] rounded-lg hover:bg-[#2a2a3e] transition-all">
-                                <div className="flex items-center justify-between mb-2">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-8 h-8 bg-gradient-to-br from-[#9131e7] to-[#e3459b] rounded-full flex items-center justify-center text-white text-sm font-bold">
-                                            {index + 1}
-                                        </div>
-                                        <div>
-                                            <p className="text-white text-sm font-medium">{user.name}</p>
-                                            <p className="text-gray-400 text-xs">{user.level}</p>
+                        {topUsers.length === 0 ? (
+                            <p className="text-gray-400 text-center py-4">No investors yet</p>
+                        ) : (
+                            topUsers.map((user, index) => (
+                                <div key={index} className="p-3 bg-[#1a1a2e] rounded-lg hover:bg-[#2a2a3e] transition-all">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-8 h-8 bg-gradient-to-br from-[#9131e7] to-[#e3459b] rounded-full flex items-center justify-center text-white text-sm font-bold">
+                                                {index + 1}
+                                            </div>
+                                            <div>
+                                                <p className="text-white text-sm font-medium">{user.name}</p>
+                                                <p className="text-gray-400 text-xs">{user.level}</p>
+                                            </div>
                                         </div>
                                     </div>
+                                    <div className="flex justify-between text-xs">
+                                        <span className="text-gray-400">
+                                            Investment: <span className="text-green-500">₹{user.investment.toLocaleString()}</span>
+                                        </span>
+                                    </div>
                                 </div>
-                                <div className="flex justify-between text-xs">
-                                    <span className="text-gray-400">
-                                        Investment: <span className="text-green-500">{user.investment}</span>
-                                    </span>
-                                </div>
-                            </div>
-                        ))}
+                            ))
+                        )}
                     </div>
                 </div>
             </div>
@@ -184,9 +245,9 @@ export default function AdminDashboard() {
                 <h3 className="text-xl font-bold text-white mb-4">Quick Actions</h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {[
-                        { label: "Approve KYC", icon: "✅", count: "145" },
-                        { label: "Process Withdrawals", icon: "💰", count: "67" },
-                        { label: "Review Tickets", icon: "🎫", count: "23" },
+                        { label: "Approve KYC", icon: "✅", count: stats.pendingKYC },
+                        { label: "Process Withdrawals", icon: "💰", count: stats.pendingWithdrawals },
+                        { label: "Review Investments", icon: "📦", count: "—" },
                         { label: "System Settings", icon: "⚙️", count: "—" },
                     ].map((action, index) => (
                         <button

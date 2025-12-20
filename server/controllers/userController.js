@@ -47,13 +47,16 @@ const updateUser = async (req, res) => {
             if (req.body.password) {
                 user.password = req.body.password;
             }
-            // Only admin can update status/role/kyc
             if (req.user.role === 'admin') {
                 user.role = req.body.role || user.role;
                 user.status = req.body.status || user.status;
                 user.kycStatus = req.body.kycStatus || user.kycStatus;
-                user.wallet = req.body.wallet || user.wallet;
                 user.balance = req.body.balance || user.balance;
+            }
+
+            // Allow user to update their wallet address (or admin)
+            if (req.body.wallet) {
+                user.wallet = req.body.wallet;
             }
 
             const updatedUser = await user.save();

@@ -4,52 +4,65 @@ import { useState, useEffect } from "react"
 import client from "../../api/client"
 
 export default function PackageManagement() {
-    const [showAddModal, setShowAddModal] = useState(false)
-
-    const [packages, setPackages] = useState([])
+    const [investments, setInvestments] = useState([])
     const [loading, setLoading] = useState(true)
-    const [newPackage, setNewPackage] = useState({
-        name: "",
-        minInvestment: "",
-        maxInvestment: "",
-        dailyReturn: "",
-        duration: "",
-        description: ""
+    const [stats, setStats] = useState({
+        totalInvestments: 0,
+        totalAmount: 0,
+        pendingInvestments: 0,
+        approvedInvestments: 0
     })
 
-    const fetchPackages = async () => {
+    const fetchInvestments = async () => {
         try {
-            const { data } = await client.get('/packages');
-            setPackages(data);
+            const { data } = await client.get('/investments/all');
+            setInvestments(data);
+
+            // Calculate stats
+            const totalAmount = data.reduce((sum, inv) => sum + inv.amount, 0);
+            const pending = data.filter(inv => inv.status === 'pending').length;
+            const approved = data.filter(inv => inv.status === 'approved').length;
+
+            setStats({
+                totalInvestments: data.length,
+                totalAmount: totalAmount,
+                pendingInvestments: pending,
+                approvedInvestments: approved
+            });
         } catch (error) {
-            console.error("Error fetching packages:", error);
+            console.error("Error fetching investments:", error);
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        fetchPackages();
+        fetchInvestments();
     }, []);
 
-    const handleCreatePackage = async () => {
+    const handleApprove = async (investmentId) => {
         try {
-            await client.post('/packages', newPackage);
-            setShowAddModal(false);
-            fetchPackages(); // Refresh list
-            setNewPackage({
-                name: "",
-                minInvestment: "",
-                maxInvestment: "",
-                dailyReturn: "",
-                duration: "",
-                description: ""
-            });
+            await client.put(`/investments/${investmentId}`, { status: 'approved' });
+            fetchInvestments(); // Refresh list
+            alert("Investment approved successfully!");
         } catch (error) {
-            console.error("Error creating package:", error);
-            alert("Failed to create package");
+            console.error("Error approving investment:", error);
+            alert("Failed to approve investment");
         }
-    }
+    };
+
+    const handleReject = async (investmentId) => {
+        try {
+            await client.put(`/investments/${investmentId}`, { status: 'rejected' });
+            fetchInvestments(); // Refresh list
+            alert("Investment rejected");
+        } catch (error) {
+            console.error("Error rejecting investment:", error);
+            alert("Failed to reject investment");
+        }
+    };
+
+    if (loading) return <div className="text-white">Loading investments...</div>;
 
     return (
         <div className="space-y-6 animate-fadeIn">
@@ -64,174 +77,125 @@ export default function PackageManagement() {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
-                    <h2 className="text-3xl font-bold text-white">Package Management</h2>
-                    <p className="text-gray-400 mt-1">Create and manage investment packages</p>
+                    <h2 className="text-3xl font-bold text-white">Investment Management</h2>
+                    <p className="text-gray-400 mt-1">View and manage all user investments</p>
                 </div>
-                <button
-                    onClick={() => setShowAddModal(true)}
-                    className="px-6 py-3 bg-[#9131e7] text-white rounded-lg font-semibold hover:bg-[#d4941f] transition-all"
-                >
-                    + Create New Package
-                </button>
             </div>
 
             {/* Stats */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                {[
-                    { label: "Active Packages", value: "6" },
-                    { label: "Total Subscribers", value: "8,140" },
-                    { label: "Total Invested", value: "₹12.4M" },
-                    { label: "Daily Payouts", value: "₹34.2K" },
-                ].map((stat, index) => (
-                    <div key={index} className="bg-[#0f0f1a] rounded-xl p-6 border border-[#9131e7]/30">
-                        <p className="text-gray-400 text-sm mb-1">{stat.label}</p>
-                        <h3 className="text-3xl font-bold text-white">{stat.value}</h3>
-                    </div>
-                ))}
-            </div>
-
-            {/* Packages Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {packages.map((pkg) => (
-                    <div
-                        key={pkg._id}
-                        className="bg-[#0f0f1a] rounded-xl p-6 border border-[#9131e7]/30 hover:border-[#9131e7] transition-all hover:shadow-lg hover:shadow-[#9131e7]/20"
-                    >
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-2xl font-bold text-[#9131e7]">{pkg.name}</h3>
-                            <span className="px-3 py-1 bg-green-500/20 text-green-500 rounded-full text-xs font-semibold">
-                                {pkg.status}
-                            </span>
-                        </div>
-
-                        <div className="space-y-3 mb-6">
-                            <div className="flex justify-between text-sm">
-                                <span className="text-gray-400">Min Investment</span>
-                                <span className="text-white font-semibold">₹{pkg.minInvestment}</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                                <span className="text-gray-400">Max Investment</span>
-                                <span className="text-white font-semibold">₹{pkg.maxInvestment}</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                                <span className="text-gray-400">Daily Return</span>
-                                <span className="text-green-500 font-bold">{pkg.dailyReturn}</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                                <span className="text-gray-400">Duration</span>
-                                <span className="text-white font-semibold">{pkg.duration}</span>
-                            </div>
-                            <div className="flex justify-between text-sm pt-2 border-t border-[#9131e7]/30">
-                                <span className="text-gray-400">Total Subscribers</span>
-                                <span className="text-[#9131e7] font-bold">{(pkg.totalSubscribers || 0).toLocaleString()}</span>
-                            </div>
-                        </div>
-
-                        <div className="flex gap-2">
-                            <button className="flex-1 px-4 py-2 bg-[#1a1a2e] text-white rounded-lg hover:bg-[#3f3f3f] transition-all text-sm font-semibold">
-                                Edit
-                            </button>
-                            <button className="flex-1 px-4 py-2 bg-red-500/20 text-red-500 rounded-lg hover:bg-red-500/30 transition-all text-sm font-semibold">
-                                Disable
-                            </button>
-                        </div>
-                    </div>
-                ))}
-            </div>
-
-            {/* Add Package Modal */}
-            {showAddModal && (
-                <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50 animate-fadeIn">
-                    <div className="bg-[#0f0f1a] rounded-xl p-6 max-w-2xl w-full border border-[#9131e7]/30">
-                        <h3 className="text-2xl font-bold text-white mb-6">Create New Package</h3>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                            <div>
-                                <label className="block text-gray-400 text-sm mb-2">Package Name</label>
-                                <input
-                                    type="text"
-                                    className="w-full px-4 py-3 bg-[#1a1a2e] text-white rounded-lg border border-[#9131e7]/30 focus:border-[#f3b232] focus:outline-none"
-                                    placeholder="e.g., Elite"
-                                    value={newPackage.name}
-                                    onChange={(e) => setNewPackage({ ...newPackage, name: e.target.value })}
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-gray-400 text-sm mb-2">Status</label>
-                                <select className="w-full px-4 py-3 bg-[#1a1a2e] text-white rounded-lg border border-[#9131e7]/30 focus:border-[#f3b232] focus:outline-none">
-                                    <option>Active</option>
-                                    <option>Inactive</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-gray-400 text-sm mb-2">Min Investment</label>
-                                <input
-                                    type="number"
-                                    className="w-full px-4 py-3 bg-[#1a1a2e] text-white rounded-lg border border-[#9131e7]/30 focus:border-[#f3b232] focus:outline-none"
-                                    placeholder="1000"
-                                    value={newPackage.minInvestment}
-                                    onChange={(e) => setNewPackage({ ...newPackage, minInvestment: e.target.value })}
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-gray-400 text-sm mb-2">Max Investment</label>
-                                <input
-                                    type="number"
-                                    className="w-full px-4 py-3 bg-[#1a1a2e] text-white rounded-lg border border-[#9131e7]/30 focus:border-[#f3b232] focus:outline-none"
-                                    placeholder="5000"
-                                    value={newPackage.maxInvestment}
-                                    onChange={(e) => setNewPackage({ ...newPackage, maxInvestment: e.target.value })}
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-gray-400 text-sm mb-2">Daily Return %</label>
-                                <input
-                                    type="number"
-                                    className="w-full px-4 py-3 bg-[#1a1a2e] text-white rounded-lg border border-[#9131e7]/30 focus:border-[#f3b232] focus:outline-none"
-                                    placeholder="4.5"
-                                    value={newPackage.dailyReturn}
-                                    onChange={(e) => setNewPackage({ ...newPackage, dailyReturn: e.target.value })}
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-gray-400 text-sm mb-2">Duration (days)</label>
-                                <input
-                                    type="number"
-                                    className="w-full px-4 py-3 bg-[#1a1a2e] text-white rounded-lg border border-[#9131e7]/30 focus:border-[#f3b232] focus:outline-none"
-                                    placeholder="365"
-                                    value={newPackage.duration}
-                                    onChange={(e) => setNewPackage({ ...newPackage, duration: e.target.value })}
-                                />
-                            </div>
-                            <div className="md:col-span-2">
-                                <label className="block text-gray-400 text-sm mb-2">Description</label>
-                                <textarea
-                                    className="w-full px-4 py-3 bg-[#1a1a2e] text-white rounded-lg border border-[#9131e7]/30 focus:border-[#f3b232] focus:outline-none resize-none"
-                                    rows={3}
-                                    placeholder="Enter package description..."
-                                    value={newPackage.description}
-                                    onChange={(e) => setNewPackage({ ...newPackage, description: e.target.value })}
-                                ></textarea>
-                            </div>
-                        </div>
-
-                        <div className="flex gap-3">
-                            <button
-                                onClick={() => setShowAddModal(false)}
-                                className="flex-1 px-6 py-3 bg-[#1a1a2e] text-white rounded-lg font-semibold hover:bg-[#3f3f3f] transition-all"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleCreatePackage}
-                                className="flex-1 px-6 py-3 bg-[#9131e7] text-white rounded-lg font-semibold hover:bg-[#d4941f] transition-all"
-                            >
-                                Create Package
-                            </button>
-                        </div>
-                    </div>
+                <div className="bg-[#0f0f1a] rounded-xl p-6 border border-[#9131e7]/30">
+                    <p className="text-gray-400 text-sm mb-1">Total Investments</p>
+                    <h3 className="text-3xl font-bold text-white">{stats.totalInvestments}</h3>
                 </div>
-            )}
+                <div className="bg-[#0f0f1a] rounded-xl p-6 border border-[#00b894]/30">
+                    <p className="text-gray-400 text-sm mb-1">Total Amount</p>
+                    <h3 className="text-3xl font-bold text-white">₹{stats.totalAmount.toLocaleString()}</h3>
+                </div>
+                <div className="bg-[#0f0f1a] rounded-xl p-6 border border-[#f3b232]/30">
+                    <p className="text-gray-400 text-sm mb-1">Pending Approvals</p>
+                    <h3 className="text-3xl font-bold text-white">{stats.pendingInvestments}</h3>
+                </div>
+                <div className="bg-[#0f0f1a] rounded-xl p-6 border border-[#00b894]/30">
+                    <p className="text-gray-400 text-sm mb-1">Approved</p>
+                    <h3 className="text-3xl font-bold text-white">{stats.approvedInvestments}</h3>
+                </div>
+            </div>
+
+            {/* Investments Table */}
+            <div className="bg-[#0f0f1a] rounded-xl border border-[#9131e7]/30 overflow-hidden">
+                <div className="p-4 md:p-6 border-b border-[#9131e7]/30 bg-gradient-to-r from-[#9131e7]/10 to-[#e84495]/10">
+                    <h4 className="text-white font-bold text-base md:text-lg">All Investments</h4>
+                </div>
+
+                <div className="overflow-x-auto">
+                    <table className="w-full">
+                        <thead className="bg-[#1a1a2e]">
+                            <tr>
+                                <th className="px-6 py-4 text-left text-gray-400 font-semibold text-sm">User</th>
+                                <th className="px-6 py-4 text-left text-gray-400 font-semibold text-sm">Amount</th>
+                                <th className="px-6 py-4 text-left text-gray-400 font-semibold text-sm">Transaction ID</th>
+                                <th className="px-6 py-4 text-left text-gray-400 font-semibold text-sm">Sponsor ID</th>
+                                <th className="px-6 py-4 text-left text-gray-400 font-semibold text-sm">Date</th>
+                                <th className="px-6 py-4 text-left text-gray-400 font-semibold text-sm">Status</th>
+                                <th className="px-6 py-4 text-left text-gray-400 font-semibold text-sm">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#9131e7]/30">
+                            {investments.length === 0 ? (
+                                <tr>
+                                    <td colSpan="7" className="px-6 py-8 text-center text-gray-400">
+                                        No investments found
+                                    </td>
+                                </tr>
+                            ) : (
+                                investments.map((investment) => (
+                                    <tr key={investment._id} className="hover:bg-[#1a1a2e] transition-colors">
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 bg-gradient-to-br from-[#9131e7] to-[#e84495] rounded-full flex items-center justify-center text-white font-bold">
+                                                    {investment.user?.name?.charAt(0) || 'U'}
+                                                </div>
+                                                <div>
+                                                    <p className="text-white font-medium">{investment.user?.name || 'Unknown'}</p>
+                                                    <p className="text-gray-400 text-sm">{investment.user?.email || 'N/A'}</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <span className="text-green-500 font-bold text-lg">₹{investment.amount.toLocaleString()}</span>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <code className="text-[#9131e7] text-sm">{investment.transactionId || 'N/A'}</code>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <span className="text-white text-sm">{investment.sponsorId || 'N/A'}</span>
+                                        </td>
+                                        <td className="px-6 py-4 text-gray-400 text-sm">
+                                            {new Date(investment.createdAt).toLocaleDateString()}
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <span
+                                                className={`px-3 py-1 rounded-full text-xs font-semibold ${investment.status === 'approved'
+                                                        ? 'bg-green-500/20 text-green-500'
+                                                        : investment.status === 'pending'
+                                                            ? 'bg-yellow-500/20 text-yellow-500'
+                                                            : 'bg-red-500/20 text-red-500'
+                                                    }`}
+                                            >
+                                                {investment.status}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-2">
+                                                {investment.status === 'pending' && (
+                                                    <>
+                                                        <button
+                                                            onClick={() => handleApprove(investment._id)}
+                                                            className="px-3 py-1 bg-green-500/20 text-green-500 rounded-lg hover:bg-green-500/30 transition-all text-sm font-semibold"
+                                                        >
+                                                            Approve
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleReject(investment._id)}
+                                                            className="px-3 py-1 bg-red-500/20 text-red-500 rounded-lg hover:bg-red-500/30 transition-all text-sm font-semibold"
+                                                        >
+                                                            Reject
+                                                        </button>
+                                                    </>
+                                                )}
+                                                {investment.status !== 'pending' && (
+                                                    <span className="text-gray-500 text-sm">No actions</span>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     )
 }

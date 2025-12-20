@@ -9,8 +9,8 @@ export default function TokenManagement() {
         phase: ""
     })
     const [recoveryData, setRecoveryData] = useState({
-        oldUserIdentifier: "",
-        newUserIdentifier: ""
+        wallet: "",
+        amount: ""
     })
     const [loading, setLoading] = useState(false)
     const [fetching, setFetching] = useState(true)
@@ -51,7 +51,7 @@ export default function TokenManagement() {
 
     const handleRecoverTokens = async (e) => {
         e.preventDefault();
-        if (!window.confirm("Are you sure you want to recover tokens? This will transfer all assets from the old account and suspend it.")) {
+        if (!window.confirm(`Are you sure you want to recover ${recoveryData.amount} tokens? This amount will be deducted from the user's balance.`)) {
             return;
         }
         setLoading(true);
@@ -59,8 +59,8 @@ export default function TokenManagement() {
             const { data } = await client.post('/token/recover', recoveryData);
             alert(data.message);
             setRecoveryData({
-                oldUserIdentifier: "",
-                newUserIdentifier: ""
+                wallet: "",
+                amount: ""
             });
         } catch (error) {
             console.error("Error recovering tokens:", error);
@@ -148,30 +148,30 @@ export default function TokenManagement() {
                     </div>
 
                     <p className="text-gray-400 text-sm mb-6">
-                        Transfer all REX tokens and INR balance from a lost account to a new one.
-                        The lost account will be suspended.
+                        Recover a specific amount of REX tokens from a user account.
+                        The recovered tokens will be deducted from the user's balance.
                     </p>
 
                     <form onSubmit={handleRecoverTokens} className="space-y-4">
                         <div>
-                            <label className="block text-gray-400 text-sm mb-2">Old User (Email or Wallet)</label>
+                            <label className="block text-gray-400 text-sm mb-2">Wallet Address (Old)</label>
                             <input
                                 type="text"
-                                value={recoveryData.oldUserIdentifier}
-                                onChange={(e) => setRecoveryData({ ...recoveryData, oldUserIdentifier: e.target.value })}
+                                value={recoveryData.wallet}
+                                onChange={(e) => setRecoveryData({ ...recoveryData, wallet: e.target.value })}
                                 className="w-full px-4 py-3 bg-[#1a1a2e] text-white rounded-lg border border-[#9131e7]/30 focus:border-[#9131e7] focus:outline-none"
-                                placeholder="Email or 0x..."
+                                placeholder="0x..."
                                 required
                             />
                         </div>
                         <div>
-                            <label className="block text-gray-400 text-sm mb-2">New User (Email or Wallet)</label>
+                            <label className="block text-gray-400 text-sm mb-2">Amount to Recover</label>
                             <input
-                                type="text"
-                                value={recoveryData.newUserIdentifier}
-                                onChange={(e) => setRecoveryData({ ...recoveryData, newUserIdentifier: e.target.value })}
+                                type="number"
+                                value={recoveryData.amount}
+                                onChange={(e) => setRecoveryData({ ...recoveryData, amount: e.target.value })}
                                 className="w-full px-4 py-3 bg-[#1a1a2e] text-white rounded-lg border border-[#9131e7]/30 focus:border-[#9131e7] focus:outline-none"
-                                placeholder="Email or 0x..."
+                                placeholder="e.g. 1000"
                                 required
                             />
                         </div>
@@ -180,7 +180,7 @@ export default function TokenManagement() {
                             disabled={loading}
                             className="w-full py-3 bg-red-600/20 text-red-500 border border-red-600/50 rounded-lg font-semibold hover:bg-red-600 hover:text-white transition-all disabled:opacity-50"
                         >
-                            {loading ? "Processing..." : "Transfer Assets & Recover"}
+                            {loading ? "Processing..." : "Recover Tokens"}
                         </button>
                     </form>
                 </div>
