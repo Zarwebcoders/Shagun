@@ -47,6 +47,9 @@ const investmentSchema = new mongoose.Schema({
     sponsorId: {
         type: String,
         default: "",
+    },
+    paymentSlip: {
+        type: String,
     }
 }, {
     timestamps: true,

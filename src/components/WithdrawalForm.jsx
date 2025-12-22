@@ -66,20 +66,23 @@ export default function WithdrawalForm({ onSubmit, userData, kycData }) {
             const amount = Number.parseFloat(formData.amount)
             const maxAmount = getMaxAmount()
 
-            if (amount > maxAmount) {
-                alert(`Amount exceeds available balance. Maximum: ${maxAmount}`)
-                return
-            }
+            // if (amount > maxAmount) {
+            //     alert(`Amount exceeds available balance. Maximum: ${maxAmount}`)
+            //     return
+            // }
 
             if (amount < 100) {
                 alert("Minimum withdrawal amount is ₹100")
                 return
             }
 
+            let sourceName = "Total Income";
+            if (formData.source === "sos") sourceName = "SOS Withdrawal";
+
             onSubmit({
                 amount: amount,
                 method: "Bank Transfer",
-                source: formData.source === "rex" ? "Total Income" : "SOS Withdrawal",
+                source: sourceName,
                 bankDetails: formData.useKYCAccount ? null : formData.bankDetails
             })
             setFormData({
@@ -118,7 +121,7 @@ export default function WithdrawalForm({ onSubmit, userData, kycData }) {
                             onClick={() => setFormData(prev => ({ ...prev, source: "rex" }))}
                             className={`p-2 md:p-3 rounded-lg border transition-all ${formData.source === "rex"
                                 ? "border-[#00b894] bg-[#00b894]/20"
-                                : "border-[#444] bg-[#1a1a1a] hover:border-[#00b894]/50"}`}
+                                : "border-[#444] bg-[#1a1a2e] hover:border-[#00b894]/50"}`}
                         >
                             <div className="flex flex-col items-center">
                                 <div className={`w-6 h-6 md:w-8 md:h-8 rounded-full mb-1 md:mb-2 flex items-center justify-center ${formData.source === "rex" ? "bg-[#00b894]" : "bg-[#444]"}`}>
@@ -126,8 +129,8 @@ export default function WithdrawalForm({ onSubmit, userData, kycData }) {
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                                     </svg>
                                 </div>
-                                <span className="text-white text-xs md:text-sm font-medium">Total Income</span>
-                                <span className="text-gray-400 text-xs mt-1">₹{(userData.totalIncome || 0).toLocaleString()}</span>
+                                <span className="text-white text-[10px] md:text-xs font-medium">Total Income</span>
+                                <span className="text-gray-400 text-[10px] mt-1">₹{(userData.totalIncome || 0).toLocaleString()}</span>
                             </div>
                         </button>
                         <button
@@ -135,7 +138,7 @@ export default function WithdrawalForm({ onSubmit, userData, kycData }) {
                             onClick={() => setFormData(prev => ({ ...prev, source: "sos" }))}
                             className={`p-2 md:p-3 rounded-lg border transition-all ${formData.source === "sos"
                                 ? "border-[#fd79a8] bg-[#fd79a8]/20"
-                                : "border-[#444] bg-[#1a1a1a] hover:border-[#fd79a8]/50"}`}
+                                : "border-[#444] bg-[#1a1a2e] hover:border-[#fd79a8]/50"}`}
                         >
                             <div className="flex flex-col items-center">
                                 <div className={`w-6 h-6 md:w-8 md:h-8 rounded-full mb-1 md:mb-2 flex items-center justify-center ${formData.source === "sos" ? "bg-[#fd79a8]" : "bg-[#444]"}`}>
@@ -143,8 +146,8 @@ export default function WithdrawalForm({ onSubmit, userData, kycData }) {
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                                     </svg>
                                 </div>
-                                <span className="text-white text-xs md:text-sm font-medium">SOS Withdrawal</span>
-                                <span className="text-gray-400 text-xs mt-1">₹{(userData.sosWithdrawal || 0).toLocaleString()}</span>
+                                <span className="text-white text-[10px] md:text-xs font-medium">SOS Withdrawal</span>
+                                <span className="text-gray-400 text-[10px] mt-1">₹{(userData.sosWithdrawal || 0).toLocaleString()}</span>
                             </div>
                         </button>
                     </div>
@@ -174,8 +177,7 @@ export default function WithdrawalForm({ onSubmit, userData, kycData }) {
                             placeholder="0.00"
                             step="0.01"
                             min="100"
-                            max={getMaxAmount()}
-                            className="w-full px-3 md:px-4 py-2 md:py-3 pl-10 md:pl-12 bg-[#1a1a1a] border border-[#444] text-white rounded-lg focus:outline-none focus:border-[#9131e7] focus:ring-2 focus:ring-[#9131e7]/30 transition-all text-sm md:text-base"
+                            className="w-full px-3 md:px-4 py-2 md:py-3 pl-10 md:pl-12 bg-[#1a1a2e] border border-[#444] text-white rounded-lg focus:outline-none focus:border-[#9131e7] focus:ring-2 focus:ring-[#9131e7]/30 transition-all text-sm md:text-base"
                         />
                         <div className="absolute left-3 md:left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
                             ₹

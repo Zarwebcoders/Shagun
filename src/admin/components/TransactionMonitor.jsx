@@ -7,20 +7,42 @@ export default function TransactionMonitor() {
   const [filterType, setFilterType] = useState("all")
 
   const [transactions, setTransactions] = useState([])
+  const [stats, setStats] = useState({
+    totalTransactions: 0,
+    totalVolume: 0,
+    pending: 0,
+    failed: 0,
+    today: 0
+  })
   const [loading, setLoading] = useState(true)
 
+  const fetchTransactions = async () => {
+    try {
+      setLoading(true);
+      const { data } = await client.get(`/transactions?type=${filterType}`);
+      setTransactions(data);
+    } catch (error) {
+      console.error("Error fetching transactions:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchStats = async () => {
+    try {
+      const { data } = await client.get('/transactions/stats');
+      setStats(data);
+    } catch (error) {
+      console.error("Error fetching transaction stats:", error);
+    }
+  };
+
   useEffect(() => {
-    const fetchTransactions = async () => {
-      try {
-        const { data } = await client.get('/transactions');
-        setTransactions(data);
-      } catch (error) {
-        console.error("Error fetching transactions:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchTransactions();
+  }, [filterType]);
+
+  useEffect(() => {
+    fetchStats();
   }, []);
 
   const getTypeColor = (type) => {
@@ -57,11 +79,11 @@ export default function TransactionMonitor() {
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         {[
-          { label: "Total Transactions", value: "45,234", icon: "📊" },
-          { label: "Total Volume", value: "₹12.4M", icon: "💰" },
-          { label: "Pending", value: "23", icon: "⏳" },
-          { label: "Failed", value: "5", icon: "❌" },
-          { label: "Today", value: "1,234", icon: "📅" },
+          { label: "Total Transactions", value: stats.totalTransactions.toLocaleString(), icon: "📊" },
+          { label: "Total Volume", value: `₹${(stats.totalVolume / 1000000).toFixed(1)}M`, icon: "💰" },
+          { label: "Pending", value: stats.pending, icon: "⏳" },
+          { label: "Failed", value: stats.failed, icon: "❌" },
+          { label: "Today", value: stats.today, icon: "📅" },
         ].map((stat, index) => (
           <div key={index} className="bg-[#0f0f1a] rounded-xl p-6 border border-[#9131e7]/30">
             <div className="flex items-center justify-between mb-2">
@@ -144,7 +166,9 @@ export default function TransactionMonitor() {
                       {tx.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-gray-400 text-sm">{tx.date}</td>
+                  <td className="px-6 py-4 text-gray-400 text-sm">
+                    {tx.createdAt ? new Date(tx.createdAt).toLocaleString() : tx.date || 'N/A'}
+                  </td>
                 </tr>
               ))}
             </tbody>

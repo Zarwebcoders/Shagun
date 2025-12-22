@@ -90,9 +90,36 @@ const updateKYCStatus = async (req, res) => {
     }
 };
 
+// @desc    Get KYC stats (Admin)
+// @route   GET /api/kyc/stats
+// @access  Private/Admin
+const getKYCStats = async (req, res) => {
+    try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const [pendingReview, approvedToday, rejectedToday, totalVerified] = await Promise.all([
+            KYC.countDocuments({ status: 'pending' }),
+            KYC.countDocuments({ status: 'approved', updatedAt: { $gte: today } }),
+            KYC.countDocuments({ status: 'rejected', updatedAt: { $gte: today } }),
+            KYC.countDocuments({ status: 'approved' })
+        ]);
+
+        res.json({
+            pendingReview,
+            approvedToday,
+            rejectedToday,
+            totalVerified
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 module.exports = {
     submitKYC,
     getPendingKYC,
     getMyKYC,
     updateKYCStatus,
+    getKYCStats,
 };

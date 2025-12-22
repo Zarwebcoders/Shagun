@@ -4,6 +4,7 @@ const {
     getTransactions,
     createTransaction,
     updateTransactionStatus,
+    getTransactionStats,
 } = require('../controllers/transactionController');
 const { protect, admin } = require('../middleware/authMiddleware');
 
@@ -13,5 +14,7 @@ router.route('/')
 
 router.route('/:id')
     .put(protect, admin, updateTransactionStatus);
+
+router.get('/stats', protect, admin, getTransactionStats);
 
 module.exports = router;

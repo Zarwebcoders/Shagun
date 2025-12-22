@@ -13,7 +13,12 @@ const getTransactions = async (req, res) => {
     try {
         let transactions;
         if (req.user.role === 'admin') {
-            transactions = await Transaction.find({})
+            const query = {};
+            if (req.query.type && req.query.type !== 'all') {
+                query.type = req.query.type;
+            }
+
+            transactions = await Transaction.find(query)
                 .populate('user', 'name email wallet')
                 .populate('relatedUser', 'name')
                 .sort({ createdAt: -1 })
@@ -129,8 +134,43 @@ const updateTransactionStatus = async (req, res) => {
     }
 };
 
+// @desc    Get Transaction stats (Admin)
+// @route   GET /api/transactions/stats
+// @access  Private/Admin
+const getTransactionStats = async (req, res) => {
+    try {
+        const todayAtMidnight = new Date();
+        todayAtMidnight.setHours(0, 0, 0, 0);
+
+        const [totalTransactions, pending, failed, today] = await Promise.all([
+            Transaction.countDocuments({}),
+            Transaction.countDocuments({ status: 'pending' }),
+            Transaction.countDocuments({ status: 'failed' }),
+            Transaction.countDocuments({ createdAt: { $gte: todayAtMidnight } })
+        ]);
+
+        const totalVolumeResult = await Transaction.aggregate([
+            { $match: { status: 'completed' } },
+            { $group: { _id: null, total: { $sum: "$amount" } } }
+        ]);
+
+        const totalVolume = totalVolumeResult.length > 0 ? totalVolumeResult[0].total : 0;
+
+        res.json({
+            totalTransactions,
+            totalVolume,
+            pending,
+            failed,
+            today
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 module.exports = {
     getTransactions,
     createTransaction,
     updateTransactionStatus,
+    getTransactionStats,
 };

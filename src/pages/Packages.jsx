@@ -49,10 +49,19 @@ export default function Packages() {
 
 
 
+    // Convert file to base64
+    const fileToBase64 = (file) => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = (error) => reject(error);
+        });
+    };
+
     // submit form
     const handleSubmit = async () => {
         try {
-
             if (!formData.amount) {
                 alert("Please enter amount");
                 return;
@@ -62,14 +71,16 @@ export default function Packages() {
                 return;
             }
 
-            // Note: In a real app we'd verify transaction hash or handle payment gateway here
-            // For now we use the createInvestment endpoint which assumes balance payment or pending manual approval
-            // Since the form asks for Transaction ID, we pass it.
+            let paymentSlipBase64 = "";
+            if (formData.paymentSlip) {
+                paymentSlipBase64 = await fileToBase64(formData.paymentSlip);
+            }
 
             await client.post('/investments', {
                 amount: formData.amount,
                 transactionId: formData.transactionId || `TXN${Date.now()}`,
-                sponsorId: userSponsorId
+                sponsorId: userSponsorId,
+                paymentSlip: paymentSlipBase64
             });
 
             alert("Investment request submitted successfully!");
@@ -84,6 +95,14 @@ export default function Packages() {
                 transactionId: "",
                 paymentSlip: null
             });
+
+            // Refresh data again to ensure UI is up-to-date
+            const [packagesRes, investmentsRes] = await Promise.all([
+                client.get('/packages'),
+                client.get('/investments')
+            ]);
+            setPackages(packagesRes.data);
+            setInvestments(investmentsRes.data);
 
         } catch (error) {
             console.error("Error creating investment:", error);

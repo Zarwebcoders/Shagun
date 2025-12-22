@@ -7,6 +7,12 @@ export default function KYCApprovals() {
     const [selectedKYC, setSelectedKYC] = useState(null)
 
     const [kycRequests, setKycRequests] = useState([])
+    const [stats, setStats] = useState({
+        pendingReview: 0,
+        approvedToday: 0,
+        rejectedToday: 0,
+        totalVerified: 0
+    })
     const [loading, setLoading] = useState(true)
 
     const fetchKYCRequests = async () => {
@@ -20,8 +26,18 @@ export default function KYCApprovals() {
         }
     };
 
+    const fetchStats = async () => {
+        try {
+            const { data } = await client.get('/kyc/stats');
+            setStats(data);
+        } catch (error) {
+            console.error("Error fetching KYC stats:", error);
+        }
+    };
+
     useEffect(() => {
         fetchKYCRequests();
+        fetchStats();
     }, []);
 
     const handleApprove = async (id) => {
@@ -67,10 +83,10 @@ export default function KYCApprovals() {
             {/* Stats */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 {[
-                    { label: "Pending Review", value: "145", color: "yellow" },
-                    { label: "Approved Today", value: "89", color: "green" },
-                    { label: "Rejected Today", value: "12", color: "red" },
-                    { label: "Total Verified", value: "8,234", color: "blue" },
+                    { label: "Pending Review", value: stats.pendingReview, color: "yellow" },
+                    { label: "Approved Today", value: stats.approvedToday, color: "green" },
+                    { label: "Rejected Today", value: stats.rejectedToday, color: "red" },
+                    { label: "Total Verified", value: stats.totalVerified.toLocaleString(), color: "blue" },
                 ].map((stat, index) => (
                     <div key={index} className="bg-[#0f0f1a] rounded-xl p-6 border border-[#9131e7]/30">
                         <p className="text-gray-400 text-sm mb-1">{stat.label}</p>

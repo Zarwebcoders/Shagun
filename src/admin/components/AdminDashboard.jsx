@@ -239,28 +239,6 @@ export default function AdminDashboard() {
                     </div>
                 </div>
             </div>
-
-            {/* Quick Actions */}
-            <div className="bg-gradient-to-r from-[#9131e7] to-[#e3459b] rounded-xl p-6">
-                <h3 className="text-xl font-bold text-white mb-4">Quick Actions</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {[
-                        { label: "Approve KYC", icon: "✅", count: stats.pendingKYC },
-                        { label: "Process Withdrawals", icon: "💰", count: stats.pendingWithdrawals },
-                        { label: "Review Investments", icon: "📦", count: "—" },
-                        { label: "System Settings", icon: "⚙️", count: "—" },
-                    ].map((action, index) => (
-                        <button
-                            key={index}
-                            className="bg-white/10 backdrop-blur-sm hover:bg-white/20 rounded-lg p-4 text-center transition-all hover:scale-105"
-                        >
-                            <div className="text-3xl mb-2">{action.icon}</div>
-                            <p className="text-white font-semibold text-sm">{action.label}</p>
-                            <p className="text-white/80 text-xs mt-1">{action.count} pending</p>
-                        </button>
-                    ))}
-                </div>
-            </div>
         </div>
     )
 }

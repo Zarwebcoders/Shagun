@@ -49,14 +49,18 @@ export default function Withdrawal() {
                 // Filter withdrawals from transactions
                 const withdrawals = txRes.data
                     .filter(tx => tx.type === 'withdrawal')
-                    .map(tx => ({
-                        id: tx._id,
-                        amount: tx.amount,
-                        date: new Date(tx.createdAt).toISOString().split('T')[0],
-                        status: tx.status.charAt(0).toUpperCase() + tx.status.slice(1),
-                        method: tx.description.includes("Bank") ? "Bank Transfer" : "Crypto Wallet",
-                        source: "Main Balance" // Simplified for now as transaction doesn't store source
-                    }));
+                    .map(tx => {
+                        // Extract source from description if available
+                        const sourceMatch = tx.description.match(/from (.*)$/);
+                        return {
+                            id: tx._id,
+                            amount: tx.amount,
+                            date: new Date(tx.createdAt).toISOString().split('T')[0],
+                            status: tx.status.charAt(0).toUpperCase() + tx.status.slice(1),
+                            method: tx.description.includes("Bank") ? "Bank Transfer" : "Crypto Wallet",
+                            source: sourceMatch ? sourceMatch[1] : "Total Income"
+                        };
+                    });
                 setWithdrawalHistory(withdrawals);
 
                 // Calculate withdrawal statistics
@@ -101,14 +105,17 @@ export default function Withdrawal() {
             const { data: txData } = await client.get('/transactions');
             const withdrawals = txData
                 .filter(tx => tx.type === 'withdrawal')
-                .map(tx => ({
-                    id: tx._id,
-                    amount: tx.amount,
-                    date: new Date(tx.createdAt).toISOString().split('T')[0],
-                    status: tx.status.charAt(0).toUpperCase() + tx.status.slice(1),
-                    method: tx.description.includes("Bank") ? "Bank Transfer" : "Crypto Wallet",
-                    source: "Main Balance"
-                }));
+                .map(tx => {
+                    const sourceMatch = tx.description.match(/from (.*)$/);
+                    return {
+                        id: tx._id,
+                        amount: tx.amount,
+                        date: new Date(tx.createdAt).toISOString().split('T')[0],
+                        status: tx.status.charAt(0).toUpperCase() + tx.status.slice(1),
+                        method: tx.description.includes("Bank") ? "Bank Transfer" : "Crypto Wallet",
+                        source: sourceMatch ? sourceMatch[1] : "Total Income"
+                    };
+                });
             setWithdrawalHistory(withdrawals);
 
             // Recalculate stats
@@ -187,27 +194,6 @@ export default function Withdrawal() {
                     </div>
                     <div className="w-full bg-[#444]/50 rounded-full h-1.5 md:h-2">
                         <div className="bg-gradient-to-r from-[#00b894] to-[#00cec9] h-1.5 md:h-2 rounded-full" style={{ width: "60%" }}></div>
-                    </div>
-                </div>
-
-                {/* Normal Withdrawal Card */}
-                <div className="bg-gradient-to-br from-[#040408] to-[#1a1a2e] p-4 md:p-6 rounded-xl border border-[#0984e3]/30 hover:border-[#0984e3] transition-all group hover:shadow-lg hover:shadow-[#0984e3]/20">
-                    <div className="flex items-start justify-between mb-3 md:mb-4">
-                        <div>
-                            <h3 className="text-white font-bold text-base md:text-lg">Normal Withdrawal</h3>
-                            <p className="text-gray-400 text-xs md:text-sm">Available Balance</p>
-                        </div>
-                        <div className="p-1 md:p-2 rounded-lg bg-[#0984e3]/20 group-hover:bg-[#0984e3]/30 transition-all">
-                            <svg className="w-5 h-5 md:w-6 md:h-6 text-[#0984e3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                            </svg>
-                        </div>
-                    </div>
-                    <div className="mb-2">
-                        <span className="text-2xl md:text-3xl font-bold text-white">₹{userData.normalWithdrawal.toLocaleString()}</span>
-                    </div>
-                    <div className="w-full bg-[#444]/50 rounded-full h-1.5 md:h-2">
-                        <div className="bg-gradient-to-r from-[#0984e3] to-[#74b9ff] h-1.5 md:h-2 rounded-full" style={{ width: "85%" }}></div>
                     </div>
                 </div>
 
