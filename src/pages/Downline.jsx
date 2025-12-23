@@ -12,6 +12,8 @@ export default function Downline() {
         networkGrowth: 0
     })
 
+    const [rawDownline, setRawDownline] = useState([])
+    const [selectedLevel, setSelectedLevel] = useState(null)
     const [networkStats, setNetworkStats] = useState([])
     const [loading, setLoading] = useState(true)
 
@@ -26,12 +28,14 @@ export default function Downline() {
 
                 const userData = userRes.data;
                 const downlineData = downlineRes.data || [];
+                setRawDownline(downlineData);
                 const incomeData = incomeRes.data || [];
 
                 // Process downline data by levels
-                const levels = [0, 0, 0, 0, 0]; // Counts for level 1-5
-                const levelBusiness = [0, 0, 0, 0, 0]; // Business volume per level
-                const levelCommission = [0, 0, 0, 0, 0]; // Commission per level
+                // Process downline data by levels
+                const levels = new Array(10).fill(0); // Counts for level 1-10
+                const levelBusiness = new Array(10).fill(0); // Business volume per level
+                const levelCommission = new Array(10).fill(0); // Commission per level
                 let totalMembers = 0;
                 let totalBusiness = 0;
                 let totalCommission = 0;
@@ -39,7 +43,7 @@ export default function Downline() {
                 // Count members per level
                 downlineData.forEach(user => {
                     const level = user.level; // 0-based from backend
-                    if (level >= 0 && level < 5) {
+                    if (level >= 0 && level < 10) {
                         levels[level]++;
                         totalMembers++;
                         // Calculate business from user's investments
@@ -52,7 +56,7 @@ export default function Downline() {
                 // Calculate commission from income data
                 incomeData.forEach(income => {
                     const level = income.level - 1; // Convert to 0-based
-                    if (level >= 0 && level < 5) {
+                    if (level >= 0 && level < 10) {
                         levelCommission[level] += income.amount || 0;
                         totalCommission += income.amount || 0;
                     }
@@ -236,13 +240,18 @@ export default function Downline() {
                                     <th className="text-left py-3 md:py-4 px-3 md:px-6 text-white font-bold text-xs md:text-sm">Level</th>
                                     <th className="text-left py-3 md:py-4 px-3 md:px-6 text-white font-bold text-xs md:text-sm">Members</th>
                                     <th className="text-left py-3 md:py-4 px-3 md:px-6 text-white font-bold text-xs md:text-sm">Business Volume</th>
+                                    <th className="text-left py-3 md:py-4 px-3 md:px-6 text-white font-bold text-xs md:text-sm">Comm. %</th>
                                     <th className="text-left py-3 md:py-4 px-3 md:px-6 text-white font-bold text-xs md:text-sm">Your Commission</th>
                                     <th className="text-left py-3 md:py-4 px-3 md:px-6 text-white font-bold text-xs md:text-sm">Performance</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {networkStats.map((stat) => (
-                                    <tr key={stat.level} className="border-b border-[#444]/30 hover:bg-[#9131e7]/10 transition-colors">
+                                    <tr
+                                        key={stat.level}
+                                        onClick={() => setSelectedLevel(stat.level)}
+                                        className={`border-b border-[#444]/30 hover:bg-[#9131e7]/10 transition-colors cursor-pointer ${selectedLevel === stat.level ? 'bg-[#9131e7]/20 border-[#9131e7]/50' : ''}`}
+                                    >
                                         <td className="py-3 md:py-4 px-3 md:px-6">
                                             <div className="flex items-center gap-2 md:gap-3">
                                                 <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-gradient-to-br from-[#9131e7] to-[#e84495] flex items-center justify-center flex-shrink-0">
@@ -280,6 +289,11 @@ export default function Downline() {
                                                     </div>
                                                 )}
                                             </div>
+                                        </td>
+                                        <td className="py-3 md:py-4 px-3 md:px-6">
+                                            <span className="text-white font-bold text-sm md:text-base">
+                                                {[5, 2, 1.5, 1, 1, 1, 0.75, 0.50, 0.25, 0.25][stat.level - 1]}%
+                                            </span>
                                         </td>
                                         <td className="py-3 md:py-4 px-3 md:px-6">
                                             <div className="space-y-1">
@@ -326,6 +340,81 @@ export default function Downline() {
                     </div>
                 </div>
             </div>
+
+            {/* Level Details View */}
+            {selectedLevel && (
+                <div className="mt-6 bg-gradient-to-br from-[#040408] to-[#1a1a2e] rounded-2xl border border-[#9131e7]/30 overflow-hidden animate-fade-in-up transition-all duration-300">
+                    <div className="p-4 md:p-6 border-b border-[#9131e7]/30 bg-gradient-to-r from-[#9131e7]/10 to-[#e84495]/10 flex justify-between items-center">
+                        <div>
+                            <h3 className="text-xl font-bold text-white">Level {selectedLevel} Members</h3>
+                            <p className="text-gray-400 text-sm">Viewing details for level {selectedLevel}</p>
+                        </div>
+                        <button
+                            onClick={() => setSelectedLevel(null)}
+                            className="p-2 hover:bg-[#9131e7]/20 rounded-full text-gray-400 hover:text-white transition-colors"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full min-w-max">
+                            <thead>
+                                <tr className="border-b border-[#9131e7]/30 bg-[#9131e7]/5">
+                                    <th className="text-left py-3 px-6 text-gray-300 font-medium text-sm">Member</th>
+                                    <th className="text-left py-3 px-6 text-gray-300 font-medium text-sm">Join Date</th>
+                                    <th className="text-left py-3 px-6 text-gray-300 font-medium text-sm">Status</th>
+                                    <th className="text-left py-3 px-6 text-gray-300 font-medium text-sm">Total Investment</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {rawDownline.filter(u => u.level === selectedLevel - 1).length === 0 ? (
+                                    <tr>
+                                        <td colSpan="5" className="py-8 text-center text-gray-400">
+                                            No members found in this level
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    rawDownline
+                                        .filter(u => u.level === selectedLevel - 1)
+                                        .map((user, idx) => (
+                                            <tr key={idx} className="border-b border-[#444]/20 hover:bg-white/5 transition-colors">
+                                                <td className="py-3 px-6">
+                                                    <div className="flex item-center gap-3">
+                                                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#9131e7] to-[#e84495] flex items-center justify-center text-white text-xs font-bold">
+                                                            {user.name?.charAt(0) || 'U'}
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-white font-medium">{user.name}</div>
+                                                            <div className="text-xs text-gray-500">{user.email}</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="py-3 px-6 text-gray-300 text-sm">
+                                                    {new Date(user.createdAt).toLocaleDateString()}
+                                                </td>
+                                                <td className="py-3 px-6">
+                                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${user.kycStatus === 'approved'
+                                                        ? 'bg-green-500/20 text-green-400'
+                                                        : user.kycStatus === 'pending'
+                                                            ? 'bg-yellow-500/20 text-yellow-400'
+                                                            : 'bg-red-500/20 text-red-400'
+                                                        }`}>
+                                                        {user.kycStatus === 'approved' ? 'Verified' : user.kycStatus || 'Unverified'}
+                                                    </span>
+                                                </td>
+                                                <td className="py-3 px-6 text-white font-bold text-sm">
+                                                    ₹{(user.totalInvestment || 0).toLocaleString()}
+                                                </td>
+                                            </tr>
+                                        ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

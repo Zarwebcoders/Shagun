@@ -25,9 +25,15 @@ export default function Packages() {
                 ]);
                 setPackages(packagesRes.data);
                 setInvestments(investmentsRes.data);
+                setInvestments(investmentsRes.data);
                 // Set sponsor ID from user data
-                if (userRes.data && userRes.data.sponsorId) {
-                    setUserSponsorId(userRes.data.sponsorId);
+                if (userRes.data) {
+                    if (userRes.data.referredBy) {
+                        const sponsor = userRes.data.referredBy;
+                        setUserSponsorId(sponsor.referralCode || sponsor._id || sponsor);
+                    } else if (userRes.data.sponsorId) {
+                        setUserSponsorId(userRes.data.sponsorId);
+                    }
                 }
             } catch (error) {
                 console.error("Error fetching data:", error);
@@ -194,8 +200,8 @@ export default function Packages() {
                                 name="sponsorId"
                                 value={userSponsorId}
                                 readOnly
-                                placeholder="Loading sponsor ID..."
-                                className="w-full px-3 md:px-4 py-2 md:py-3 bg-[#1a1a2e]/50 border border-[#9131e7]/40 text-gray-400 rounded-lg cursor-not-allowed text-sm md:text-base"
+                                placeholder={loading ? "Loading sponsor ID..." : "No Sponsor Linked"}
+                                className={`w-full px-3 md:px-4 py-2 md:py-3 bg-[#1a1a2e]/50 border border-[#9131e7]/40 text-gray-400 rounded-lg cursor-not-allowed text-sm md:text-base ${!userSponsorId && !loading ? 'italic opacity-70' : ''}`}
                             />
                             <p className="text-gray-400 text-xs mt-2">Your sponsor ID is automatically fetched from your profile</p>
                         </div>

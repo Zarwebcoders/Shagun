@@ -21,7 +21,7 @@ export default function PackageManagement() {
             // Calculate stats
             const totalAmount = data.reduce((sum, inv) => sum + inv.amount, 0);
             const pending = data.filter(inv => inv.status === 'pending').length;
-            const approved = data.filter(inv => inv.status === 'approved').length;
+            const approved = data.filter(inv => inv.status === 'active').length;
 
             setStats({
                 totalInvestments: data.length,
@@ -41,8 +41,9 @@ export default function PackageManagement() {
     }, []);
 
     const handleApprove = async (investmentId) => {
+        if (!window.confirm("Are you sure you want to approve this investment?")) return;
         try {
-            await client.put(`/investments/${investmentId}`, { status: 'approved' });
+            await client.put(`/investments/${investmentId}`, { status: 'active' });
             fetchInvestments(); // Refresh list
             alert("Investment approved successfully!");
         } catch (error) {
@@ -52,6 +53,7 @@ export default function PackageManagement() {
     };
 
     const handleReject = async (investmentId) => {
+        if (!window.confirm("Are you sure you want to reject this investment?")) return;
         try {
             await client.put(`/investments/${investmentId}`, { status: 'rejected' });
             fetchInvestments(); // Refresh list
@@ -156,14 +158,14 @@ export default function PackageManagement() {
                                         </td>
                                         <td className="px-6 py-4">
                                             <span
-                                                className={`px-3 py-1 rounded-full text-xs font-semibold ${investment.status === 'approved'
-                                                        ? 'bg-green-500/20 text-green-500'
-                                                        : investment.status === 'pending'
-                                                            ? 'bg-yellow-500/20 text-yellow-500'
-                                                            : 'bg-red-500/20 text-red-500'
+                                                className={`px-3 py-1 rounded-full text-xs font-semibold ${investment.status === 'active'
+                                                    ? 'bg-green-500/20 text-green-500'
+                                                    : investment.status === 'pending'
+                                                        ? 'bg-yellow-500/20 text-yellow-500'
+                                                        : 'bg-red-500/20 text-red-500'
                                                     }`}
                                             >
-                                                {investment.status}
+                                                {investment.status === 'active' ? 'Approved' : investment.status}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4">

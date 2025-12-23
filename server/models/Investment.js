@@ -33,8 +33,13 @@ const investmentSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['active', 'completed', 'terminated'],
-        default: 'active',
+        enum: ['pending', 'active', 'completed', 'terminated', 'rejected'],
+        default: 'pending',
+    },
+    businessVolume: {
+        type: Number,
+        required: true,
+        default: 0
     },
     lastroiDate: {
         type: Date,

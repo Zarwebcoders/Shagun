@@ -103,8 +103,13 @@ const deleteUser = async (req, res) => {
 // @access  Private
 const getDownline = async (req, res) => {
     try {
-        // Use mongoose from require if not globally available, or import it
         const mongoose = require('mongoose');
+
+        // 1. Find the current user and get their graph
+        // 2. Unwind the network to process each user individually
+        // 3. Lookup investments for each network user
+        // 4. Sum up the active investments
+
         const downline = await User.aggregate([
             { $match: { _id: new mongoose.Types.ObjectId(req.user.id) } },
             {
@@ -114,24 +119,53 @@ const getDownline = async (req, res) => {
                     connectFromField: "_id",
                     connectToField: "referredBy",
                     as: "network",
-                    maxDepth: 4, // 0 is Level 1 (direct referals) relative to startWith? Wait, startWith is me.
-                    // If startWith is ME, then level 0 in graphLookup is MY DIRECTS?
-                    // Let's verify: connectToField 'referredBy' matches 'connectFromField' (_id).
-                    // So users whose referredBy is ME are found.
+                    maxDepth: 4,
                     depthField: "level"
                 }
+            },
+            { $unwind: "$network" },
+            {
+                $lookup: {
+                    from: "investments",
+                    localField: "network._id",
+                    foreignField: "user",
+                    as: "userInvestments"
+                }
+            },
+            {
+                $addFields: {
+                    "network.totalInvestment": {
+                        $sum: {
+                            $map: {
+                                input: {
+                                    $filter: {
+                                        input: "$userInvestments",
+                                        as: "inv",
+                                        cond: { $eq: ["$$inv.status", "active"] } // Only count active investments? Or all? Usually total business is active.
+                                    }
+                                },
+                                as: "activeInv",
+                                in: { $ifNull: ["$$activeInv.businessVolume", "$$activeInv.amount"] }
+                            }
+                        }
+                    }
+                }
+            },
+            {
+                $sort: { "network.createdAt": -1 }
+            },
+            {
+                $project: {
+                    "network.password": 0, // Security: don't send passwords
+                    "userInvestments": 0
+                }
+            },
+            {
+                $replaceRoot: { newRoot: "$network" }
             }
         ]);
 
-        if (!downline || downline.length === 0) {
-            return res.json([]);
-        }
-
-        // graphLookup depth is 0 for first match.
-        // So level 0 = Level 1 (Directs).
-        // level 1 = Level 2.
-
-        res.json(downline[0].network);
+        res.json(downline);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

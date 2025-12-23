@@ -35,6 +35,7 @@ app.use('/api/settings', require('./routes/settingRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
 app.use('/api/investments', require('./routes/investmentRoutes'));
 app.use('/api/token', require('./routes/tokenRoutes'));
+app.use('/api/income', require('./routes/incomeRoutes'));
 
 const PORT = process.env.PORT || 5000;
 

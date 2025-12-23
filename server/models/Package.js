@@ -13,6 +13,10 @@ const packageSchema = new mongoose.Schema({
         type: Number, // Use a very large number for 'Unlimited'
         required: true,
     },
+    businessVolume: {
+        type: Number, // Percentage of investment that counts as BV (e.g. 100)
+        default: 100
+    },
     dailyReturn: {
         type: Number, // Percentage value, e.g., 2.5
         required: true,

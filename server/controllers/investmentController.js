@@ -50,27 +50,34 @@ const createInvestment = async (req, res) => {
         endDate.setDate(startDate.getDate() + (parseInt(pkg.duration) || 365));
 
         // Create Investment
+        // Calculate Business Volume
+        const businessVolume = (Number(amount) * (pkg.businessVolume || 100)) / 100;
+
+        // Create Investment
         const investment = await Investment.create({
             user: req.user.id,
             package: pkg._id,
             amount: Number(amount),
+            businessVolume: businessVolume,
             dailyReturn: pkg.dailyReturn,
             dailyReturnAmount: (Number(amount) * pkg.dailyReturn) / 100,
             startDate,
             endDate,
             transactionId: transactionId || `INV${Date.now()}`,
-            status: 'active', // Set to active so it shows in history
+            status: 'pending', // Defaults to pending
             sponsorId: sponsorId || "",
             paymentSlip: paymentSlip || ""
         });
 
-        // Create Transaction Record
+        // Commission is NOT distributed here anymore. It will be distributed upon approval.
+
+        // Create Transaction Record (Pending)
         await Transaction.create({
             user: req.user.id,
             type: 'investment',
             amount: Number(amount),
-            description: `Investment in ${pkg.name} package`,
-            status: 'completed',
+            description: `Investment in ${pkg.name} package (Pending Approval)`,
+            status: 'pending',
             hash: transactionId || `INV${Date.now()}`
         });
 
@@ -120,8 +127,34 @@ const updateInvestmentStatus = async (req, res) => {
         const investment = await Investment.findById(req.params.id);
 
         if (investment) {
+            const oldStatus = investment.status;
             investment.status = status;
             await investment.save();
+
+            // If status changed to active, distribute commission and update transaction
+            if (oldStatus !== 'active' && status === 'active') {
+                console.log(`Approving investment ${investment._id}. BV: ${investment.businessVolume}`);
+                const { distributeLevelIncome } = require('../utils/commission');
+                // Use businessVolume for commission calculation, fallback to amount if BV is missing
+                const calcAmount = investment.businessVolume !== undefined ? investment.businessVolume : investment.amount;
+                await distributeLevelIncome(investment.user, calcAmount, investment.transactionId);
+
+                // Update the original transaction status to completed
+                const transaction = await Transaction.findOne({ hash: investment.transactionId });
+                if (transaction) {
+                    transaction.status = 'completed';
+                    transaction.description = transaction.description.replace('(Pending Approval)', '');
+                    await transaction.save();
+                }
+            } else if (status === 'rejected') {
+                // Update the original transaction status to failed/rejected
+                const transaction = await Transaction.findOne({ hash: investment.transactionId });
+                if (transaction) {
+                    transaction.status = 'failed';
+                    await transaction.save();
+                }
+            }
+
             res.json(investment);
         } else {
             res.status(404).json({ message: 'Investment not found' });
