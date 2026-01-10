@@ -13,7 +13,7 @@ connectDB();
 
 // CORS
 const corsOptions = {
-    origin: 'http://localhost:5000/api' || 'https://shagunbackend.vercel.app/api' || 'https://shagunbackend.vercel.app',
+    origin: 'http://localhost:5000/api' || 'https://shagunbackend.vercel.app/api' || 'https://shagunbackend.vercel.app' || 'https://shagun-black.vercel.app',
     credentials: true,
     optionSuccessStatus: 200
 }
