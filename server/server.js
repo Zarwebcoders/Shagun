@@ -13,7 +13,7 @@ connectDB();
 
 // CORS
 const corsOptions = {
-    origin: 'http://localhost:5000/api',
+    origin: 'http://localhost:5000/api' || 'https://shagunbackend.vercel.app/api' || 'https://shagunbackend.vercel.app',
     credentials: true,
     optionSuccessStatus: 200
 }
@@ -29,7 +29,7 @@ app.use(morgan('dev'));
 
 // Basic Route
 app.get('/', (req, res) => {
-    res.send('REX Token API is running...');
+    res.send('Shagun API is running...');
 });
 
 // Routes

@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const client = axios.create({
-    baseURL: import.meta.env.PROD ? 'http://localhost:5000/api' : '/api',
+    baseURL: import.meta.env.PROD ? 'https://shagunbackend.vercel.app/api' : '/api',
     headers: {
         'Content-Type': 'application/json',
     },
