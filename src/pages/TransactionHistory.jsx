@@ -44,14 +44,14 @@ export default function TransactionHistory() {
             </div>
 
             {/* Filters and Search */}
-            <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-[#1a1a2e] border border-[#9131e7]/30 p-4 rounded-xl">
+            <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-[#1a1a2e] border border-teal-500/30 p-4 rounded-xl">
                 <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
                     {["All", "Deposit", "Withdrawal", "Investment", "Bonus"].map((item) => (
                         <button
                             key={item}
                             onClick={() => setFilter(item)}
                             className={`px-4 py-2 rounded-lg text-sm whitespace-nowrap transition-all ${filter === item
-                                ? "bg-[#9131e7] text-white font-semibold shadow-lg shadow-[#9131e7]/20"
+                                ? "bg-teal-500 text-white font-semibold shadow-lg shadow-teal-500/20"
                                 : "bg-[#0f0f1a] text-gray-400 hover:bg-[#3f3f3f] hover:text-white"
                                 }`}
                         >
@@ -66,7 +66,7 @@ export default function TransactionHistory() {
                         placeholder="Search transactions..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 bg-[#0f0f1a] border border-[#9131e7]/30 rounded-lg text-white focus:outline-none focus:border-[#9131e7] text-sm"
+                        className="w-full pl-10 pr-4 py-2 bg-[#0f0f1a] border border-teal-500/30 rounded-lg text-white focus:outline-none focus:border-teal-500 text-sm"
                     />
                     <svg
                         className="absolute left-3 top-2.5 w-4 h-4 text-gray-400"
@@ -85,11 +85,11 @@ export default function TransactionHistory() {
             </div>
 
             {/* Transactions Table */}
-            <div className="bg-[#1a1a2e] border border-[#9131e7]/30 rounded-xl overflow-hidden">
+            <div className="bg-[#1a1a2e] border border-teal-500/30 rounded-xl overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full">
                         <thead>
-                            <tr className="bg-[#0f0f1a] border-b border-[#9131e7]/30 text-left">
+                            <tr className="bg-[#0f0f1a] border-b border-teal-500/30 text-left">
                                 <th className="p-4 text-gray-400 font-semibold text-sm">Type</th>
                                 <th className="p-4 text-gray-400 font-semibold text-sm">Description</th>
                                 <th className="p-4 text-gray-400 font-semibold text-sm">Amount</th>
@@ -103,7 +103,7 @@ export default function TransactionHistory() {
                                 filteredTransactions.map((tx) => (
                                     <tr
                                         key={tx._id}
-                                        className="border-b border-[#444]/20 hover:bg-[#9131e7]/5 transition-colors"
+                                        className="border-b border-[#444]/20 hover:bg-teal-500/5 transition-colors"
                                     >
                                         <td className="p-4">
                                             <div className="flex items-center gap-2">

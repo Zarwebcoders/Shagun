@@ -74,7 +74,7 @@ export default function LevelIncome() {
                     <select
                         value={selectedLevel}
                         onChange={(e) => setSelectedLevel(e.target.value)}
-                        className="bg-[#040408] border border-[#9131e7] text-white rounded-lg px-3 md:px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#9131e7] w-full sm:w-auto min-w-[150px] text-sm md:text-base"
+                        className="bg-[#040408] border border-teal-500 text-white rounded-lg px-3 md:px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 w-full sm:w-auto min-w-[150px] text-sm md:text-base"
                     >
                         <option value="all">All Levels</option>
                         {[1, 2, 3, 4, 5].map((lvl) => (
@@ -89,7 +89,7 @@ export default function LevelIncome() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                 <div className="bg-gradient-to-br from-[#040408] to-[#1f1f1f] p-4 md:p-6 rounded-lg border border-[#444]">
                     <h3 className="text-[#b0b0b0] text-xs md:text-sm mb-2">Total Level Income</h3>
-                    <p className="text-2xl md:text-3xl font-bold text-[#9131e7]">₹{totalLevelIncome.toLocaleString()}</p>
+                    <p className="text-2xl md:text-3xl font-bold text-teal-400">₹{totalLevelIncome.toLocaleString()}</p>
                 </div>
                 <div className="bg-gradient-to-br from-[#040408] to-[#1f1f1f] p-4 md:p-6 rounded-lg border border-[#444]">
                     <h3 className="text-[#b0b0b0] text-xs md:text-sm mb-2">Total Network Members</h3>
@@ -104,7 +104,7 @@ export default function LevelIncome() {
             </div>
 
             <div className="space-y-4 md:space-y-6">
-                <h3 className="text-xl md:text-2xl font-bold text-[#9131e7]">
+                <h3 className="text-xl md:text-2xl font-bold text-teal-400">
                     Level Income Breakdown {selectedLevel !== "all" && `- Level ${selectedLevel}`}
                 </h3>
                 {displayData.length === 0 ? (
@@ -126,15 +126,15 @@ export default function LevelIncome() {
                                 </thead>
                                 <tbody>
                                     {displayData.map((item, index) => (
-                                        <tr key={index} className="border-b border-[#444] hover:bg-[#9131e7]/5 transition-colors">
+                                        <tr key={index} className="border-b border-[#444] hover:bg-teal-500/5 transition-colors">
                                             <td className="py-3 px-3 md:px-4">
-                                                <span className="px-2 md:px-3 py-1 bg-[#9131e7]/20 text-[#9131e7] rounded-full text-xs md:text-sm font-semibold">
+                                                <span className="px-2 md:px-3 py-1 bg-teal-500/20 text-teal-400 rounded-full text-xs md:text-sm font-semibold">
                                                     Level {item.level}
                                                 </span>
                                             </td>
                                             <td className="py-3 px-3 md:px-4 text-white text-sm md:text-base">{item.members}</td>
                                             <td className="py-3 px-3 md:px-4 text-white text-sm md:text-base">₹{item.totalInvestment.toLocaleString()}</td>
-                                            <td className="py-3 px-3 md:px-4 text-[#9131e7] font-bold text-sm md:text-base">₹{item.income.toLocaleString()}</td>
+                                            <td className="py-3 px-3 md:px-4 text-teal-400 font-bold text-sm md:text-base">₹{item.income.toLocaleString()}</td>
                                         </tr>
                                     ))}
                                 </tbody>

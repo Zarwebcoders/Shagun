@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useNavigate, Outlet } from "react-router-dom"
 import { IoIosLogOut } from "react-icons/io";
+import logo from "../../../public/removedbg.png"
 
 export default function AdminLayout({ children, setIsAdminAuthenticated }) {
     const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -49,17 +50,18 @@ export default function AdminLayout({ children, setIsAdminAuthenticated }) {
       `}</style>
 
             {/* Top Header */}
-            <div className="fixed top-0 left-0 right-0 h-16 bg-[#0f0f1a] border-b border-[#9131e7]/30 flex items-center justify-between px-6 z-50">
+            <div className="fixed top-0 left-0 right-0 h-16 bg-[#0f0f1a] border-b border-teal-500/30 flex items-center justify-between px-6 z-50">
                 <div className="flex items-center gap-4">
                     <button
                         onClick={() => setSidebarOpen(!sidebarOpen)}
-                        className="lg:hidden text-white hover:text-[#9131e7] transition-colors"
+                        className="lg:hidden text-white hover:text-teal-400 transition-colors"
                     >
                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                         </svg>
                     </button>
-                    <h1 className="text-2xl font-bold bg-gradient-to-r from-[#9131e7] to-[#e3459b] bg-clip-text text-transparent">REX Token Admin</h1>
+                    <img className="w-14 h-14" src={logo} alt="" />
+                    <h1 className="text-2xl font-bold bg-gradient-brand bg-clip-text text-transparent">Admin</h1>
                 </div>
 
                 <div className="flex items-center gap-4">
@@ -67,23 +69,12 @@ export default function AdminLayout({ children, setIsAdminAuthenticated }) {
                         <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                         <span className="text-white text-sm">System Online</span>
                     </div>
-                    <button className="p-2 bg-[#1a1a2e] rounded-lg text-white hover:bg-[#9131e7]/20 transition-colors relative">
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-                            />
-                        </svg>
-                        <span className="absolute top-1 right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-[#0f0f1a]"></span>
-                    </button>
                     <div className="flex items-center gap-3">
                         <div className="hidden md:block text-right">
                             <p className="text-white text-sm font-semibold">Admin User</p>
-                            <p className="text-gray-400 text-xs">admin@rextoken.com</p>
+                            <p className="text-gray-400 text-xs">admin@shagun.com</p>
                         </div>
-                        <div className="w-10 h-10 bg-gradient-to-br from-[#9131e7] to-[#e3459b] rounded-full flex items-center justify-center text-white font-bold">
+                        <div className="w-10 h-10 bg-gradient-brand rounded-full flex items-center justify-center text-white font-bold">
                             A
                         </div>
                     </div>
@@ -91,14 +82,14 @@ export default function AdminLayout({ children, setIsAdminAuthenticated }) {
             </div>
 
             {/* Sidebar - Desktop */}
-            <div className="hidden lg:flex fixed left-0 top-16 bottom-0 w-64 bg-[#0f0f1a] border-r border-[#9131e7]/30 flex-col">
+            <div className="hidden lg:flex fixed left-0 top-16 bottom-0 w-64 bg-[#0f0f1a] border-r border-teal-500/30 flex-col">
                 <nav className="p-4 space-y-2 flex-1 overflow-y-auto">
                     {menuItems.map((item) => (
                         <button
                             key={item.id}
                             onClick={() => handleMenuClick(item)}
                             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${activeMenu === item.id
-                                ? "bg-gradient-to-r from-[#9131e7] to-[#e3459b] text-white font-semibold shadow-lg shadow-[#9131e7]/30"
+                                ? "bg-gradient-brand text-white font-semibold shadow-lg shadow-teal-500/30"
                                 : "text-gray-300 hover:bg-[#1a1a2e] hover:text-white"
                                 }`}
                         >
@@ -109,7 +100,7 @@ export default function AdminLayout({ children, setIsAdminAuthenticated }) {
                 </nav>
 
                 {/* Logout Button */}
-                <div className="p-4 border-t border-[#9131e7]/30">
+                <div className="p-4 border-t border-teal-500/30">
                     <button
                         className="w-full flex items-center gap-3 px-4 py-3 bg-red-600/10 hover:bg-red-600/20 text-red-500 hover:text-red-400 rounded-lg transition-all duration-300 font-semibold border border-red-600/20"
                         onClick={handleLogout}
@@ -127,14 +118,14 @@ export default function AdminLayout({ children, setIsAdminAuthenticated }) {
                         className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40 animate-fadeIn"
                         onClick={() => setSidebarOpen(false)}
                     ></div>
-                    <div className="lg:hidden fixed left-0 top-16 bottom-0 w-64 bg-[#0f0f1a] border-r border-[#9131e7]/30 z-50 animate-slideIn flex flex-col">
+                    <div className="lg:hidden fixed left-0 top-16 bottom-0 w-64 bg-[#0f0f1a] border-r border-teal-500/30 z-50 animate-slideIn flex flex-col">
                         <nav className="p-4 space-y-2 flex-1 overflow-y-auto">
                             {menuItems.map((item) => (
                                 <button
                                     key={item.id}
                                     onClick={() => handleMenuClick(item)}
                                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${activeMenu === item.id
-                                        ? "bg-gradient-to-r from-[#9131e7] to-[#e3459b] text-white font-semibold"
+                                        ? "bg-gradient-brand text-white font-semibold"
                                         : "text-gray-300 hover:bg-[#1a1a2e] hover:text-white"
                                         }`}
                                 >
@@ -145,7 +136,7 @@ export default function AdminLayout({ children, setIsAdminAuthenticated }) {
                         </nav>
 
                         {/* Logout Button Mobile */}
-                        <div className="p-4 border-t border-[#9131e7]/30">
+                        <div className="p-4 border-t border-teal-500/30">
                             <button
                                 className="w-full flex items-center gap-3 px-4 py-3 bg-red-600/10 hover:bg-red-600/20 text-red-500 hover:text-red-400 rounded-lg transition-all duration-300 font-semibold border border-red-600/20"
                                 onClick={handleLogout}

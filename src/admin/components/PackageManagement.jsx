@@ -1,202 +1,75 @@
 "use client"
-
-import { useState, useEffect } from "react"
-import client from "../../api/client"
+import { useState } from "react"
+import { Package, Plus, Edit2, Trash2 } from "lucide-react"
 
 export default function PackageManagement() {
-    const [investments, setInvestments] = useState([])
-    const [loading, setLoading] = useState(true)
-    const [stats, setStats] = useState({
-        totalInvestments: 0,
-        totalAmount: 0,
-        pendingInvestments: 0,
-        approvedInvestments: 0
-    })
-
-    const fetchInvestments = async () => {
-        try {
-            const { data } = await client.get('/investments/all');
-            setInvestments(data);
-
-            // Calculate stats
-            const totalAmount = data.reduce((sum, inv) => sum + inv.amount, 0);
-            const pending = data.filter(inv => inv.status === 'pending').length;
-            const approved = data.filter(inv => inv.status === 'active').length;
-
-            setStats({
-                totalInvestments: data.length,
-                totalAmount: totalAmount,
-                pendingInvestments: pending,
-                approvedInvestments: approved
-            });
-        } catch (error) {
-            console.error("Error fetching investments:", error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchInvestments();
-    }, []);
-
-    const handleApprove = async (investmentId) => {
-        if (!window.confirm("Are you sure you want to approve this investment?")) return;
-        try {
-            await client.put(`/investments/${investmentId}`, { status: 'active' });
-            fetchInvestments(); // Refresh list
-            alert("Investment approved successfully!");
-        } catch (error) {
-            console.error("Error approving investment:", error);
-            alert("Failed to approve investment");
-        }
-    };
-
-    const handleReject = async (investmentId) => {
-        if (!window.confirm("Are you sure you want to reject this investment?")) return;
-        try {
-            await client.put(`/investments/${investmentId}`, { status: 'rejected' });
-            fetchInvestments(); // Refresh list
-            alert("Investment rejected");
-        } catch (error) {
-            console.error("Error rejecting investment:", error);
-            alert("Failed to reject investment");
-        }
-    };
-
-    if (loading) return <div className="text-white">Loading investments...</div>;
+    const [packages, setPackages] = useState([
+        { id: 1, name: "Starter", price: "100 G4X", roi: "0.6%", duration: "365 Days" },
+        { id: 2, name: "Pro", price: "500 G4X", roi: "0.6%", duration: "365 Days" },
+        { id: 3, name: "Elite", price: "1000 G4X", roi: "0.6%", duration: "365 Days" },
+        { id: 4, name: "Master", price: "5000 G4X", roi: "0.6%", duration: "365 Days" },
+        { id: 5, name: "Grand", price: "10000 G4X", roi: "0.6%", duration: "365 Days" },
+    ])
 
     return (
-        <div className="space-y-6 animate-fadeIn">
+        <div className="space-y-8 animate-fadeIn text-white">
             <style jsx>{`
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        .animate-fadeIn { animation: fadeIn 0.5s ease-out; }
-      `}</style>
-
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                @keyframes fadeIn {
+                    from { opacity: 0; transform: translateY(10px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                .animate-fadeIn { animation: fadeIn 0.4s ease-out; }
+                .cyber-card {
+                    background: linear-gradient(145deg, rgba(20, 184, 166, 0.1), rgba(15, 15, 26, 0.8));
+                    border: 1px solid rgba(20, 184, 166, 0.3);
+                }
+            `}</style>
+            <div className="flex justify-between items-center">
                 <div>
-                    <h2 className="text-3xl font-bold text-white">Investment Management</h2>
-                    <p className="text-gray-400 mt-1">View and manage all user investments</p>
+                    <h2 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+                        Package Management
+                    </h2>
+                    <p className="text-gray-400 mt-1 flex items-center gap-2">
+                        <Package className="w-4 h-4 text-teal-500" />
+                        Manage investment packages and ROI settings
+                    </p>
                 </div>
+                <button className="px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded-lg flex items-center gap-2 transition-all shadow-[0_0_15px_rgba(20,184,166,0.5)]">
+                    <Plus className="w-4 h-4" /> Add Package
+                </button>
             </div>
 
-            {/* Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="bg-[#0f0f1a] rounded-xl p-6 border border-[#9131e7]/30">
-                    <p className="text-gray-400 text-sm mb-1">Total Investments</p>
-                    <h3 className="text-3xl font-bold text-white">{stats.totalInvestments}</h3>
-                </div>
-                <div className="bg-[#0f0f1a] rounded-xl p-6 border border-[#00b894]/30">
-                    <p className="text-gray-400 text-sm mb-1">Total Amount</p>
-                    <h3 className="text-3xl font-bold text-white">₹{stats.totalAmount.toLocaleString()}</h3>
-                </div>
-                <div className="bg-[#0f0f1a] rounded-xl p-6 border border-[#f3b232]/30">
-                    <p className="text-gray-400 text-sm mb-1">Pending Approvals</p>
-                    <h3 className="text-3xl font-bold text-white">{stats.pendingInvestments}</h3>
-                </div>
-                <div className="bg-[#0f0f1a] rounded-xl p-6 border border-[#00b894]/30">
-                    <p className="text-gray-400 text-sm mb-1">Approved</p>
-                    <h3 className="text-3xl font-bold text-white">{stats.approvedInvestments}</h3>
-                </div>
-            </div>
-
-            {/* Investments Table */}
-            <div className="bg-[#0f0f1a] rounded-xl border border-[#9131e7]/30 overflow-hidden">
-                <div className="p-4 md:p-6 border-b border-[#9131e7]/30 bg-gradient-to-r from-[#9131e7]/10 to-[#e84495]/10">
-                    <h4 className="text-white font-bold text-base md:text-lg">All Investments</h4>
-                </div>
-
-                <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead className="bg-[#1a1a2e]">
-                            <tr>
-                                <th className="px-6 py-4 text-left text-gray-400 font-semibold text-sm">User</th>
-                                <th className="px-6 py-4 text-left text-gray-400 font-semibold text-sm">Amount</th>
-                                <th className="px-6 py-4 text-left text-gray-400 font-semibold text-sm">Transaction ID</th>
-                                <th className="px-6 py-4 text-left text-gray-400 font-semibold text-sm">Sponsor ID</th>
-                                <th className="px-6 py-4 text-left text-gray-400 font-semibold text-sm">Date</th>
-                                <th className="px-6 py-4 text-left text-gray-400 font-semibold text-sm">Status</th>
-                                <th className="px-6 py-4 text-left text-gray-400 font-semibold text-sm">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-[#9131e7]/30">
-                            {investments.length === 0 ? (
-                                <tr>
-                                    <td colSpan="7" className="px-6 py-8 text-center text-gray-400">
-                                        No investments found
-                                    </td>
-                                </tr>
-                            ) : (
-                                investments.map((investment) => (
-                                    <tr key={investment._id} className="hover:bg-[#1a1a2e] transition-colors">
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 bg-gradient-to-br from-[#9131e7] to-[#e84495] rounded-full flex items-center justify-center text-white font-bold">
-                                                    {investment.user?.name?.charAt(0) || 'U'}
-                                                </div>
-                                                <div>
-                                                    <p className="text-white font-medium">{investment.user?.name || 'Unknown'}</p>
-                                                    <p className="text-gray-400 text-sm">{investment.user?.email || 'N/A'}</p>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span className="text-green-500 font-bold text-lg">₹{investment.amount.toLocaleString()}</span>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <code className="text-[#9131e7] text-sm">{investment.transactionId || 'N/A'}</code>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span className="text-white text-sm">{investment.sponsorId || 'N/A'}</span>
-                                        </td>
-                                        <td className="px-6 py-4 text-gray-400 text-sm">
-                                            {new Date(investment.createdAt).toLocaleDateString()}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span
-                                                className={`px-3 py-1 rounded-full text-xs font-semibold ${investment.status === 'active'
-                                                    ? 'bg-green-500/20 text-green-500'
-                                                    : investment.status === 'pending'
-                                                        ? 'bg-yellow-500/20 text-yellow-500'
-                                                        : 'bg-red-500/20 text-red-500'
-                                                    }`}
-                                            >
-                                                {investment.status === 'active' ? 'Approved' : investment.status}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-2">
-                                                {investment.status === 'pending' && (
-                                                    <>
-                                                        <button
-                                                            onClick={() => handleApprove(investment._id)}
-                                                            className="px-3 py-1 bg-green-500/20 text-green-500 rounded-lg hover:bg-green-500/30 transition-all text-sm font-semibold"
-                                                        >
-                                                            Approve
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleReject(investment._id)}
-                                                            className="px-3 py-1 bg-red-500/20 text-red-500 rounded-lg hover:bg-red-500/30 transition-all text-sm font-semibold"
-                                                        >
-                                                            Reject
-                                                        </button>
-                                                    </>
-                                                )}
-                                                {investment.status !== 'pending' && (
-                                                    <span className="text-gray-500 text-sm">No actions</span>
-                                                )}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {packages.map((pkg) => (
+                    <div key={pkg.id} className="cyber-card p-6 rounded-xl relative group hover:border-teal-500 transition-colors">
+                        <div className="flex justify-between items-start mb-4">
+                            <h3 className="text-xl font-bold text-white">{pkg.name}</h3>
+                            <span className="bg-teal-500/10 text-teal-400 px-2 py-1 rounded text-xs border border-teal-500/20">Active</span>
+                        </div>
+                        <div className="space-y-2 text-gray-400 text-sm">
+                            <div className="flex justify-between">
+                                <span>Price</span>
+                                <span className="text-white font-mono">{pkg.price}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span>Daily ROI</span>
+                                <span className="text-teal-400 font-bold">{pkg.roi}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span>Duration</span>
+                                <span className="text-white">{pkg.duration}</span>
+                            </div>
+                        </div>
+                        <div className="mt-6 flex gap-2">
+                            <button className="flex-1 py-2 bg-[#0f0f1a] border border-gray-700 hover:border-teal-500 text-gray-300 hover:text-white rounded-lg transition-all flex items-center justify-center gap-2 text-sm">
+                                <Edit2 className="w-3 h-3" /> Edit
+                            </button>
+                            <button className="p-2 bg-[#0f0f1a] border border-gray-700 hover:border-rose-500 text-gray-300 hover:text-rose-500 rounded-lg transition-all">
+                                <Trash2 className="w-4 h-4" />
+                            </button>
+                        </div>
+                    </div>
+                ))}
             </div>
         </div>
     )

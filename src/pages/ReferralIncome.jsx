@@ -45,7 +45,7 @@ export default function ReferralIncome() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                 <div className="bg-gradient-to-br from-[#040408] to-[#1f1f1f] p-4 md:p-6 rounded-lg border border-[#444]">
                     <h3 className="text-[#b0b0b0] text-xs md:text-sm mb-2">Total Referral Income</h3>
-                    <p className="text-2xl md:text-3xl font-bold text-[#9131e7]">₹{totalReferralIncome.toLocaleString()}</p>
+                    <p className="text-2xl md:text-3xl font-bold text-teal-400">₹{totalReferralIncome.toLocaleString()}</p>
                 </div>
                 <div className="bg-gradient-to-br from-[#040408] to-[#1f1f1f] p-4 md:p-6 rounded-lg border border-[#444]">
                     <h3 className="text-[#b0b0b0] text-xs md:text-sm mb-2">Pending Income</h3>
@@ -58,7 +58,7 @@ export default function ReferralIncome() {
             </div>
 
             <div className="space-y-4 md:space-y-6">
-                <h3 className="text-xl md:text-2xl font-bold text-[#9131e7]">Referral Transaction History</h3>
+                <h3 className="text-xl md:text-2xl font-bold text-teal-400">Referral Transaction History</h3>
                 {referralData.length === 0 ? (
                     <div className="bg-gradient-to-br from-[#040408] to-[#1f1f1f] p-8 rounded-lg border border-[#444] text-center">
                         <p className="text-gray-400">No referral income data available yet.</p>
@@ -78,7 +78,7 @@ export default function ReferralIncome() {
                                 </thead>
                                 <tbody>
                                     {referralData.map((item) => (
-                                        <tr key={item.id} className="border-b border-[#444] hover:bg-[#9131e7]/5 transition-colors">
+                                        <tr key={item.id} className="border-b border-[#444] hover:bg-teal-500/5 transition-colors">
                                             <td className="py-3 px-3 md:px-4 text-white text-sm md:text-base truncate max-w-[100px] md:max-w-none">{item.referralName}</td>
                                             <td className="py-3 px-3 md:px-4 text-[#b0b0b0] text-xs md:text-sm">{item.date}</td>
                                             <td className="py-3 px-3 md:px-4 text-white font-medium text-sm md:text-base">₹{item.amount.toLocaleString()}</td>

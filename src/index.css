@@ -1,5 +1,55 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
+:root {
+  font-family: 'Outfit', sans-serif;
+  color-scheme: dark;
+}
+
+body {
+  background-color: #050505;
+  color: white;
+  overflow-x: hidden;
+}
+
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
-  display: none;
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #050505;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #7c3aed;
+}
+
+/* Global Selection Color */
+::selection {
+  background-color: #7c3aed;
+  color: white;
+}
+
+/* Custom Utilities - Replaced @apply to avoid lint warnings */
+.bg-gradient-brand {
+  background-image: linear-gradient(to right, #2dd4bf, #3b82f6, #9333ea);
+}
+
+.text-gradient-brand {
+  background-image: linear-gradient(to right, #2dd4bf, #3b82f6, #9333ea);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.border-gradient-brand {
+  border-color: transparent;
+  background-image: linear-gradient(to right, #2dd4bf, #3b82f6, #9333ea);
+  background-clip: border-box;
 }

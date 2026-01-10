@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { toast } from "react-hot-toast"
 import CryptoCard from "../components/CryptoCard"
 import client from "../api/client"
 
@@ -37,11 +38,11 @@ export default function Shopping() {
                 description: `Purchase of ${cartItems.map(c => c.symbol).join(', ')}`,
                 crypto: 'None' // or mixed
             });
-            alert('Purchase successful!');
+            toast.success('Purchase successful!');
             setCartItems([]);
         } catch (error) {
             console.error(error);
-            alert(error.response?.data?.message || 'Purchase failed');
+            toast.error(error.response?.data?.message || 'Purchase failed');
         } finally {
             setLoading(false);
         }
@@ -54,7 +55,7 @@ export default function Shopping() {
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
                 <div className="lg:col-span-3 space-y-6">
-                    <h3 className="text-2xl font-bold text-[#9131e7]">Available Cryptocurrencies</h3>
+                    <h3 className="text-2xl font-bold text-teal-400">Available Cryptocurrencies</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {cryptos.map((crypto) => (
                             <CryptoCard key={crypto.id} crypto={crypto} onAddToCart={handleAddToCart} />
@@ -62,8 +63,8 @@ export default function Shopping() {
                     </div>
                 </div>
 
-                <aside className="lg:col-span-1 bg-gradient-to-br from-[#040408] to-[#1f1f1f] p-6 rounded-xl border border-[#444] h-fit sticky top-8">
-                    <h3 className="text-2xl font-bold text-[#9131e7] mb-6">Shopping Cart</h3>
+                <aside className="lg:col-span-1 bg-gradient-to-br from-[#040408] to-[#1f1f1f] p-6 rounded-xl border border-teal-500/30 h-fit sticky top-8">
+                    <h3 className="text-2xl font-bold text-teal-400 mb-6">Shopping Cart</h3>
                     {cartItems.length === 0 ? (
                         <p className="text-[#b0b0b0] text-center py-8">Your cart is empty</p>
                     ) : (
@@ -89,13 +90,13 @@ export default function Shopping() {
                             </div>
                             <div className="border-t border-[#444] pt-4 mb-4">
                                 <p className="text-white font-bold">
-                                    Total: <span className="text-[#9131e7]">₹{totalCartValue.toFixed(2)}</span>
+                                    Total: <span className="text-purple-500">₹{totalCartValue.toFixed(2)}</span>
                                 </p>
                             </div>
                             <button
                                 onClick={handleCheckout}
                                 disabled={loading}
-                                className={`w-full px-6 py-3 bg-gradient-to-r from-[#9131e7] to-[#e84495] text-[#040408] font-bold rounded-lg hover:shadow-lg hover:shadow-[#9131e7]/50 transition-all duration-300 hover:-translate-y-1 active:translate-y-0 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                className={`w-full px-6 py-3 bg-gradient-brand text-white font-bold rounded-lg hover:shadow-lg hover:shadow-teal-500/50 transition-all duration-300 hover:-translate-y-1 active:translate-y-0 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
                                 {loading ? 'Processing...' : 'Proceed to Checkout'}
                             </button>

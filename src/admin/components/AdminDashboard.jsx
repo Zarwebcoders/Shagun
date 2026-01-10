@@ -108,7 +108,7 @@ export default function AdminDashboard() {
         { label: "Pending KYC", value: stats.pendingKYC, change: "-5%", icon: "⏳", color: "from-yellow-500 to-yellow-600" },
         { label: "Active Investments", value: stats.activeInvestments, change: "+15%", icon: "📦", color: "from-purple-500 to-purple-600" },
         { label: "Pending Withdrawals", value: stats.pendingWithdrawals, change: "+3%", icon: "💳", color: "from-red-500 to-red-600" },
-        { label: "Total Transactions", value: stats.totalTransactions, change: "+22%", icon: "🔄", color: "from-[#9131e7] to-[#e3459b]" },
+        { label: "Total Transactions", value: stats.totalTransactions, change: "+22%", icon: "🔄", color: "from-teal-500 to-purple-500" },
     ];
 
     if (loading) return <div className="text-white">Loading dashboard...</div>;
@@ -121,8 +121,8 @@ export default function AdminDashboard() {
           to { opacity: 1; transform: translateY(0); }
         }
         @keyframes glow {
-          0%, 100% { box-shadow: 0 0 5px rgba(145, 49, 231, 0.5); }
-          50% { box-shadow: 0 0 20px rgba(145, 49, 231, 0.8); }
+          0%, 100% { box-shadow: 0 0 5px rgba(45, 212, 191, 0.5); }
+          50% { box-shadow: 0 0 20px rgba(45, 212, 191, 0.8); }
         }
         .animate-fadeIn { animation: fadeIn 0.5s ease-out; }
         .animate-glow { animation: glow 2s ease-in-out infinite; }
@@ -134,18 +134,6 @@ export default function AdminDashboard() {
                     <h2 className="text-3xl font-bold text-white">Admin Dashboard</h2>
                     <p className="text-gray-400 mt-1">Welcome back! Here's what's happening today.</p>
                 </div>
-                <div className="flex items-center gap-2">
-                    {["24h", "7d", "30d", "All"].map((range) => (
-                        <button
-                            key={range}
-                            onClick={() => setTimeRange(range)}
-                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${timeRange === range ? "bg-[#9131e7] text-white" : "bg-[#0f0f1a] border border-[#9131e7]/30 text-gray-400 hover:text-white"
-                                }`}
-                        >
-                            {range}
-                        </button>
-                    ))}
-                </div>
             </div>
 
             {/* Stats Grid */}
@@ -153,15 +141,12 @@ export default function AdminDashboard() {
                 {statsConfig.map((stat, index) => (
                     <div
                         key={index}
-                        className="bg-[#0f0f1a] rounded-xl p-6 border border-[#9131e7]/30 hover:border-[#9131e7] transition-all hover:shadow-lg hover:shadow-[#9131e7]/20"
+                        className="bg-[#0f0f1a] rounded-xl p-6 border border-teal-500/30 hover:border-teal-500 transition-all hover:shadow-lg hover:shadow-teal-500/20"
                     >
                         <div className="flex items-start justify-between">
                             <div className="flex-1">
                                 <p className="text-gray-400 text-sm mb-1">{stat.label}</p>
-                                <h3 className="text-3xl font-bold text-white mb-2">{stat.value}</h3>
-                                <p className={`text-sm font-medium ${stat.change.startsWith("+") ? "text-green-500" : "text-red-500"}`}>
-                                    {stat.change} from last period
-                                </p>
+                                <h3 className="text-3xl font-bold text-white">{stat.value}</h3>
                             </div>
                             <div
                                 className={`w-14 h-14 bg-gradient-to-br ${stat.color} rounded-xl flex items-center justify-center text-2xl`}
@@ -176,7 +161,7 @@ export default function AdminDashboard() {
             {/* Charts and Activity */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Recent Activity */}
-                <div className="lg:col-span-2 bg-[#0f0f1a] rounded-xl p-6 border border-[#9131e7]/30">
+                <div className="lg:col-span-2 bg-[#0f0f1a] rounded-xl p-6 border border-teal-500/30">
                     <h3 className="text-xl font-bold text-white mb-4">Recent Activity</h3>
                     <div className="space-y-3">
                         {recentActivities.length === 0 ? (
@@ -209,7 +194,7 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Top Users */}
-                <div className="bg-[#0f0f1a] rounded-xl p-6 border border-[#9131e7]/30">
+                <div className="bg-[#0f0f1a] rounded-xl p-6 border border-teal-500/30">
                     <h3 className="text-xl font-bold text-white mb-4">Top Investors</h3>
                     <div className="space-y-3">
                         {topUsers.length === 0 ? (
@@ -219,7 +204,7 @@ export default function AdminDashboard() {
                                 <div key={index} className="p-3 bg-[#1a1a2e] rounded-lg hover:bg-[#2a2a3e] transition-all">
                                     <div className="flex items-center justify-between mb-2">
                                         <div className="flex items-center gap-2">
-                                            <div className="w-8 h-8 bg-gradient-to-br from-[#9131e7] to-[#e3459b] rounded-full flex items-center justify-center text-white text-sm font-bold">
+                                            <div className="w-8 h-8 bg-gradient-to-br from-teal-500 to-purple-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
                                                 {index + 1}
                                             </div>
                                             <div>

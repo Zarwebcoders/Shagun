@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { toast } from "react-hot-toast"
 import client from "../../api/client"
 
 export default function TokenManagement() {
@@ -40,10 +41,10 @@ export default function TokenManagement() {
                 price: parseFloat(priceData.price),
                 phase: priceData.phase
             });
-            alert("Token price and phase updated successfully!");
+            toast.success("Token price and phase updated successfully!");
         } catch (error) {
             console.error("Error updating price:", error);
-            alert(error.response?.data?.message || "Failed to update price");
+            toast.error(error.response?.data?.message || "Failed to update price");
         } finally {
             setLoading(false);
         }
@@ -57,14 +58,14 @@ export default function TokenManagement() {
         setLoading(true);
         try {
             const { data } = await client.post('/token/recover', recoveryData);
-            alert(data.message);
+            toast.success(data.message);
             setRecoveryData({
                 wallet: "",
                 amount: ""
             });
         } catch (error) {
             console.error("Error recovering tokens:", error);
-            alert(error.response?.data?.message || "Failed to recover tokens");
+            toast.error(error.response?.data?.message || "Failed to recover tokens");
         } finally {
             setLoading(false);
         }
@@ -84,15 +85,15 @@ export default function TokenManagement() {
             <div className="flex items-center justify-between">
                 <div>
                     <h2 className="text-3xl font-bold text-white">Token Management</h2>
-                    <p className="text-gray-400 mt-1">Manage REX token price, phases, and asset recovery</p>
+                    <p className="text-gray-400 mt-1">Manage ShagunPro price, phases, and asset recovery</p>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Phase Change / Price Update Section */}
-                <div className="bg-[#0f0f1a] rounded-xl p-6 border border-[#9131e7]/30">
+                <div className="bg-[#0f0f1a] rounded-xl p-6 border border-teal-500/30">
                     <div className="flex items-center gap-3 mb-6">
-                        <div className="w-10 h-10 bg-gradient-to-br from-[#9131e7] to-[#e3459b] rounded-lg flex items-center justify-center text-white text-xl">
+                        <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-purple-500 rounded-lg flex items-center justify-center text-white text-xl">
                             🪙
                         </div>
                         <h3 className="text-xl font-bold text-white">Phase Change & Price</h3>
@@ -100,7 +101,7 @@ export default function TokenManagement() {
 
                     {fetching ? (
                         <div className="flex justify-center p-8">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#9131e7]"></div>
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-500"></div>
                         </div>
                     ) : (
                         <form onSubmit={handleUpdatePrice} className="space-y-4">
@@ -111,7 +112,7 @@ export default function TokenManagement() {
                                     step="0.00001"
                                     value={priceData.price}
                                     onChange={(e) => setPriceData({ ...priceData, price: e.target.value })}
-                                    className="w-full px-4 py-3 bg-[#1a1a2e] text-white rounded-lg border border-[#9131e7]/30 focus:border-[#9131e7] focus:outline-none"
+                                    className="w-full px-4 py-3 bg-[#1a1a2e] text-white rounded-lg border border-teal-500/30 focus:border-teal-500 focus:outline-none"
                                     placeholder="e.g. 0.10"
                                     required
                                 />
@@ -122,7 +123,7 @@ export default function TokenManagement() {
                                     type="text"
                                     value={priceData.phase}
                                     onChange={(e) => setPriceData({ ...priceData, phase: e.target.value })}
-                                    className="w-full px-4 py-3 bg-[#1a1a2e] text-white rounded-lg border border-[#9131e7]/30 focus:border-[#9131e7] focus:outline-none"
+                                    className="w-full px-4 py-3 bg-[#1a1a2e] text-white rounded-lg border border-teal-500/30 focus:border-teal-500 focus:outline-none"
                                     placeholder="e.g. Phase 1"
                                     required
                                 />
@@ -130,7 +131,7 @@ export default function TokenManagement() {
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="w-full py-3 bg-gradient-to-r from-[#9131e7] to-[#e3459b] text-white rounded-lg font-semibold hover:shadow-lg hover:shadow-[#9131e7]/30 transition-all disabled:opacity-50"
+                                className="w-full py-3 bg-gradient-brand text-white rounded-lg font-semibold hover:shadow-lg hover:shadow-teal-500/30 transition-all disabled:opacity-50"
                             >
                                 {loading ? "Updating..." : "Update Price & Phase"}
                             </button>
@@ -139,9 +140,9 @@ export default function TokenManagement() {
                 </div>
 
                 {/* Recover Tokens Section */}
-                <div className="bg-[#0f0f1a] rounded-xl p-6 border border-[#9131e7]/30">
+                <div className="bg-[#0f0f1a] rounded-xl p-6 border border-teal-500/30">
                     <div className="flex items-center gap-3 mb-6">
-                        <div className="w-10 h-10 bg-gradient-to-br from-[#9131e7] to-[#e3459b] rounded-lg flex items-center justify-center text-white text-xl">
+                        <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-purple-500 rounded-lg flex items-center justify-center text-white text-xl">
                             🔄
                         </div>
                         <h3 className="text-xl font-bold text-white">Recover Tokens</h3>
@@ -159,7 +160,7 @@ export default function TokenManagement() {
                                 type="text"
                                 value={recoveryData.wallet}
                                 onChange={(e) => setRecoveryData({ ...recoveryData, wallet: e.target.value })}
-                                className="w-full px-4 py-3 bg-[#1a1a2e] text-white rounded-lg border border-[#9131e7]/30 focus:border-[#9131e7] focus:outline-none"
+                                className="w-full px-4 py-3 bg-[#1a1a2e] text-white rounded-lg border border-teal-500/30 focus:border-teal-500 focus:outline-none"
                                 placeholder="0x..."
                                 required
                             />
@@ -170,7 +171,7 @@ export default function TokenManagement() {
                                 type="number"
                                 value={recoveryData.amount}
                                 onChange={(e) => setRecoveryData({ ...recoveryData, amount: e.target.value })}
-                                className="w-full px-4 py-3 bg-[#1a1a2e] text-white rounded-lg border border-[#9131e7]/30 focus:border-[#9131e7] focus:outline-none"
+                                className="w-full px-4 py-3 bg-[#1a1a2e] text-white rounded-lg border border-teal-500/30 focus:border-teal-500 focus:outline-none"
                                 placeholder="e.g. 1000"
                                 required
                             />

@@ -3,10 +3,39 @@ const User = require('../models/User');
 // @desc    Get all users (Admin)
 // @route   GET /api/users
 // @access  Private/Admin
+// @desc    Get all users (Admin)
+// @route   GET /api/users
+// @access  Private/Admin
 const getUsers = async (req, res) => {
     try {
-        const users = await User.find({});
-        res.json(users);
+        const pageSize = Number(req.query.limit) || 10;
+        const page = Number(req.query.page) || 1;
+
+        const keyword = req.query.search
+            ? {
+                $or: [
+                    { name: { $regex: req.query.search, $options: 'i' } },
+                    { email: { $regex: req.query.search, $options: 'i' } },
+                    { wallet: { $regex: req.query.search, $options: 'i' } },
+                ],
+            }
+            : {};
+
+        const filterStatus = req.query.status && req.query.status !== 'all'
+            ? { status: req.query.status }
+            : {};
+
+        const filterKYC = req.query.kycStatus && req.query.kycStatus !== 'all'
+            ? { kycStatus: req.query.kycStatus }
+            : {};
+
+        const count = await User.countDocuments({ ...keyword, ...filterStatus, ...filterKYC });
+        const users = await User.find({ ...keyword, ...filterStatus, ...filterKYC })
+            .sort({ createdAt: -1 })
+            .limit(pageSize)
+            .skip(pageSize * (page - 1));
+
+        res.json({ users, page, pages: Math.ceil(count / pageSize), total: count });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

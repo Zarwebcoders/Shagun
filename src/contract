@@ -6,8 +6,8 @@
 
 // contract REXToken {
 //     // ========== TOKEN DETAILS ==========
-//     string public name = "REX Token";
-//     string public symbol = "REX";
+//     string public name = "ShagunPro";
+//     string public symbol = "SHGN";
 //     uint8 public decimals = 18;
 //     uint256 public totalSupply;
     

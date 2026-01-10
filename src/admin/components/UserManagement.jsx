@@ -1,13 +1,15 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { toast } from "react-hot-toast"
 import client from "../../api/client"
 
 export default function UserManagement() {
     const [searchTerm, setSearchTerm] = useState("")
+    const [debouncedSearch, setDebouncedSearch] = useState("")
     const [filterStatus, setFilterStatus] = useState("all")
     const [filterKYC, setFilterKYC] = useState("all")
-    const [selectedUsers, setSelectedUsers] = useState([])
+    // const [selectedUsers, setSelectedUsers] = useState([]) // Selection not yet implemented on backend for bulk actions
     const [users, setUsers] = useState([])
     const [loading, setLoading] = useState(true)
     const [selectedUser, setSelectedUser] = useState(null)
@@ -15,24 +17,59 @@ export default function UserManagement() {
     const [isEditing, setIsEditing] = useState(false)
     const [editFormData, setEditFormData] = useState({})
 
+    // Pagination State
+    const [page, setPage] = useState(1);
+    const [pages, setPages] = useState(1);
+    const [totalUsers, setTotalUsers] = useState(0);
+
+    // Debounce search term
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedSearch(searchTerm);
+            setPage(1); // Reset to page 1 on search change
+        }, 500);
+
+        return () => {
+            clearTimeout(handler);
+        };
+    }, [searchTerm]);
+
+    useEffect(() => {
+        // Reset to page 1 when filters change
+        setPage(1);
+    }, [filterStatus, filterKYC]);
+
     useEffect(() => {
         fetchUsers();
-    }, []);
+    }, [page, debouncedSearch, filterStatus, filterKYC]);
 
     const fetchUsers = async () => {
         try {
-            const { data } = await client.get('/users');
-            setUsers(data);
+            setLoading(true);
+            const params = {
+                page,
+                limit: 10,
+                search: debouncedSearch,
+                status: filterStatus,
+                kycStatus: filterKYC
+            };
+            const { data } = await client.get('/users', { params });
+
+            // Backend now returns { users, page, pages, total }
+            setUsers(data.users || []);
+            setPages(data.pages || 1);
+            setTotalUsers(data.total || 0);
         } catch (error) {
             console.error("Error fetching users:", error);
+            toast.error("Failed to load users");
         } finally {
             setLoading(false);
         }
     };
 
-    const toggleUserSelection = (userId) => {
-        setSelectedUsers((prev) => (prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]))
-    }
+    // const toggleUserSelection = (userId) => {
+    //     setSelectedUsers((prev) => (prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]))
+    // }
 
     const handleViewUser = (user) => {
         setSelectedUser(user);
@@ -56,27 +93,17 @@ export default function UserManagement() {
             fetchUsers();
             setShowUserModal(false);
             setIsEditing(false);
+            toast.success("User updated successfully");
         } catch (error) {
             console.error("Error updating user:", error);
-            alert("Failed to update user");
+            toast.error("Failed to update user");
         }
     }
 
-    // Filter users based on search and filters
-    const filteredUsers = users.filter((user) => {
-        const matchesSearch =
-            user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (user.wallet && user.wallet.toLowerCase().includes(searchTerm.toLowerCase()));
+    // Client-side filtering is no longer needed as backend handles it
+    const filteredUsers = users;
 
-        const matchesStatus = filterStatus === "all" || user.status === filterStatus;
-
-        const matchesKYC = filterKYC === "all" || user.kycStatus === filterKYC;
-
-        return matchesSearch && matchesStatus && matchesKYC;
-    });
-
-    if (loading) return <div className="text-white">Loading users...</div>;
+    if (loading && users.length === 0) return <div className="text-white p-8 text-center">Loading users...</div>;
 
     return (
         <div className="space-y-6 animate-fadeIn">
@@ -97,7 +124,7 @@ export default function UserManagement() {
             </div>
 
             {/* Filters and Search */}
-            <div className="bg-[#0f0f1a] rounded-xl p-6 border border-[#9131e7]/30">
+            <div className="bg-[#0f0f1a] rounded-xl p-3 border border-teal-500/30">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div className="md:col-span-2">
                         <input
@@ -105,13 +132,13 @@ export default function UserManagement() {
                             placeholder="Search users by name, email, or wallet..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full px-4 py-3 bg-[#1a1a2e] text-white rounded-lg border border-[#9131e7]/30 focus:border-[#9131e7] focus:outline-none transition-all"
+                            className="w-full px-4 py-3 bg-[#1a1a2e] text-white rounded-lg border border-teal-500/30 focus:border-teal-500 focus:outline-none transition-all"
                         />
                     </div>
                     <select
                         value={filterStatus}
                         onChange={(e) => setFilterStatus(e.target.value)}
-                        className="px-4 py-3 bg-[#1a1a2e] text-white rounded-lg border border-[#9131e7]/30 focus:border-[#9131e7] focus:outline-none transition-all"
+                        className="px-4 py-3 bg-[#1a1a2e] text-white rounded-lg border border-teal-500/30 focus:border-teal-500 focus:outline-none transition-all"
                     >
                         <option value="all">All Status</option>
                         <option value="active">Active</option>
@@ -121,7 +148,7 @@ export default function UserManagement() {
                     <select
                         value={filterKYC}
                         onChange={(e) => setFilterKYC(e.target.value)}
-                        className="px-4 py-3 bg-[#1a1a2e] text-white rounded-lg border border-[#9131e7]/30 focus:border-[#9131e7] focus:outline-none transition-all"
+                        className="px-4 py-3 bg-[#1a1a2e] text-white rounded-lg border border-teal-500/30 focus:border-teal-500 focus:outline-none transition-all"
                     >
                         <option value="all">All KYC Status</option>
                         <option value="verified">Verified</option>
@@ -133,54 +160,49 @@ export default function UserManagement() {
             </div>
 
             {/* Users Table */}
-            <div className="bg-[#0f0f1a] rounded-xl border border-[#9131e7]/30 overflow-hidden">
+            <div className="bg-[#0f0f1a] rounded-xl border border-teal-500/30 overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full">
-                        <thead className="bg-[#1a1a2e]">
+                        <thead className="bg-[#1a1a2e] text-center">
                             <tr>
-                                <th className="px-6 py-4 text-left">
-                                    <input type="checkbox" className="w-4 h-4 rounded" />
-                                </th>
-                                <th className="px-6 py-4 text-left text-gray-400 font-semibold text-sm">User</th>
-                                <th className="px-6 py-4 text-left text-gray-400 font-semibold text-sm">Wallet Address</th>
-                                <th className="px-6 py-4 text-left text-gray-400 font-semibold text-sm">Investment</th>
-                                <th className="px-6 py-4 text-left text-gray-400 font-semibold text-sm">Status</th>
-                                <th className="px-6 py-4 text-left text-gray-400 font-semibold text-sm">KYC</th>
-                                <th className="px-6 py-4 text-left text-gray-400 font-semibold text-sm">Join Date</th>
-                                <th className="px-6 py-4 text-left text-gray-400 font-semibold text-sm">Actions</th>
+                                <th className="px-6 py-4 text-gray-400 font-semibold text-sm">User</th>
+                                <th className="px-6 py-4 text-gray-400 font-semibold text-sm">Wallet Address</th>
+                                <th className="px-6 py-4 text-gray-400 font-semibold text-sm">Investment</th>
+                                <th className="px-6 py-4 text-gray-400 font-semibold text-sm">Status</th>
+                                <th className="px-6 py-4 text-gray-400 font-semibold text-sm">KYC</th>
+                                <th className="px-6 py-4 text-gray-400 font-semibold text-sm">Join Date</th>
+                                <th className="px-6 py-4 text-gray-400 font-semibold text-sm">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-[#9131e7]/30">
-                            {filteredUsers.length === 0 ? (
+                        <tbody className="divide-y divide-teal-500/30 text-center">
+                            {loading ? (
                                 <tr>
-                                    <td colSpan="8" className="px-6 py-8 text-center text-gray-400">
+                                    <td colSpan="7" className="px-6 py-8 text-center text-gray-400">
+                                        Loading...
+                                    </td>
+                                </tr>
+                            ) : users.length === 0 ? (
+                                <tr>
+                                    <td colSpan="7" className="px-6 py-8 text-center text-gray-400">
                                         No users found matching your criteria
                                     </td>
                                 </tr>
                             ) : (
-                                filteredUsers.map((user) => (
+                                users.map((user) => (
                                     <tr key={user._id} className="hover:bg-[#1a1a2e] transition-colors">
                                         <td className="px-6 py-4">
-                                            <input
-                                                type="checkbox"
-                                                checked={selectedUsers.includes(user._id)}
-                                                onChange={() => toggleUserSelection(user._id)}
-                                                className="w-4 h-4 rounded"
-                                            />
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 bg-gradient-to-br from-[#9131e7] to-[#e3459b] rounded-full flex items-center justify-center text-white font-bold">
-                                                    {user.name.charAt(0)}
+                                            <div className="flex items-center gap-3 text-left">
+                                                <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold shrink-0">
+                                                    {user.name ? user.name.charAt(0).toUpperCase() : '?'}
                                                 </div>
                                                 <div>
-                                                    <p className="text-white font-medium">{user.name}</p>
+                                                    <p className="text-white font-medium">{user.name || 'Unknown'}</p>
                                                     <p className="text-gray-400 text-sm">{user.email}</p>
                                                 </div>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <code className="text-[#9131e7] text-sm">{user.wallet || 'Not connected'}</code>
+                                            <code className="text-teal-400 text-sm">{user.wallet ? `${user.wallet.substring(0, 6)}...${user.wallet.substring(user.wallet.length - 4)}` : 'Not connected'}</code>
                                         </td>
                                         <td className="px-6 py-4">
                                             <span className="text-green-500 font-semibold">
@@ -211,7 +233,7 @@ export default function UserManagement() {
                                             {new Date(user.joinedDate || user.createdAt).toLocaleDateString()}
                                         </td>
                                         <td className="px-6 py-4">
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex items-center justify-center gap-2">
                                                 <button
                                                     onClick={() => handleViewUser(user)}
                                                     className="p-2 text-blue-500 hover:bg-blue-500/20 rounded-lg transition-all"
@@ -220,6 +242,16 @@ export default function UserManagement() {
                                                     👁️
                                                 </button>
                                                 <button
+                                                    onClick={() => {
+                                                        setSelectedUser(user);
+                                                        setEditFormData({
+                                                            status: user.status,
+                                                            kycStatus: user.kycStatus,
+                                                            wallet: user.wallet
+                                                        });
+                                                        setShowUserModal(true);
+                                                        setIsEditing(true);
+                                                    }}
                                                     className="p-2 text-green-500 hover:bg-green-500/20 rounded-lg transition-all"
                                                     title="Edit"
                                                 >
@@ -235,32 +267,64 @@ export default function UserManagement() {
                 </div>
 
                 {/* Pagination */}
-                <div className="flex items-center justify-between px-6 py-4 bg-[#1a1a2e] border-t border-[#9131e7]/30">
-                    <p className="text-gray-400 text-sm">
-                        Showing {filteredUsers.length} of {users.length} users
-                    </p>
-                    <div className="flex items-center gap-2">
-                        <button className="px-4 py-2 bg-[#0f0f1a] text-white rounded-lg hover:bg-[#2a2a3e] transition-all">
-                            Previous
-                        </button>
-                        <button className="px-4 py-2 bg-[#9131e7] text-white rounded-lg font-semibold">1</button>
-                        <button className="px-4 py-2 bg-[#0f0f1a] text-white rounded-lg hover:bg-[#2a2a3e] transition-all">
-                            2
-                        </button>
-                        <button className="px-4 py-2 bg-[#0f0f1a] text-white rounded-lg hover:bg-[#2a2a3e] transition-all">
-                            3
-                        </button>
-                        <button className="px-4 py-2 bg-[#0f0f1a] text-white rounded-lg hover:bg-[#2a2a3e] transition-all">
-                            Next
-                        </button>
+                {pages > 1 && (
+                    <div className="flex flex-col md:flex-row items-center justify-between px-6 py-4 bg-[#1a1a2e] border-t border-teal-500/30 gap-4">
+                        <p className="text-gray-400 text-sm">
+                            Showing {users.length} of {totalUsers} users
+                        </p>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setPage(p => Math.max(1, p - 1))}
+                                disabled={page === 1}
+                                className="px-4 py-2 bg-[#0f0f1a] text-white rounded-lg hover:bg-[#2a2a3e] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Previous
+                            </button>
+
+                            {[...Array(pages)].map((_, i) => {
+                                // Show first, last, current, and adjacent pages
+                                if (
+                                    i + 1 === 1 ||
+                                    i + 1 === pages ||
+                                    (i + 1 >= page - 1 && i + 1 <= page + 1)
+                                ) {
+                                    return (
+                                        <button
+                                            key={i + 1}
+                                            onClick={() => setPage(i + 1)}
+                                            className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all ${page === i + 1
+                                                    ? "bg-teal-500 text-white font-bold"
+                                                    : "bg-[#0f0f1a] text-gray-400 hover:bg-[#2a2a3e]"
+                                                }`}
+                                        >
+                                            {i + 1}
+                                        </button>
+                                    );
+                                } else if (
+                                    (i + 1 === page - 2 && page > 3) ||
+                                    (i + 1 === page + 2 && page < pages - 2)
+                                ) {
+                                    return <span key={i} className="text-gray-500">...</span>;
+                                }
+                                return null;
+                            })}
+
+                            <button
+                                onClick={() => setPage(p => Math.min(pages, p + 1))}
+                                disabled={page === pages}
+                                className="px-4 py-2 bg-[#0f0f1a] text-white rounded-lg hover:bg-[#2a2a3e] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Next
+                            </button>
+                        </div>
                     </div>
-                </div>
+                )}
             </div>
 
             {/* User Details Modal */}
             {showUserModal && selectedUser && (
                 <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50 animate-fadeIn">
-                    <div className="bg-[#0f0f1a] rounded-xl p-6 max-w-3xl w-full border border-[#9131e7]/30 max-h-[90vh] overflow-y-auto">
+                    <div className="bg-[#0f0f1a] rounded-xl p-6 max-w-3xl w-full border border-teal-500/30 max-h-[90vh] overflow-y-auto">
                         <div className="flex items-center justify-between mb-6">
                             <h3 className="text-2xl font-bold text-white">{isEditing ? 'Edit User' : 'User Details'}</h3>
                             <button
@@ -273,8 +337,8 @@ export default function UserManagement() {
 
                         <div className="space-y-6">
                             {/* User Profile */}
-                            <div className="flex items-center gap-4 pb-6 border-b border-[#9131e7]/30">
-                                <div className="w-20 h-20 bg-gradient-to-br from-[#9131e7] to-[#e3459b] rounded-full flex items-center justify-center text-white text-3xl font-bold">
+                            <div className="flex items-center gap-4 pb-6 border-b border-teal-500/30">
+                                <div className="w-20 h-20 bg-gradient-to-br from-teal-500 to-purple-500 rounded-full flex items-center justify-center text-white text-3xl font-bold">
                                     {selectedUser.name.charAt(0)}
                                 </div>
                                 <div>
@@ -353,10 +417,10 @@ export default function UserManagement() {
                                         type="text"
                                         value={editFormData.wallet || ''}
                                         onChange={(e) => setEditFormData({ ...editFormData, wallet: e.target.value })}
-                                        className="w-full bg-[#000] text-[#9131e7] text-sm p-2 rounded border border-[#3f3f3f]"
+                                        className="w-full bg-[#000] text-teal-400 text-sm p-2 rounded border border-[#3f3f3f]"
                                     />
                                 ) : (
-                                    <code className="text-[#9131e7] text-sm break-all">{selectedUser.wallet || 'Not connected'}</code>
+                                    <code className="text-teal-400 text-sm break-all">{selectedUser.wallet || 'Not connected'}</code>
                                 )}
                             </div>
 
@@ -401,7 +465,7 @@ export default function UserManagement() {
                                 ) : (
                                     <button
                                         onClick={handleEditUser}
-                                        className="flex-1 px-6 py-3 bg-[#9131e7] text-white rounded-lg font-semibold hover:bg-[#d4941f] transition-all"
+                                        className="flex-1 px-6 py-3 bg-teal-500 text-white rounded-lg font-semibold hover:bg-teal-600 transition-all"
                                     >
                                         Edit User
                                     </button>

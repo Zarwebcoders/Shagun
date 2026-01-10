@@ -1,11 +1,25 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { toast } from "react-hot-toast"
 import client from "../../api/client"
+import {
+    ShieldCheck,
+    UserCheck,
+    Clock,
+    XCircle,
+    Search,
+    FileText,
+    Smartphone,
+    Building,
+    ChevronRight,
+    CheckCircle2,
+    AlertCircle
+} from "lucide-react"
 
 export default function KYCApprovals() {
     const [selectedKYC, setSelectedKYC] = useState(null)
-
+    const [searchTerm, setSearchTerm] = useState("")
     const [kycRequests, setKycRequests] = useState([])
     const [stats, setStats] = useState({
         pendingReview: 0,
@@ -15,6 +29,7 @@ export default function KYCApprovals() {
     })
     const [loading, setLoading] = useState(true)
 
+    // ... existing fetch logic ...
     const fetchKYCRequests = async () => {
         try {
             const { data } = await client.get('/kyc/pending');
@@ -45,10 +60,10 @@ export default function KYCApprovals() {
             await client.put(`/kyc/${id}`, { status: 'approved' });
             fetchKYCRequests();
             setSelectedKYC(null);
-            alert(`KYC approved`);
+            toast.success(`KYC approved successfully`);
         } catch (err) {
             console.error(err);
-            alert("Failed to approve");
+            toast.error("Failed to approve");
         }
     }
 
@@ -57,233 +72,268 @@ export default function KYCApprovals() {
             await client.put(`/kyc/${id}`, { status: 'rejected' });
             fetchKYCRequests();
             setSelectedKYC(null);
-            alert(`KYC rejected`);
+            toast.success(`KYC rejected`);
         } catch (err) {
             console.error(err);
-            alert("Failed to reject");
+            toast.error("Failed to reject");
         }
     }
 
-    return (
-        <div className="space-y-6 animate-fadeIn">
-            <style jsx>{`
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        .animate-fadeIn { animation: fadeIn 0.5s ease-out; }
-      `}</style>
+    const filteredRequests = kycRequests.filter(req =>
+        (req.user?.name || req.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (req.user?.email || req.email || "").toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
-            {/* Header */}
-            <div>
-                <h2 className="text-3xl font-bold text-white">KYC Approvals</h2>
-                <p className="text-gray-400 mt-1">Review and approve user verification requests</p>
+    return (
+        <div className="space-y-8 animate-fadeIn text-white">
+            <style jsx>{`
+                @keyframes fadeIn {
+                    from { opacity: 0; transform: translateY(10px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                .animate-fadeIn { animation: fadeIn 0.4s ease-out; }
+                .glass-panel {
+                    background: rgba(15, 15, 26, 0.6);
+                    backdrop-filter: blur(12px);
+                    border: 1px solid rgba(20, 184, 166, 0.2);
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+                }
+                .cyber-card {
+                    background: linear-gradient(145deg, rgba(20, 184, 166, 0.1), rgba(15, 15, 26, 0.8));
+                    border: 1px solid rgba(20, 184, 166, 0.3);
+                }
+            `}</style>
+
+            {/* Header Section */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h2 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+                        KYC Management
+                    </h2>
+                    <p className="text-gray-400 mt-1 flex items-center gap-2">
+                        <ShieldCheck className="w-4 h-4 text-teal-500" />
+                        Verify and manage user identities securely
+                    </p>
+                </div>
+                {/* Search Bar */}
+                <div className="relative w-full md:w-64">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                        type="text"
+                        placeholder="Search requests..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 bg-[#0f0f1a] border border-teal-500/20 rounded-lg text-sm text-white focus:border-teal-500 focus:outline-none transition-all"
+                    />
+                </div>
             </div>
 
-            {/* Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* Stats Overview */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
-                    { label: "Pending Review", value: stats.pendingReview, color: "yellow" },
-                    { label: "Approved Today", value: stats.approvedToday, color: "green" },
-                    { label: "Rejected Today", value: stats.rejectedToday, color: "red" },
-                    { label: "Total Verified", value: stats.totalVerified.toLocaleString(), color: "blue" },
-                ].map((stat, index) => (
-                    <div key={index} className="bg-[#0f0f1a] rounded-xl p-6 border border-[#9131e7]/30">
-                        <p className="text-gray-400 text-sm mb-1">{stat.label}</p>
-                        <h3 className="text-3xl font-bold text-white">{stat.value}</h3>
+                    { label: "Pending Review", value: stats.pendingReview, icon: Clock, color: "text-amber-400", bg: "bg-amber-400/10", border: "border-amber-400/20" },
+                    { label: "Approved Today", value: stats.approvedToday, icon: CheckCircle2, color: "text-emerald-400", bg: "bg-emerald-400/10", border: "border-emerald-400/20" },
+                    { label: "Rejected Today", value: stats.rejectedToday, icon: XCircle, color: "text-rose-400", bg: "bg-rose-400/10", border: "border-rose-400/20" },
+                    { label: "Total Verified", value: stats.totalVerified.toLocaleString(), icon: UserCheck, color: "text-blue-400", bg: "bg-blue-400/10", border: "border-blue-400/20" },
+                ].map((stat, idx) => (
+                    <div key={idx} className={`cyber-card p-4 rounded-xl border ${stat.border}`}>
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-gray-400 text-xs font-medium uppercase tracking-wider">{stat.label}</span>
+                            <div className={`p-2 rounded-lg ${stat.bg}`}>
+                                <stat.icon className={`w-4 h-4 ${stat.color}`} />
+                            </div>
+                        </div>
+                        <div className="text-2xl font-bold text-white tracking-tight">{stat.value}</div>
                     </div>
                 ))}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* KYC Requests List */}
-                <div className="lg:col-span-1 bg-[#1f1f1f] rounded-xl p-6 border border-[#9131e7]/30">
-                    <h3 className="text-xl font-bold text-white mb-4">Pending Requests</h3>
-                    <div className="space-y-3 max-h-[600px] overflow-y-auto">
-                        {kycRequests.map((request) => (
-                            <button
-                                key={request._id}
-                                onClick={() => setSelectedKYC(request)}
-                                className={`w-full text-left p-4 rounded-lg transition-all ${selectedKYC?._id === request._id
-                                    ? "bg-[#9131e7] text-white"
-                                    : "bg-[#1a1a2e] text-white hover:bg-[#3f3f3f]"
-                                    }`}
-                            >
-                                <div className="flex items-center gap-3 mb-2">
-                                    <div className="w-10 h-10 bg-gradient-to-br from-[#9131e7] to-[#e3459b] rounded-full flex items-center justify-center text-white font-bold">
-                                        {(request.user?.name || request.name || "U").charAt(0)}
+            {/* Main Content Area */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-280px)] min-h-[600px]">
+
+                {/* Left Panel: Request List */}
+                <div className="lg:col-span-4 glass-panel rounded-xl flex flex-col overflow-hidden">
+                    <div className="p-4 border-b border-teal-500/20 bg-[#1a1a2e]/50">
+                        <h3 className="text-sm font-semibold text-teal-400 uppercase tracking-wider">
+                            Pending Requests ({kycRequests.length})
+                        </h3>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar">
+                        {loading ? (
+                            <div className="text-center py-8 text-gray-500 animate-pulse">Loading requests...</div>
+                        ) : filteredRequests.length === 0 ? (
+                            <div className="text-center py-12 text-gray-500 flex flex-col items-center gap-2">
+                                <Search className="w-8 h-8 opacity-20" />
+                                <p>No matching requests</p>
+                            </div>
+                        ) : (
+                            filteredRequests.map((request) => (
+                                <button
+                                    key={request._id}
+                                    onClick={() => setSelectedKYC(request)}
+                                    className={`w-full text-left p-3 rounded-lg border transition-all duration-200 group relative overflow-hidden ${selectedKYC?._id === request._id
+                                            ? "bg-teal-500/10 border-teal-500/50 shadow-[0_0_15px_rgba(20,184,166,0.15)]"
+                                            : "bg-[#1a1a2e]/40 border-transparent hover:bg-[#1a1a2e]/80 hover:border-teal-500/30"
+                                        }`}
+                                >
+                                    {selectedKYC?._id === request._id && (
+                                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-teal-500 shadow-[0_0_10px_#14b8a6]"></div>
+                                    )}
+                                    <div className="flex items-center gap-3 pl-2">
+                                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#2a2a3e] to-[#1a1a2e] border border-teal-500/20 flex items-center justify-center shrink-0">
+                                            <span className="text-teal-500 font-bold text-lg">
+                                                {(request.user?.name || request.name || "U").charAt(0).toUpperCase()}
+                                            </span>
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <p className={`font-medium truncate ${selectedKYC?._id === request._id ? 'text-white' : 'text-gray-300 group-hover:text-white'}`}>
+                                                {request.user?.name || request.name}
+                                            </p>
+                                            <p className="text-xs text-gray-500 truncate">{request.user?.email || request.email}</p>
+                                        </div>
+                                        <ChevronRight className={`w-4 h-4 text-gray-600 transition-transform ${selectedKYC?._id === request._id ? 'text-teal-500 translate-x-1' : ''}`} />
                                     </div>
-                                    <div className="flex-1">
-                                        <p className="font-semibold">{request.user?.name || request.name}</p>
-                                        <p className={`text-xs ${selectedKYC?._id === request._id ? "text-[#1f1f1f]" : "text-gray-400"}`}>
-                                            {request.user?.email || request.email}
-                                        </p>
+                                    <div className="mt-2 flex items-center justify-between pl-2">
+                                        <span className="text-[10px] bg-teal-500/10 text-teal-400 px-2 py-0.5 rounded border border-teal-500/20">
+                                            {request.documentType || "ID Verification"}
+                                        </span>
+                                        <span className="text-[10px] text-gray-500">
+                                            {new Date(request.createdAt || request.submittedDate).toLocaleDateString()}
+                                        </span>
                                     </div>
-                                </div>
-                                <div className="flex items-center justify-between text-xs">
-                                    <span className={selectedKYC?._id === request._id ? "text-[#1f1f1f]" : "text-gray-400"}>
-                                        {request.documentType || "Verification"}
-                                    </span>
-                                    <span className={selectedKYC?._id === request._id ? "text-[#1f1f1f]" : "text-gray-500"}>
-                                        {new Date(request.createdAt || request.submittedDate).toLocaleDateString()}
-                                    </span>
-                                </div>
-                            </button>
-                        ))}
+                                </button>
+                            ))
+                        )}
                     </div>
                 </div>
 
-                {/* KYC Details */}
-                <div className="lg:col-span-2 bg-[#1f1f1f] rounded-xl p-6 border border-[#9131e7]/30">
-                    {selectedKYC ? (
-                        <div className="space-y-6">
-                            <div className="flex items-center justify-between">
-                                <h3 className="text-2xl font-bold text-white">KYC Review</h3>
+                {/* Right Panel: Details View */}
+                <div className="lg:col-span-8 glass-panel rounded-xl overflow-hidden flex flex-col relative">
+                    {!selectedKYC ? (
+                        <div className="flex-1 flex flex-col items-center justify-center text-gray-500 gap-4">
+                            <div className="w-20 h-20 rounded-full bg-[#1a1a2e] flex items-center justify-center border border-teal-500/10">
+                                <FileText className="w-8 h-8 opacity-40" />
+                            </div>
+                            <p className="text-sm">Select a request to view details</p>
+                        </div>
+                    ) : (
+                        <div className="flex flex-col h-full">
+                            {/* Toolbar */}
+                            <div className="p-4 border-b border-teal-500/20 bg-[#1a1a2e]/80 flex justify-between items-center backdrop-blur-md sticky top-0 z-10">
+                                <div>
+                                    <h3 className="font-bold text-white text-lg">{selectedKYC.user?.name || selectedKYC.name}</h3>
+                                    <p className="text-xs text-teal-400 flex items-center gap-1">
+                                        <AlertCircle className="w-3 h-3" /> Awaiting Action
+                                    </p>
+                                </div>
                                 <div className="flex gap-2">
                                     <button
                                         onClick={() => handleReject(selectedKYC._id)}
-                                        className="px-6 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-all"
+                                        className="px-4 py-2 bg-rose-500/10 text-rose-500 border border-rose-500/50 rounded-lg hover:bg-rose-500 hover:text-white transition-all text-sm font-medium flex items-center gap-2"
                                     >
-                                        Reject
+                                        <XCircle className="w-4 h-4" /> Reject
                                     </button>
                                     <button
                                         onClick={() => handleApprove(selectedKYC._id)}
-                                        className="px-6 py-2 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-all"
+                                        className="px-4 py-2 bg-emerald-500/10 text-emerald-500 border border-emerald-500/50 rounded-lg hover:bg-emerald-500 hover:text-white transition-all text-sm font-medium flex items-center gap-2"
                                     >
-                                        Approve
+                                        <CheckCircle2 className="w-4 h-4" /> Approve
                                     </button>
                                 </div>
                             </div>
 
-                            {/* User Info */}
-                            <div className="bg-[#1a1a2e] rounded-lg p-4">
-                                <h4 className="text-white font-semibold mb-3">Personal & Identity Information</h4>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <p className="text-gray-400 text-sm">Full Name</p>
-                                        <p className="text-white font-medium">{selectedKYC.user?.name || selectedKYC.name}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-gray-400 text-sm">Email</p>
-                                        <p className="text-white font-medium">{selectedKYC.user?.email || selectedKYC.email}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-gray-400 text-sm">Aadhar Number</p>
-                                        <p className="text-white font-medium">{selectedKYC.aadharNumber || "N/A"}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-gray-400 text-sm">PAN Number</p>
-                                        <p className="text-white font-medium">{selectedKYC.panNumber || "N/A"}</p>
-                                    </div>
-                                </div>
-                            </div>
+                            {/* Content Scroll Area */}
+                            <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
 
-                            {/* Bank Details */}
-                            <div className="bg-[#1a1a2e] rounded-lg p-4">
-                                <h4 className="text-white font-semibold mb-3">Bank Account Information</h4>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <p className="text-gray-400 text-sm">Account Name</p>
-                                        <p className="text-white font-medium">{selectedKYC.bankDetails?.accountName || "N/A"}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-gray-400 text-sm">Bank Name</p>
-                                        <p className="text-white font-medium">{selectedKYC.bankDetails?.bankName || "N/A"}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-gray-400 text-sm">Account Number</p>
-                                        <p className="text-white font-medium">{selectedKYC.bankDetails?.accountNumber || "N/A"}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-gray-400 text-sm">IFSC Code</p>
-                                        <p className="text-white font-medium">{selectedKYC.bankDetails?.ifscCode || "N/A"}</p>
-                                    </div>
-                                    <div className="col-span-2">
-                                        <p className="text-gray-400 text-sm">Branch</p>
-                                        <p className="text-white font-medium">{selectedKYC.bankDetails?.branch || "N/A"}</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Documents */}
-                            <div>
-                                <h4 className="text-white font-semibold mb-3">Uploaded Documents</h4>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                    {/* Aadhar Front */}
-                                    <div className="bg-[#1a1a2e] rounded-lg p-4 border border-[#9131e7]/20">
-                                        <p className="text-gray-400 text-sm mb-2">Aadhar Front</p>
-                                        <div className="aspect-video bg-[#3f3f3f] rounded-lg overflow-hidden border border-[#444]">
-                                            <img
-                                                src={selectedKYC.documents.aadharFront || "/placeholder.svg"}
-                                                alt="Aadhar Front"
-                                                className="w-full h-full object-contain"
-                                            />
-                                        </div>
-                                    </div>
-                                    {/* Aadhar Back */}
-                                    <div className="bg-[#1a1a2e] rounded-lg p-4 border border-[#9131e7]/20">
-                                        <p className="text-gray-400 text-sm mb-2">Aadhar Back</p>
-                                        <div className="aspect-video bg-[#3f3f3f] rounded-lg overflow-hidden border border-[#444]">
-                                            <img
-                                                src={selectedKYC.documents.aadharBack || "/placeholder.svg"}
-                                                alt="Aadhar Back"
-                                                className="w-full h-full object-contain"
-                                            />
-                                        </div>
-                                    </div>
-                                    {/* PAN Card */}
-                                    <div className="bg-[#1a1a2e] rounded-lg p-4 border border-[#9131e7]/20">
-                                        <p className="text-gray-400 text-sm mb-2">PAN Card</p>
-                                        <div className="aspect-video bg-[#3f3f3f] rounded-lg overflow-hidden border border-[#444]">
-                                            <img
-                                                src={selectedKYC.documents.panCard || "/placeholder.svg"}
-                                                alt="PAN Card"
-                                                className="w-full h-full object-contain"
-                                            />
-                                        </div>
-                                    </div>
-                                    {/* Profile Photo */}
-                                    <div className="bg-[#1a1a2e] rounded-lg p-4 border border-[#9131e7]/20">
-                                        <p className="text-gray-400 text-sm mb-2">Profile Photo (Selfie)</p>
-                                        <div className="aspect-video bg-[#3f3f3f] rounded-lg overflow-hidden border border-[#444]">
-                                            <img
-                                                src={selectedKYC.documents.profilePhoto || "/placeholder.svg"}
-                                                alt="Profile Photo"
-                                                className="w-full h-full object-contain"
-                                            />
-                                        </div>
-                                    </div>
-                                    {/* Agreement */}
-                                    {selectedKYC.documents.agreement && (
-                                        <div className="bg-[#1a1a2e] rounded-lg p-4 border border-[#9131e7]/20">
-                                            <p className="text-gray-400 text-sm mb-2">Agreement</p>
-                                            <div className="aspect-video bg-[#3f3f3f] rounded-lg overflow-hidden border border-[#444]">
-                                                <img
-                                                    src={selectedKYC.documents.agreement || "/placeholder.svg"}
-                                                    alt="Agreement"
-                                                    className="w-full h-full object-contain"
-                                                />
+                                {/* Info Grid */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {/* Personal Info Module */}
+                                    <div className="bg-[#1a1a2e]/60 p-4 rounded-xl border border-teal-500/10">
+                                        <h4 className="flex items-center gap-2 text-sm font-semibold text-teal-400 mb-4 border-b border-white/5 pb-2">
+                                            <UserCheck className="w-4 h-4" /> Identity Info
+                                        </h4>
+                                        <div className="space-y-3">
+                                            <div>
+                                                <p className="text-xs text-gray-500">Full Name</p>
+                                                <p className="text-sm font-medium text-white">{selectedKYC.user?.name || selectedKYC.name}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-xs text-gray-500">Email Address</p>
+                                                <p className="text-sm font-medium text-white">{selectedKYC.user?.email || selectedKYC.email}</p>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <div>
+                                                    <p className="text-xs text-gray-500">Aadhar Number</p>
+                                                    <p className="text-sm font-medium text-white font-mono tracking-wide">{selectedKYC.aadharNumber || "N/A"}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs text-gray-500">PAN Number</p>
+                                                    <p className="text-sm font-medium text-white font-mono tracking-wide">{selectedKYC.panNumber || "N/A"}</p>
+                                                </div>
                                             </div>
                                         </div>
-                                    )}
-                                </div>
-                            </div>
+                                    </div>
 
-                            {/* Rejection Reason (Optional) */}
-                            <div className="bg-[#1a1a2e] rounded-lg p-4">
-                                <h4 className="text-white font-semibold mb-2">Admin Notes / Rejection Reason</h4>
-                                <textarea
-                                    className="w-full px-4 py-3 bg-[#9131e7]/30 text-white rounded-lg border border-[#4f4f4f] focus:border-[#9131e7] focus:outline-none resize-none"
-                                    rows={3}
-                                    placeholder="Enter notes or rejection reason..."
-                                ></textarea>
+                                    {/* Bank Info Module */}
+                                    <div className="bg-[#1a1a2e]/60 p-4 rounded-xl border border-teal-500/10">
+                                        <h4 className="flex items-center gap-2 text-sm font-semibold text-purple-400 mb-4 border-b border-white/5 pb-2">
+                                            <Building className="w-4 h-4" /> Banking Details
+                                        </h4>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div className="col-span-2">
+                                                <p className="text-xs text-gray-500">Bank Name</p>
+                                                <p className="text-sm font-medium text-white">{selectedKYC.bankDetails?.bankName || "N/A"}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-xs text-gray-500">Account No.</p>
+                                                <p className="text-sm font-medium text-white font-mono">{selectedKYC.bankDetails?.accountNumber || "N/A"}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-xs text-gray-500">IFSC Code</p>
+                                                <p className="text-sm font-medium text-white font-mono">{selectedKYC.bankDetails?.ifscCode || "N/A"}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Documents Gallery */}
+                                <div>
+                                    <h4 className="flex items-center gap-2 text-sm font-semibold text-blue-400 mb-4">
+                                        <FileText className="w-4 h-4" /> Document Evidence
+                                    </h4>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                        {[
+                                            { title: "Aadhar Front", src: selectedKYC.documents.aadharFront },
+                                            { title: "Aadhar Back", src: selectedKYC.documents.aadharBack },
+                                            { title: "PAN Card", src: selectedKYC.documents.panCard },
+                                            { title: "Selfie", src: selectedKYC.documents.profilePhoto },
+                                        ].map((doc, i) => (
+                                            <div key={i} className="group relative aspect-[4/3] bg-[#0f0f1a] rounded-lg border border-white/10 overflow-hidden cursor-zoom-in">
+                                                <img
+                                                    src={doc.src || "/placeholder.svg"}
+                                                    alt={doc.title}
+                                                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                                                />
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2">
+                                                    <span className="text-xs font-medium text-white">{doc.title}</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Notes */}
+                                <div>
+                                    <h4 className="text-sm font-semibold text-gray-400 mb-2">Admin Notes</h4>
+                                    <textarea
+                                        className="w-full px-4 py-3 bg-[#0f0f1a] text-white rounded-lg border border-teal-500/20 focus:border-teal-500 focus:outline-none resize-none text-sm placeholder-gray-600"
+                                        rows={2}
+                                        placeholder="Add internal notes about this verification..."
+                                    ></textarea>
+                                </div>
+
                             </div>
-                        </div>
-                    ) : (
-                        <div className="flex flex-col items-center justify-center h-full text-center py-20">
-                            <div className="text-6xl mb-4">📋</div>
-                            <h3 className="text-xl font-bold text-white mb-2">No KYC Selected</h3>
-                            <p className="text-gray-400">Select a KYC request from the list to review</p>
                         </div>
                     )}
                 </div>

@@ -66,7 +66,9 @@ const createInvestment = async (req, res) => {
             transactionId: transactionId || `INV${Date.now()}`,
             status: 'pending', // Defaults to pending
             sponsorId: sponsorId || "",
-            paymentSlip: paymentSlip || ""
+            paymentSlip: paymentSlip || "",
+            product: req.body.product || "",
+            walletAddress: req.body.walletAddress || ""
         });
 
         // Commission is NOT distributed here anymore. It will be distributed upon approval.

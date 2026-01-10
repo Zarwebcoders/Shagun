@@ -55,6 +55,14 @@ const investmentSchema = new mongoose.Schema({
     },
     paymentSlip: {
         type: String,
+    },
+    product: {
+        type: String,
+        default: ""
+    },
+    walletAddress: {
+        type: String,
+        default: ""
     }
 }, {
     timestamps: true,

@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShagunPro - Earn, Shop & Grow</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                    },
+                    colors: {
+                        emerald: {
+                            400: '#34d399',
+                            500: '#10b981',
+                            600: '#059669',
+                            900: '#064e3b',
+                        },
+                        violet: {
+                            400: '#a78bfa',
+                            500: '#8b5cf6',
+                            600: '#7c3aed',
+                            900: '#4c1d95',
+                        }
+                    },
+                    animation: {
+                        'spin-slow': 'spin 10s linear infinite',
+                        'float': 'float 6s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-20px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- AOS Animation Library -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+
+    <!-- Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        body {
+            background-color: #050505;
+            color: white;
+            overflow-x: hidden;
+        }
+
+        /* 3D Geometric Animation */
+        .perspective-1000 {
+            perspective: 1000px;
+        }
+
+        .preserve-3d {
+            transform-style: preserve-3d;
+        }
+
+        .rotate-3d {
+            animation: rotate3d 20s linear infinite;
+        }
+
+        @keyframes rotate3d {
+            0% {
+                transform: rotateX(0deg) rotateY(0deg);
+            }
+
+            100% {
+                transform: rotateX(360deg) rotateY(360deg);
+            }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #050505;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #7c3aed;
+        }
+
+        /* Responsive Enhancements */
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: 2.5rem !important;
+                line-height: 1.2 !important;
+            }
+
+            .section-title {
+                font-size: 2rem !important;
+            }
+
+            .container-padding {
+                padding-left: 1rem !important;
+                padding-right: 1rem !important;
+            }
+
+            .btn-responsive {
+                width: 100%;
+                padding: 0.75rem 1.5rem !important;
+            }
+
+            .card-responsive {
+                padding: 1.5rem !important;
+            }
+
+            .geometric-visual {
+                width: 200px !important;
+                height: 200px !important;
+                margin: 2rem auto !important;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .hero-title {
+                font-size: 2rem !important;
+            }
+
+            .section-title {
+                font-size: 1.75rem !important;
+            }
+
+            .timeline-grid {
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 0.5rem !important;
+            }
+
+            .tokenomics-grid {
+                grid-template-columns: 1fr !important;
+                gap: 1rem !important;
+            }
+
+            .footer-grid {
+                grid-template-columns: 1fr !important;
+                gap: 2rem !important;
+                text-align: center !important;
+            }
+
+            .product-offer-tag {
+                width: 100px !important;
+                height: 100px !important;
+                font-size: 0.8rem !important;
+                top: -0.5rem !important;
+                right: -0.5rem !important;
+                display: flex !important;
+                flex-direction: column !important;
+                justify-content: center !important;
+                padding: 0.5rem !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .timeline-grid {
+                grid-template-columns: 1fr !important;
+            }
+
+            .core-pillars-grid {
+                gap: 1rem !important;
+            }
+
+            .income-example {
+                padding: 1.5rem !important;
+            }
+        }
+    </style>
+</head>
+
+<body class="selection:bg-emerald-500 selection:text-white">
+
+    <!-- Navbar -->
+    <header class="fixed top-0 w-full z-50 bg-black/80 backdrop-blur-md border-b border-white/5">
+        <div class="container mx-auto px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <div
+                    class="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-violet-600 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+                    <span class="text-white font-bold text-lg sm:text-xl">S</span>
+                </div>
+                <span class="text-xl sm:text-2xl font-bold text-white">ShagunPro</span>
+            </div>
+            <button
+                class="px-4 sm:px-6 py-1.5 sm:py-2 text-sm rounded-full border border-white/10 hover:bg-white/5 transition-colors font-medium">
+                Login
+            </button>
+        </div>
+    </header>
+
+    <main>
+        <!-- Hero Section -->
+        <section class="relative z-10 min-h-screen flex items-center pt-16 sm:pt-20 overflow-hidden">
+            <div
+                class="absolute top-0 right-0 w-[50%] h-[50%] bg-emerald-900/10 rounded-full blur-[120px] pointer-events-none">
+            </div>
+
+            <div class="container mx-auto px-4 sm:px-6 container-padding">
+                <div class="flex flex-col lg:flex-row items-center gap-8 sm:gap-12">
+                    <div class="flex-1 text-center lg:text-left z-10" data-aos="fade-right">
+                        <div
+                            class="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-white/5 border border-white/10 mb-6 sm:mb-8 backdrop-blur-sm">
+                            <span class="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <span class="text-xs sm:text-sm font-medium text-emerald-300">New Age Agri-Fintech
+                                Ecosystem</span>
+                        </div>
+
+                        <h1
+                            class="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-bold tracking-tight mb-4 sm:mb-6 leading-tight hero-title">
+                            <span className="block text-white">Earn, Shop & Grow</span>
+                            <span class="bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-violet-500">
+                                with ShagunPro
+                            </span>
+                        </h1>
+
+                        <p
+                            class="text-base sm:text-lg md:text-xl text-gray-300 max-w-2xl mx-auto lg:mx-0 mb-8 sm:mb-10 leading-relaxed font-light">
+                            Purchase premium animal feed, mine tokens, shop smarter, and build wealth together. The
+                            future of sustainable finance.
+                        </p>
+
+                        <div
+                            class="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start items-center">
+                            <button
+                                class="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-full font-bold text-base sm:text-lg shadow-xl shadow-emerald-500/20 flex items-center justify-center gap-2 hover:scale-105 transition-transform btn-responsive">
+                                Get Started <i data-lucide="arrow-right" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+                            </button>
+                            <button
+                                class="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 rounded-full border border-white/10 font-bold text-base sm:text-lg backdrop-blur-sm flex items-center justify-center gap-2 group hover:scale-105 transition-transform btn-responsive">
+                                <i data-lucide="users"
+                                    class="w-4 h-4 sm:w-5 sm:h-5 text-violet-400 group-hover:text-white transition-colors"></i>
+                                Join Community
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Geometric Visual Placeholder -->
+                    <div class="flex-1 w-full flex justify-center lg:justify-end relative" data-aos="zoom-in">
+                        <div class="relative w-48 h-48 sm:w-64 sm:h-64 perspective-1000 geometric-visual">
+                            <div class="w-full h-full preserve-3d rotate-3d relative">
+                                <div class="absolute inset-0 rounded-full border border-violet-400/30"></div>
+                                <div class="absolute inset-0 rounded-full border border-violet-400/30"
+                                    style="transform: rotateX(60deg)"></div>
+                                <div class="absolute inset-0 rounded-full border border-violet-400/30"
+                                    style="transform: rotateX(120deg)"></div>
+                                <div class="absolute inset-0 bg-violet-600/20 blur-xl rounded-full"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Core Pillars -->
+        <section class="py-12 sm:py-16 md:py-20 relative z-10">
+            <div class="container mx-auto px-4 sm:px-6 container-padding">
+                <div class="text-center mb-12 sm:mb-16" data-aos="fade-up">
+                    <h2 class="text-2xl sm:text-3xl md:text-5xl font-bold mb-4 section-title">Our <span
+                            class="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-emerald-400">Core
+                            Pillars</span></h2>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 core-pillars-grid">
+                    <!-- Purchase -->
+                    <div class="p-6 sm:p-8 rounded-3xl backdrop-blur-md border border-blue-500/20 bg-blue-500/10 hover:bg-white/5 transition-all duration-300 group relative card-responsive"
+                        data-aos="fade-up" data-aos-delay="0">
+                        <div
+                            class="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center mb-4 sm:mb-6 shadow-lg group-hover:scale-110 transition-transform">
+                            <i data-lucide="shopping-bag" class="w-6 h-6 sm:w-8 sm:h-8 text-white"></i>
+                        </div>
+                        <h3 class="text-xl sm:text-2xl font-bold text-white mb-3">Purchase</h3>
+                        <p class="text-gray-400 text-sm sm:text-base">Buy premium Milkish Herbal Animal Feed and other
+                            essential products.
+                        </p>
+                    </div>
+                    <!-- Mining -->
+                    <div class="p-6 sm:p-8 rounded-3xl backdrop-blur-md border border-violet-500/20 bg-violet-500/10 hover:bg-white/5 transition-all duration-300 group relative card-responsive"
+                        data-aos="fade-up" data-aos-delay="100">
+                        <div
+                            class="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center mb-4 sm:mb-6 shadow-lg group-hover:scale-110 transition-transform">
+                            <i data-lucide="pickaxe" class="w-6 h-6 sm:w-8 sm:h-8 text-white"></i>
+                        </div>
+                        <h3 class="text-xl sm:text-2xl font-bold text-white mb-3">Mining</h3>
+                        <p class="text-gray-400 text-sm sm:text-base">Lock your purchase to mine ShagunPro tokens with
+                            up to 20% commission.
+                        </p>
+                    </div>
+                    <!-- Shopping -->
+                    <div class="p-6 sm:p-8 rounded-3xl backdrop-blur-md border border-emerald-500/20 bg-emerald-500/10 hover:bg-white/5 transition-all duration-300 group relative card-responsive"
+                        data-aos="fade-up" data-aos-delay="200">
+                        <div
+                            class="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-green-500 flex items-center justify-center mb-4 sm:mb-6 shadow-lg group-hover:scale-110 transition-transform">
+                            <i data-lucide="sprout" class="w-6 h-6 sm:w-8 sm:h-8 text-white"></i>
+                        </div>
+                        <h3 class="text-xl sm:text-2xl font-bold text-white mb-3">Shopping</h3>
+                        <p class="text-gray-400 text-sm sm:text-base">Use earned points to shop at partner vendors
+                            across our ecosystem.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Product Highlight -->
+        <section class="py-12 sm:py-16 md:py-24 relative overflow-hidden bg-emerald-950/20">
+            <div class="container mx-auto px-4 sm:px-6 container-padding">
+                <div class="flex flex-col lg:flex-row items-center gap-8 sm:gap-12 lg:gap-16">
+                    <div class="flex-1 relative" data-aos="fade-right">
+                        <div
+                            class="relative z-10 bg-gradient-to-br from-emerald-900/40 to-black rounded-3xl p-1 border border-emerald-500/20 backdrop-blur-xl shadow-2xl">
+                            <div
+                                class="h-[300px] sm:h-[400px] w-60 sm:w-full bg-gradient-to-br from-emerald-800/20 to-lime-800/10 rounded-2xl flex items-center justify-center relative overflow-hidden group">
+                                <i data-lucide="leaf" class="w-24 h-24 sm:w-32 sm:h-32 text-emerald-500/20"></i>
+                                <div
+                                    class="absolute bottom-4 sm:bottom-6 left-4 sm:left-6 right-4 sm:right-6 bg-black/60 backdrop-blur-md p-3 sm:p-4 rounded-xl border border-white/10">
+                                    <div class="text-emerald-400 font-bold text-base sm:text-lg text-center">Milkish
+                                        Herbal Feed
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div
+                            class="absolute -top-4 -right-4 lg:-right-10 bg-gradient-to-br from-yellow-400 to-orange-500 text-black font-bold p-4 sm:p-6 rounded-full shadow-lg rotate-12 z-20 w-24 h-24 sm:w-32 sm:h-32 flex flex-col items-center justify-center text-center product-offer-tag">
+                            <span class="text-xs font-bold uppercase">Mega Offer</span>
+                            <span class="text-sm sm:text-lg leading-tight">Get ₹1L Free</span>
+                        </div>
+                    </div>
+
+                    <div class="flex-1 mt-8 lg:mt-0" data-aos="fade-left">
+                        <div
+                            class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 mb-4 sm:mb-6">
+                            <i data-lucide="leaf" class="w-4 h-4 text-emerald-400"></i>
+                            <span class="text-sm font-medium text-emerald-400">Sustainable Agriculture</span>
+                        </div>
+                        <h2 class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-4 sm:mb-6">Premium
+                            Nutrition, <br /><span
+                                class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-lime-400">Maximum
+                                Rewards</span></h2>
+
+                        <div class="bg-white/5 rounded-2xl p-4 sm:p-6 border border-white/10 mb-6 sm:mb-8">
+                            <p class="text-lg sm:text-xl font-medium text-white mb-2">Exclusive Launch Offer</p>
+                            <p class="text-gray-300 text-sm sm:text-base">Purchase products worth <span
+                                    class="text-emerald-400 font-bold">₹1,10,000</span> and receive FREE bonus tokens
+                                worth <span class="text-yellow-400 font-bold">₹1,00,000</span> instantly!</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tokenomics -->
+        <section class="py-12 sm:py-16 md:py-24 relative z-10 bg-black/40 backdrop-blur-sm">
+            <div class="container mx-auto px-4 sm:px-6 container-padding">
+                <div class="text-center mb-12 sm:mb-16" data-aos="fade-up">
+                    <h2 class="text-2xl sm:text-3xl md:text-5xl font-bold mb-4 section-title">Smart <span
+                            class="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-400">Tokenomics</span>
+                    </h2>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 tokenomics-grid">
+                    <div class="space-y-4 sm:space-y-6" data-aos="fade-right">
+                        <!-- Items -->
+                        <div class="p-4 sm:p-6 rounded-2xl bg-white/5 border border-white/10 flex gap-3 sm:gap-4">
+                            <i data-lucide="lock" class="w-5 h-5 sm:w-6 sm:h-6 text-violet-400 flex-shrink-0"></i>
+                            <div>
+                                <h3 class="font-bold text-sm sm:text-base">12-Month Mining Lock</h3>
+                                <p class="text-gray-400 text-xs sm:text-sm">Earn monthly rewards while locked.</p>
+                            </div>
+                        </div>
+                        <div class="p-4 sm:p-6 rounded-2xl bg-white/5 border border-white/10 flex gap-3 sm:gap-4">
+                            <i data-lucide="coins" class="w-5 h-5 sm:w-6 sm:h-6 text-fuchsia-400 flex-shrink-0"></i>
+                            <div>
+                                <h3 class="font-bold text-sm sm:text-base">20% Mining Commission</h3>
+                                <p class="text-gray-400 text-xs sm:text-sm">Approx 5,000 tokens distributed.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white/5 rounded-3xl p-6 sm:p-8 border border-white/10" data-aos="fade-left">
+                        <h3 class="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 flex items-center gap-2"><i
+                                data-lucide="trending-up" class="text-green-400"></i> Phase Growth</h3>
+                        <div class="space-y-3 sm:space-y-4">
+                            <div class="flex justify-between text-gray-400 text-sm sm:text-base"><span>Phase 1</span>
+                                <span>Base Price</span>
+                            </div>
+                            <div class="flex justify-between text-green-400 font-bold text-sm sm:text-base"><span>Phase
+                                    2</span> <span>1.2x
+                                    Growth (Active)</span></div>
+                        </div>
+                        <div
+                            class="mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-white/10 text-xs sm:text-sm flex justify-between">
+                            <span class="text-gray-400">Total Tokens (16 Mo)</span>
+                            <span class="text-xl sm:text-2xl font-bold">6,000+</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Timeline -->
+        <section class="py-12 sm:py-16 md:py-20 bg-[#080808]">
+            <div class="container mx-auto px-4 sm:px-6 container-padding">
+                <div class="text-center mb-12 sm:mb-16">
+                    <h2 class="text-2xl sm:text-3xl font-bold">Timeline</h2>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 md:gap-8 text-center timeline-grid">
+                    <div class="bg-white/5 p-4 sm:p-6 rounded-2xl" data-aos="fade-up" data-aos-delay="0">
+                        <div class="text-violet-400 font-bold mb-2 text-sm sm:text-base">Month 0</div>
+                        <h3 class="font-bold text-sm sm:text-base">Purchase & Lock</h3>
+                    </div>
+                    <div class="bg-white/5 p-4 sm:p-6 rounded-2xl" data-aos="fade-up" data-aos-delay="100">
+                        <div class="text-violet-400 font-bold mb-2 text-sm sm:text-base">Month 1-12</div>
+                        <h3 class="font-bold text-sm sm:text-base">Monthly Mining</h3>
+                    </div>
+                    <div class="bg-white/5 p-4 sm:p-6 rounded-2xl" data-aos="fade-up" data-aos-delay="200">
+                        <div class="text-violet-400 font-bold mb-2 text-sm sm:text-base">Month 13</div>
+                        <h3 class="font-bold text-sm sm:text-base">Sell Window</h3>
+                    </div>
+                    <div class="bg-white/5 p-4 sm:p-6 rounded-2xl" data-aos="fade-up" data-aos-delay="300">
+                        <div class="text-violet-400 font-bold mb-2 text-sm sm:text-base">Month 17</div>
+                        <h3 class="font-bold text-sm sm:text-base">Cycle End</h3>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Community & Income -->
+        <section class="py-12 sm:py-16 md:py-24">
+            <div class="container mx-auto px-4 sm:px-6 container-padding">
+                <h2 class="text-2xl sm:text-3xl md:text-4xl font-bold mb-8 sm:mb-12 text-center">We build <span
+                        class="text-pink-500">Community</span>
+                </h2>
+                <div class="bg-gradient-to-br from-gray-900 to-black p-6 sm:p-8 rounded-3xl border border-white/5 text-center max-w-4xl mx-auto income-example"
+                    data-aos="zoom-in">
+                    <h3 class="text-xl sm:text-2xl font-bold mb-6 sm:mb-8">Income Potential Example</h3>
+                    <div class="flex flex-col md:flex-row justify-center items-center gap-6 sm:gap-8">
+                        <div class="text-left">
+                            <div class="text-3xl sm:text-4xl font-bold mb-2">₹3,500</div>
+                            <div class="text-xs text-gray-500 uppercase">Est. Monthly</div>
+                        </div>
+                        <div class="h-8 sm:h-12 w-px bg-white/10 hidden md:block"></div>
+                        <div class="text-left">
+                            <div class="text-3xl sm:text-4xl font-bold mb-2">₹42,000</div>
+                            <div class="text-xs text-gray-500 uppercase">Est. Yearly</div>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-600 italic mt-4 sm:mt-6">* Illustration only. Based on performance.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- FAQ -->
+        <section class="py-12 sm:py-16 md:py-24 bg-[#050505]">
+            <div class="container mx-auto px-4 sm:px-6 container-padding text-center">
+                <h2 class="text-2xl sm:text-3xl md:text-4xl font-bold mb-8 sm:mb-12">FAQ</h2>
+                <div class="max-w-2xl mx-auto text-left space-y-4">
+                    <div class="bg-white/5 p-4 sm:p-6 rounded-xl border border-white/5">
+                        <h3 class="font-bold mb-2 text-sm sm:text-base">What is ShagunPro?</h3>
+                        <p class="text-xs sm:text-sm text-gray-400">ShagunPro is a BEP-20 token on Binance Smart Chain
+                            earning
+                            passive income through staking and animal feed product purchase.</p>
+                    </div>
+                    <div class="bg-white/5 p-4 sm:p-6 rounded-xl border border-white/5">
+                        <h3 class="font-bold mb-2 text-sm sm:text-base">Is my investment secure?</h3>
+                        <p class="text-xs sm:text-sm text-gray-400">Yes, our smart contract has been professionally
+                            audited. We use
+                            industry-standard security protocols.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer
+        class="py-8 sm:py-12 bg-black border-t border-white/10 text-center md:text-left text-gray-500 text-xs sm:text-sm">
+        <div
+            class="container mx-auto px-4 sm:px-6 grid grid-cols-1 md:grid-cols-4 gap-6 sm:gap-8 mb-6 sm:mb-8 footer-grid">
+            <div class="md:col-span-2">
+                <div class="text-white font-bold text-base sm:text-lg mb-3 sm:mb-4">ShagunPro</div>
+                <p class="max-w-sm text-xs sm:text-sm">Revolutionizing passive income generation through blockchain
+                    technology and
+                    sustainable agriculture.</p>
+            </div>
+            <div>
+                <h4 class="text-white font-bold mb-3 sm:mb-4 text-sm sm:text-base">Links</h4>
+                <ul class="space-y-1 sm:space-y-2">
+                    <li><a href="#" class="hover:text-emerald-400 text-xs sm:text-sm">Staking</a></li>
+                    <li><a href="#" class="hover:text-emerald-400 text-xs sm:text-sm">Shop</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="text-white font-bold mb-3 sm:mb-4 text-sm sm:text-base">Legal</h4>
+                <ul class="space-y-1 sm:space-y-2">
+                    <li><a href="#" class="hover:text-emerald-400 text-xs sm:text-sm">Terms</a></li>
+                    <li><a href="#" class="hover:text-emerald-400 text-xs sm:text-sm">Privacy</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="container mx-auto px-4 sm:px-6 pt-6 sm:pt-8 border-t border-white/5 text-center">
+            <div class="text-xs sm:text-sm">© 2025 ShagunPro. All rights reserved.</div>
+            <p class="text-xs opacity-50 mt-2">Crypto assets are unregulated & highly risky. Secure your capital.</p>
+        </div>
+    </footer>
+
+    <!-- Initialize AOS & Lucide -->
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script>
+        AOS.init({
+            duration: 800,
+            once: true,
+        });
+        lucide.createIcons();
+    </script>
+</body>
+
+</html>

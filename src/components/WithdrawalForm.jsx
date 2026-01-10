@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { toast } from "react-hot-toast"
 
 export default function WithdrawalForm({ onSubmit, userData, kycData }) {
     const [formData, setFormData] = useState({
@@ -72,7 +73,7 @@ export default function WithdrawalForm({ onSubmit, userData, kycData }) {
             // }
 
             if (amount < 100) {
-                alert("Minimum withdrawal amount is ₹100")
+                toast.error("Minimum withdrawal amount is ₹100")
                 return
             }
 
@@ -98,13 +99,13 @@ export default function WithdrawalForm({ onSubmit, userData, kycData }) {
                     branchName: ""
                 }
             })
-            alert("Withdrawal request submitted successfully!")
+            toast.success("Withdrawal request submitted successfully!")
         }
     }
 
     return (
-        <div className="bg-gradient-to-br from-[#040408] to-[#1a1a2e] rounded-xl border border-[#9131e7]/30 overflow-hidden">
-            <div className="p-4 md:p-6 border-b border-[#9131e7]/30 bg-gradient-to-r from-[#9131e7]/10 to-[#e84495]/10">
+        <div className="bg-gradient-to-br from-[#040408] to-[#1a1a2e] rounded-xl border border-teal-500/30 overflow-hidden">
+            <div className="p-4 md:p-6 border-b border-teal-500/30 bg-gradient-to-r from-teal-500/10 to-purple-500/10">
                 <h3 className="text-xl md:text-2xl font-bold text-white">Initial Withdrawal Request</h3>
                 <p className="text-gray-400 text-sm md:text-base">Request withdrawal from your available wallets</p>
             </div>
@@ -120,11 +121,11 @@ export default function WithdrawalForm({ onSubmit, userData, kycData }) {
                             type="button"
                             onClick={() => setFormData(prev => ({ ...prev, source: "rex" }))}
                             className={`p-2 md:p-3 rounded-lg border transition-all ${formData.source === "rex"
-                                ? "border-[#00b894] bg-[#00b894]/20"
-                                : "border-[#444] bg-[#1a1a2e] hover:border-[#00b894]/50"}`}
+                                ? "border-teal-500 bg-teal-500/20"
+                                : "border-[#444] bg-[#1a1a2e] hover:border-teal-500/50"}`}
                         >
                             <div className="flex flex-col items-center">
-                                <div className={`w-6 h-6 md:w-8 md:h-8 rounded-full mb-1 md:mb-2 flex items-center justify-center ${formData.source === "rex" ? "bg-[#00b894]" : "bg-[#444]"}`}>
+                                <div className={`w-6 h-6 md:w-8 md:h-8 rounded-full mb-1 md:mb-2 flex items-center justify-center ${formData.source === "rex" ? "bg-teal-500" : "bg-[#444]"}`}>
                                     <svg className="w-3 h-3 md:w-4 md:h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                                     </svg>
@@ -137,11 +138,11 @@ export default function WithdrawalForm({ onSubmit, userData, kycData }) {
                             type="button"
                             onClick={() => setFormData(prev => ({ ...prev, source: "sos" }))}
                             className={`p-2 md:p-3 rounded-lg border transition-all ${formData.source === "sos"
-                                ? "border-[#fd79a8] bg-[#fd79a8]/20"
-                                : "border-[#444] bg-[#1a1a2e] hover:border-[#fd79a8]/50"}`}
+                                ? "border-purple-500 bg-purple-500/20"
+                                : "border-[#444] bg-[#1a1a2e] hover:border-purple-500/50"}`}
                         >
                             <div className="flex flex-col items-center">
-                                <div className={`w-6 h-6 md:w-8 md:h-8 rounded-full mb-1 md:mb-2 flex items-center justify-center ${formData.source === "sos" ? "bg-[#fd79a8]" : "bg-[#444]"}`}>
+                                <div className={`w-6 h-6 md:w-8 md:h-8 rounded-full mb-1 md:mb-2 flex items-center justify-center ${formData.source === "sos" ? "bg-purple-500" : "bg-[#444]"}`}>
                                     <svg className="w-3 h-3 md:w-4 md:h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                                     </svg>
@@ -162,7 +163,7 @@ export default function WithdrawalForm({ onSubmit, userData, kycData }) {
                         <button
                             type="button"
                             onClick={handleMaxClick}
-                            className="text-xs px-2 md:px-3 py-1 bg-[#9131e7]/20 text-[#9131e7] rounded hover:bg-[#9131e7]/30 transition-colors"
+                            className="text-xs px-2 md:px-3 py-1 bg-teal-500/20 text-teal-400 rounded hover:bg-teal-500/30 transition-colors"
                         >
                             MAX: {getMaxAmount().toLocaleString()}
                         </button>
@@ -177,7 +178,7 @@ export default function WithdrawalForm({ onSubmit, userData, kycData }) {
                             placeholder="0.00"
                             step="0.01"
                             min="100"
-                            className="w-full px-3 md:px-4 py-2 md:py-3 pl-10 md:pl-12 bg-[#1a1a2e] border border-[#444] text-white rounded-lg focus:outline-none focus:border-[#9131e7] focus:ring-2 focus:ring-[#9131e7]/30 transition-all text-sm md:text-base"
+                            className="w-full px-3 md:px-4 py-2 md:py-3 pl-10 md:pl-12 bg-[#1a1a2e] border border-[#444] text-white rounded-lg focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/30 transition-all text-sm md:text-base"
                         />
                         <div className="absolute left-3 md:left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
                             ₹
@@ -215,7 +216,7 @@ export default function WithdrawalForm({ onSubmit, userData, kycData }) {
                     <div className="space-y-4">
                         {/* Toggle for using KYC account */}
                         {kycData?.status === 'approved' && kycData?.bankDetails && (
-                            <div className="flex items-center justify-between p-3 bg-[#9131e7]/10 border border-[#9131e7]/30 rounded-lg">
+                            <div className="flex items-center justify-between p-3 bg-teal-500/10 border border-teal-500/30 rounded-lg">
                                 <div className="flex items-center gap-2">
                                     <svg className="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20">
                                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
@@ -229,7 +230,7 @@ export default function WithdrawalForm({ onSubmit, userData, kycData }) {
                                         onChange={(e) => setFormData(prev => ({ ...prev, useKYCAccount: e.target.checked }))}
                                         className="sr-only peer"
                                     />
-                                    <div className="w-11 h-6 bg-[#444] peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#9131e7] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#9131e7]"></div>
+                                    <div className="w-11 h-6 bg-[#444] peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-teal-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-500"></div>
                                 </label>
                             </div>
                         )}
@@ -248,7 +249,7 @@ export default function WithdrawalForm({ onSubmit, userData, kycData }) {
                                     onChange={handleBankDetailsChange}
                                     placeholder="Enter account number"
                                     disabled={formData.useKYCAccount && kycData?.status === 'approved'}
-                                    className="w-full px-3 md:px-4 py-2 md:py-3 bg-[#1a1a1a] border border-[#444] text-white rounded-lg focus:outline-none focus:border-[#9131e7] focus:ring-2 focus:ring-[#9131e7]/30 transition-all text-sm md:text-base font-mono disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="w-full px-3 md:px-4 py-2 md:py-3 bg-[#1a1a1a] border border-[#444] text-white rounded-lg focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/30 transition-all text-sm md:text-base font-mono disabled:opacity-50 disabled:cursor-not-allowed"
                                 />
                             </div>
 
@@ -265,7 +266,7 @@ export default function WithdrawalForm({ onSubmit, userData, kycData }) {
                                             value={formData.bankDetails.accountHolderName}
                                             onChange={handleBankDetailsChange}
                                             placeholder="Enter account holder name"
-                                            className="w-full px-3 md:px-4 py-2 md:py-3 bg-[#1a1a1a] border border-[#444] text-white rounded-lg focus:outline-none focus:border-[#9131e7] focus:ring-2 focus:ring-[#9131e7]/30 transition-all text-sm md:text-base"
+                                            className="w-full px-3 md:px-4 py-2 md:py-3 bg-[#1a1a1a] border border-[#444] text-white rounded-lg focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/30 transition-all text-sm md:text-base"
                                         />
                                     </div>
 
@@ -280,7 +281,7 @@ export default function WithdrawalForm({ onSubmit, userData, kycData }) {
                                             value={formData.bankDetails.ifscCode}
                                             onChange={handleBankDetailsChange}
                                             placeholder="Enter IFSC code"
-                                            className="w-full px-3 md:px-4 py-2 md:py-3 bg-[#1a1a1a] border border-[#444] text-white rounded-lg focus:outline-none focus:border-[#9131e7] focus:ring-2 focus:ring-[#9131e7]/30 transition-all text-sm md:text-base font-mono uppercase"
+                                            className="w-full px-3 md:px-4 py-2 md:py-3 bg-[#1a1a1a] border border-[#444] text-white rounded-lg focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/30 transition-all text-sm md:text-base font-mono uppercase"
                                         />
                                     </div>
 
@@ -295,7 +296,7 @@ export default function WithdrawalForm({ onSubmit, userData, kycData }) {
                                             value={formData.bankDetails.bankName}
                                             onChange={handleBankDetailsChange}
                                             placeholder="Enter bank name"
-                                            className="w-full px-3 md:px-4 py-2 md:py-3 bg-[#1a1a1a] border border-[#444] text-white rounded-lg focus:outline-none focus:border-[#9131e7] focus:ring-2 focus:ring-[#9131e7]/30 transition-all text-sm md:text-base"
+                                            className="w-full px-3 md:px-4 py-2 md:py-3 bg-[#1a1a1a] border border-[#444] text-white rounded-lg focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/30 transition-all text-sm md:text-base"
                                         />
                                     </div>
 
@@ -310,7 +311,7 @@ export default function WithdrawalForm({ onSubmit, userData, kycData }) {
                                             value={formData.bankDetails.branchName}
                                             onChange={handleBankDetailsChange}
                                             placeholder="Enter branch name"
-                                            className="w-full px-3 md:px-4 py-2 md:py-3 bg-[#1a1a1a] border border-[#444] text-white rounded-lg focus:outline-none focus:border-[#9131e7] focus:ring-2 focus:ring-[#9131e7]/30 transition-all text-sm md:text-base"
+                                            className="w-full px-3 md:px-4 py-2 md:py-3 bg-[#1a1a1a] border border-[#444] text-white rounded-lg focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/30 transition-all text-sm md:text-base"
                                         />
                                     </div>
                                 </>
@@ -335,7 +336,7 @@ export default function WithdrawalForm({ onSubmit, userData, kycData }) {
                             value={formData.walletAddress || ""}
                             onChange={handleChange}
                             placeholder="Enter your crypto wallet address"
-                            className="w-full px-3 md:px-4 py-2 md:py-3 bg-[#1a1a1a] border border-[#444] text-white rounded-lg focus:outline-none focus:border-[#9131e7] focus:ring-2 focus:ring-[#9131e7]/30 transition-all text-sm md:text-base"
+                            className="w-full px-3 md:px-4 py-2 md:py-3 bg-[#1a1a1a] border border-[#444] text-white rounded-lg focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/30 transition-all text-sm md:text-base"
                         />
                     </div>
                 )}
@@ -343,13 +344,13 @@ export default function WithdrawalForm({ onSubmit, userData, kycData }) {
                 {/* Submit Button */}
                 <button
                     type="submit"
-                    className="w-full px-4 md:px-6 py-3 md:py-4 bg-gradient-to-r from-[#9131e7] to-[#e84495] text-white font-bold rounded-lg hover:shadow-lg hover:shadow-[#9131e7]/50 transition-all duration-300 hover:-translate-y-1 active:translate-y-0 text-sm md:text-lg"
+                    className="w-full px-4 md:px-6 py-3 md:py-4 bg-gradient-brand text-white font-bold rounded-lg hover:shadow-lg hover:shadow-teal-500/50 transition-all duration-300 hover:-translate-y-1 active:translate-y-0 text-sm md:text-lg"
                 >
                     Submit Withdrawal Request
                 </button>
 
                 {/* Info Note */}
-                <div className="p-2 md:p-3 bg-[#9131e7]/10 border border-[#9131e7]/30 rounded-lg">
+                <div className="p-2 md:p-3 bg-teal-500/10 border border-teal-500/30 rounded-lg">
                     <p className="text-xs text-gray-300 text-center">
                         ⚡ Withdrawal requests are processed within 24-48 hours. A 1% processing fee applies.
                     </p>

@@ -141,8 +141,8 @@ export default function Downline() {
             </div>
 
             {/* User Information Card */}
-            <div className="bg-gradient-to-br from-[#040408] to-[#1a1a2e] rounded-2xl border border-[#9131e7]/30 overflow-hidden">
-                <div className="p-4 md:p-6 border-b border-[#9131e7]/30 bg-gradient-to-r from-[#9131e7]/10 to-[#e84495]/10">
+            <div className="bg-gradient-to-br from-[#040408] to-[#1a1a2e] rounded-2xl border border-teal-500/30 overflow-hidden">
+                <div className="p-4 md:p-6 border-b border-teal-500/30 bg-gradient-to-r from-teal-500/10 to-purple-500/10">
                     <h3 className="text-xl md:text-2xl font-bold text-white">Your Profile Information</h3>
                     <p className="text-gray-400 text-sm md:text-base">Complete overview of your referral network account</p>
                 </div>
@@ -150,8 +150,8 @@ export default function Downline() {
                 <div className="p-4 md:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6">
                     <div className="space-y-1 md:space-y-2">
                         <div className="flex items-center gap-2">
-                            <div className="p-1 md:p-2 rounded-lg bg-[#9131e7]/20">
-                                <svg className="w-4 h-4 md:w-5 md:h-5 text-[#9131e7]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div className="p-1 md:p-2 rounded-lg bg-teal-500/20">
+                                <svg className="w-4 h-4 md:w-5 md:h-5 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
                                 </svg>
                             </div>
@@ -186,8 +186,8 @@ export default function Downline() {
 
                     <div className="space-y-1 md:space-y-2">
                         <div className="flex items-center gap-2">
-                            <div className="p-1 md:p-2 rounded-lg bg-[#fd79a8]/20">
-                                <svg className="w-4 h-4 md:w-5 md:h-5 text-[#fd79a8]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div className="p-1 md:p-2 rounded-lg bg-pink-500/20">
+                                <svg className="w-4 h-4 md:w-5 md:h-5 text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                                 </svg>
                             </div>
@@ -224,19 +224,19 @@ export default function Downline() {
                     </div>
                     <div className="flex items-center gap-2">
                         <span className="text-gray-400 text-sm md:text-base">Active Levels:</span>
-                        <span className="px-2 md:px-3 py-1 bg-[#9131e7] text-white rounded-full font-bold text-sm md:text-base">{userInfo.activeLevels}</span>
+                        <span className="px-2 md:px-3 py-1 bg-gradient-brand text-white rounded-full font-bold text-sm md:text-base">{userInfo.activeLevels}</span>
                     </div>
                 </div>
 
-                <div className="bg-gradient-to-br from-[#040408] to-[#1a1a2e] rounded-2xl border border-[#9131e7]/30 overflow-hidden">
-                    <div className="p-4 md:p-6 border-b border-[#9131e7]/30 bg-gradient-to-r from-[#9131e7]/10 to-[#e84495]/10">
+                <div className="bg-gradient-to-br from-[#040408] to-[#1a1a2e] rounded-2xl border border-teal-500/30 overflow-hidden">
+                    <div className="p-4 md:p-6 border-b border-teal-500/30 bg-gradient-to-r from-teal-500/10 to-purple-500/10">
                         <h4 className="text-white font-bold text-base md:text-lg">Network Summary</h4>
                     </div>
 
                     <div className="overflow-x-auto">
                         <table className="w-full min-w-max">
                             <thead>
-                                <tr className="border-b border-[#9131e7]/30">
+                                <tr className="border-b border-teal-500/30">
                                     <th className="text-left py-3 md:py-4 px-3 md:px-6 text-white font-bold text-xs md:text-sm">Level</th>
                                     <th className="text-left py-3 md:py-4 px-3 md:px-6 text-white font-bold text-xs md:text-sm">Members</th>
                                     <th className="text-left py-3 md:py-4 px-3 md:px-6 text-white font-bold text-xs md:text-sm">Business Volume</th>
@@ -250,11 +250,11 @@ export default function Downline() {
                                     <tr
                                         key={stat.level}
                                         onClick={() => setSelectedLevel(stat.level)}
-                                        className={`border-b border-[#444]/30 hover:bg-[#9131e7]/10 transition-colors cursor-pointer ${selectedLevel === stat.level ? 'bg-[#9131e7]/20 border-[#9131e7]/50' : ''}`}
+                                        className={`border-b border-[#444]/30 hover:bg-teal-500/10 transition-colors cursor-pointer ${selectedLevel === stat.level ? 'bg-teal-500/20 border-teal-500/50' : ''}`}
                                     >
                                         <td className="py-3 md:py-4 px-3 md:px-6">
                                             <div className="flex items-center gap-2 md:gap-3">
-                                                <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-gradient-to-br from-[#9131e7] to-[#e84495] flex items-center justify-center flex-shrink-0">
+                                                <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-gradient-brand flex items-center justify-center flex-shrink-0">
                                                     <span className="font-bold text-white text-sm md:text-base">L{stat.level}</span>
                                                 </div>
                                                 <div className="min-w-0">
@@ -262,7 +262,7 @@ export default function Downline() {
                                                     <div className="flex items-center gap-1">
                                                         <div className="w-12 md:w-16 h-1 bg-gray-700 rounded-full overflow-hidden flex-shrink-0">
                                                             <div
-                                                                className="h-full bg-gradient-to-r from-[#9131e7] to-[#e84495] rounded-full"
+                                                                className="h-full bg-gradient-brand rounded-full"
                                                                 style={{ width: `${(stat.members / 50) * 100}%` }}
                                                             ></div>
                                                         </div>
@@ -322,7 +322,7 @@ export default function Downline() {
                     </div>
 
                     {/* Total Summary Row */}
-                    <div className="p-4 md:p-6 bg-gradient-to-r from-[#9131e7]/10 to-[#e84495]/10 border-t border-[#9131e7]/30">
+                    <div className="p-4 md:p-6 bg-gradient-to-r from-teal-500/10 to-purple-500/10 border-t border-teal-500/30">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
                             <div className="text-center">
                                 <div className="text-gray-400 mb-1 text-sm md:text-base">Total Members</div>
@@ -343,15 +343,15 @@ export default function Downline() {
 
             {/* Level Details View */}
             {selectedLevel && (
-                <div className="mt-6 bg-gradient-to-br from-[#040408] to-[#1a1a2e] rounded-2xl border border-[#9131e7]/30 overflow-hidden animate-fade-in-up transition-all duration-300">
-                    <div className="p-4 md:p-6 border-b border-[#9131e7]/30 bg-gradient-to-r from-[#9131e7]/10 to-[#e84495]/10 flex justify-between items-center">
+                <div className="mt-6 bg-gradient-to-br from-[#040408] to-[#1a1a2e] rounded-2xl border border-teal-500/30 overflow-hidden animate-fade-in-up transition-all duration-300">
+                    <div className="p-4 md:p-6 border-b border-teal-500/30 bg-gradient-to-r from-teal-500/10 to-purple-500/10 flex justify-between items-center">
                         <div>
                             <h3 className="text-xl font-bold text-white">Level {selectedLevel} Members</h3>
                             <p className="text-gray-400 text-sm">Viewing details for level {selectedLevel}</p>
                         </div>
                         <button
                             onClick={() => setSelectedLevel(null)}
-                            className="p-2 hover:bg-[#9131e7]/20 rounded-full text-gray-400 hover:text-white transition-colors"
+                            className="p-2 hover:bg-teal-500/20 rounded-full text-gray-400 hover:text-white transition-colors"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -361,7 +361,7 @@ export default function Downline() {
                     <div className="overflow-x-auto">
                         <table className="w-full min-w-max">
                             <thead>
-                                <tr className="border-b border-[#9131e7]/30 bg-[#9131e7]/5">
+                                <tr className="border-b border-teal-500/30 bg-teal-500/5">
                                     <th className="text-left py-3 px-6 text-gray-300 font-medium text-sm">Member</th>
                                     <th className="text-left py-3 px-6 text-gray-300 font-medium text-sm">Join Date</th>
                                     <th className="text-left py-3 px-6 text-gray-300 font-medium text-sm">Status</th>
@@ -382,7 +382,7 @@ export default function Downline() {
                                             <tr key={idx} className="border-b border-[#444]/20 hover:bg-white/5 transition-colors">
                                                 <td className="py-3 px-6">
                                                     <div className="flex item-center gap-3">
-                                                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#9131e7] to-[#e84495] flex items-center justify-center text-white text-xs font-bold">
+                                                        <div className="w-8 h-8 rounded-full bg-gradient-brand flex items-center justify-center text-white text-xs font-bold">
                                                             {user.name?.charAt(0) || 'U'}
                                                         </div>
                                                         <div>

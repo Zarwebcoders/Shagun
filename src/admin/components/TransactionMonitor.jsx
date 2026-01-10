@@ -1,180 +1,31 @@
 "use client"
-
-import { useState, useEffect } from "react"
-import client from "../../api/client"
+import { Activity } from "lucide-react"
 
 export default function TransactionMonitor() {
-  const [filterType, setFilterType] = useState("all")
-
-  const [transactions, setTransactions] = useState([])
-  const [stats, setStats] = useState({
-    totalTransactions: 0,
-    totalVolume: 0,
-    pending: 0,
-    failed: 0,
-    today: 0
-  })
-  const [loading, setLoading] = useState(true)
-
-  const fetchTransactions = async () => {
-    try {
-      setLoading(true);
-      const { data } = await client.get(`/transactions?type=${filterType}`);
-      setTransactions(data);
-    } catch (error) {
-      console.error("Error fetching transactions:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchStats = async () => {
-    try {
-      const { data } = await client.get('/transactions/stats');
-      setStats(data);
-    } catch (error) {
-      console.error("Error fetching transaction stats:", error);
-    }
-  };
-
-  useEffect(() => {
-    fetchTransactions();
-  }, [filterType]);
-
-  useEffect(() => {
-    fetchStats();
-  }, []);
-
-  const getTypeColor = (type) => {
-    switch (type) {
-      case "deposit":
-        return "bg-green-500/20 text-green-500"
-      case "withdrawal":
-        return "bg-red-500/20 text-red-500"
-      case "investment":
-        return "bg-blue-500/20 text-blue-500"
-      case "referral":
-        return "bg-purple-500/20 text-purple-500"
-      default:
-        return "bg-gray-500/20 text-gray-500"
-    }
-  }
-
-  return (
-    <div className="space-y-6 animate-fadeIn">
-      <style jsx>{`
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        .animate-fadeIn { animation: fadeIn 0.5s ease-out; }
-      `}</style>
-
-      {/* Header */}
-      <div>
-        <h2 className="text-3xl font-bold text-white">Transaction Monitor</h2>
-        <p className="text-gray-400 mt-1">Real-time monitoring of all platform transactions</p>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        {[
-          { label: "Total Transactions", value: stats.totalTransactions.toLocaleString(), icon: "📊" },
-          { label: "Total Volume", value: `₹${(stats.totalVolume / 1000000).toFixed(1)}M`, icon: "💰" },
-          { label: "Pending", value: stats.pending, icon: "⏳" },
-          { label: "Failed", value: stats.failed, icon: "❌" },
-          { label: "Today", value: stats.today, icon: "📅" },
-        ].map((stat, index) => (
-          <div key={index} className="bg-[#0f0f1a] rounded-xl p-6 border border-[#9131e7]/30">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-2xl">{stat.icon}</span>
+    return (
+        <div className="space-y-8 animate-fadeIn text-white">
+            <style jsx>{`
+                @keyframes fadeIn {
+                    from { opacity: 0; transform: translateY(10px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                .animate-fadeIn { animation: fadeIn 0.4s ease-out; }
+            `}</style>
+            <div className="flex justify-between items-center">
+                <div>
+                    <h2 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+                        Transaction Monitor
+                    </h2>
+                    <p className="text-gray-400 mt-1 flex items-center gap-2">
+                        <Activity className="w-4 h-4 text-teal-500" />
+                        Live tracking of platform transactions
+                    </p>
+                </div>
             </div>
-            <p className="text-gray-400 text-sm mb-1">{stat.label}</p>
-            <h3 className="text-2xl font-bold text-white">{stat.value}</h3>
-          </div>
-        ))}
-      </div>
-
-      {/* Filters */}
-      <div className="bg-[#0f0f1a] rounded-xl p-4 border border-[#9131e7]/30">
-        <div className="flex flex-wrap gap-2">
-          {["all", "deposit", "withdrawal", "investment", "referral"].map((type) => (
-            <button
-              key={type}
-              onClick={() => setFilterType(type)}
-              className={`px-6 py-2 rounded-lg font-semibold capitalize transition-all ${filterType === type ? "bg-[#9131e7] text-white" : "bg-[#1a1a2e] text-gray-400 hover:text-white"
-                }`}
-            >
-              {type}
-            </button>
-          ))}
+            <div className="p-8 text-center text-gray-500 border border-teal-500/20 rounded-xl bg-[#0f0f1a]/50">
+                <Activity className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p>Transaction monitoring coming soon...</p>
+            </div>
         </div>
-      </div>
-
-      {/* Transactions Table */}
-      <div className="bg-[#0f0f1a] rounded-xl border border-[#9131e7]/30 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-[#1a1a2e]">
-              <tr>
-                <th className="px-6 py-4 text-left text-gray-400 font-semibold text-sm">Transaction ID</th>
-                <th className="px-6 py-4 text-left text-gray-400 font-semibold text-sm">Type</th>
-                <th className="px-6 py-4 text-left text-gray-400 font-semibold text-sm">User</th>
-                <th className="px-6 py-4 text-left text-gray-400 font-semibold text-sm">Amount</th>
-                <th className="px-6 py-4 text-left text-gray-400 font-semibold text-sm">Crypto</th>
-                <th className="px-6 py-4 text-left text-gray-400 font-semibold text-sm">Hash</th>
-                <th className="px-6 py-4 text-left text-gray-400 font-semibold text-sm">Status</th>
-                <th className="px-6 py-4 text-left text-gray-400 font-semibold text-sm">Date/Time</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#9131e7]/30">
-              {transactions.map((tx) => (
-                <tr key={tx._id} className="hover:bg-[#1a1a2e] transition-colors">
-                  <td className="px-6 py-4">
-                    <code className="text-[#9131e7] text-sm font-mono">{tx._id.substring(0, 8)}...</code>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs font-semibold capitalize ${getTypeColor(tx.type)}`}
-                    >
-                      {tx.type}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-white">{tx.user?.email || tx.user}</td>
-                  <td className="px-6 py-4">
-                    <span className={`font-bold ${tx.type === "deposit" ? "text-green-500" : "text-white"}`}>
-                      ₹{tx.amount}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="px-2 py-1 bg-[#9131e7]/20 text-[#9131e7] rounded text-xs font-semibold">
-                      {tx.crypto}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <code className="text-gray-400 text-xs">{tx.hash}</code>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs font-semibold ${tx.status === "completed"
-                        ? "bg-green-500/20 text-green-500"
-                        : tx.status === "pending"
-                          ? "bg-yellow-500/20 text-yellow-500"
-                          : "bg-red-500/20 text-red-500"
-                        }`}
-                    >
-                      {tx.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-gray-400 text-sm">
-                    {tx.createdAt ? new Date(tx.createdAt).toLocaleString() : tx.date || 'N/A'}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  )
+    )
 }
