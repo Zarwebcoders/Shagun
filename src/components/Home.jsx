@@ -8,6 +8,7 @@ import CommunityShopping from "./sections/CommunityShopping";
 import IncomePlan from "./sections/IncomePlan";
 import FAQ from "./FAQ";
 
+
 export default function Home() {
     const navigate = useNavigate();
 
@@ -18,10 +19,11 @@ export default function Home() {
             <header className="fixed top-0 w-full z-50 bg-black/80 backdrop-blur-md border-b border-white/5">
                 <div className="container mx-auto px-6 py-4 flex justify-between items-center">
                     <div className="flex items-center gap-2">
-                        <div className="w-10 h-10 bg-gradient-to-br from-violet-600 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+                        {/* <div className="w-10 h-10 bg-gradient-to-br from-violet-600 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
                             <span className="text-white font-bold text-xl">S</span>
-                        </div>
-                        <span className="text-2xl font-bold text-white">ShagunPro</span>
+                        </div> */}
+                        {/* <span className="text-2xl font-bold text-white">ShagunPro</span> */}
+                        <img src="/removedbg.png" alt="logo" className="h-16 w-16" />
                     </div>
                     <button
                         onClick={() => navigate("/login")}

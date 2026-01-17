@@ -17,6 +17,7 @@ import LevelIncome from "./pages/LevelIncome"
 import Profile from "./pages/Profile"
 import TransactionHistory from "./pages/TransactionHistory"
 import Home from "./components/Home"
+import Products from "./pages/Products"
 import AdminLayout from "./admin/page"
 import UserManagement from "./admin/components/UserManagement"
 import KYCApprovals from "./admin/components/KYCApprovals"
@@ -57,7 +58,8 @@ export default function App() {
     <Router>
       <Toaster position="top-right" reverseOrder={false} />
       <Routes>
-        <Route path="/" element={<Home />} />
+        {/* <Route path="/" element={<Home />} /> */}
+        <Route path="/" element={<Products />} />
 
         {/* Single Login Route for both User and Admin */}
         <Route path="/login" element={
