@@ -1,108 +1,108 @@
 "use client"
-
-import { useState } from "react"
-import { toast } from "react-hot-toast"
-import CryptoCard from "../components/CryptoCard"
+import { useState, useEffect } from "react"
+import { ArrowLeft, ShoppingBag, CreditCard, Calendar, Activity } from "lucide-react"
+import { useNavigate } from "react-router-dom"
 import client from "../api/client"
+import { toast } from "react-hot-toast"
 
 export default function Shopping() {
-    const [cryptos, setCryptos] = useState([
-        { id: 1, name: "Bitcoin", symbol: "BTC", price: 42500, change: 2.5, image: "₿" },
-        { id: 2, name: "Ethereum", symbol: "ETH", price: 2250, change: 1.8, image: "Ξ" },
-        { id: 3, name: "Litecoin", symbol: "LTC", price: 95.5, change: -0.5, image: "Ł" },
-        { id: 4, name: "Ripple", symbol: "XRP", price: 2.45, change: 3.2, image: "✕" },
-        { id: 5, name: "Cardano", symbol: "ADA", price: 0.98, change: 1.1, image: "◆" },
-        { id: 6, name: "Solana", symbol: "SOL", price: 178.5, change: 5.3, image: "◎" },
-    ])
+    const navigate = useNavigate()
+    const [tokens, setTokens] = useState([])
+    const [loading, setLoading] = useState(true)
+    const [totalTokens, setTotalTokens] = useState(0)
 
-    const [cartItems, setCartItems] = useState([])
-    const [loading, setLoading] = useState(false)
+    useEffect(() => {
+        fetchTokens()
+    }, [])
 
-    const handleAddToCart = (crypto) => {
-        setCartItems((prev) => [...prev, crypto])
-    }
-
-    const handleRemoveFromCart = (index) => {
-        setCartItems((prev) => prev.filter((_, i) => i !== index))
-    }
-
-    const totalCartValue = cartItems.reduce((sum, item) => sum + item.price, 0)
-
-    const handleCheckout = async () => {
-        if (cartItems.length === 0) return;
-        setLoading(true);
+    const fetchTokens = async () => {
         try {
-            await client.post('/transactions', {
-                type: 'purchase',
-                amount: totalCartValue,
-                description: `Purchase of ${cartItems.map(c => c.symbol).join(', ')}`,
-                crypto: 'None' // or mixed
-            });
-            toast.success('Purchase successful!');
-            setCartItems([]);
+            const { data } = await client.get('/api/shopping-token/my-tokens')
+            setTokens(data)
+
+            // Calculate total
+            const total = data.reduce((acc, curr) => acc + curr.amount, 0)
+            setTotalTokens(total)
+
+            setLoading(false)
         } catch (error) {
-            console.error(error);
-            toast.error(error.response?.data?.message || 'Purchase failed');
-        } finally {
-            setLoading(false);
+            console.error("Error fetching tokens:", error)
+            toast.error("Failed to load shopping tokens")
+            setLoading(false)
         }
     }
 
     return (
-        <div className="w-full space-y-8">
-            <h2 className="text-4xl font-bold text-white mb-2">Crypto Shopping</h2>
-            <p className="text-[#b0b0b0] text-lg">Buy and manage your cryptocurrency portfolio</p>
+        <div className="min-h-screen bg-[#050505] text-white p-6 md:p-12 font-sans">
+            <div className="max-w-4xl mx-auto space-y-8 animate-fadeIn">
+                <button
+                    onClick={() => navigate('/dashboard')}
+                    className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+                >
+                    <ArrowLeft className="w-5 h-5" /> Back to Dashboard
+                </button>
 
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                <div className="lg:col-span-3 space-y-6">
-                    <h3 className="text-2xl font-bold text-teal-400">Available Cryptocurrencies</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {cryptos.map((crypto) => (
-                            <CryptoCard key={crypto.id} crypto={crypto} onAddToCart={handleAddToCart} />
-                        ))}
+                <div className="grid md:grid-cols-2 gap-8 items-center">
+                    <div>
+                        <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-pink-400 to-rose-600 bg-clip-text text-transparent mb-2">
+                            Shopping Tokens
+                        </h1>
+                        <p className="text-gray-400">Manage your shopping wallet and history</p>
+                    </div>
+
+                    <div className="bg-[#0f0f1a] border border-pink-500/20 rounded-2xl p-6 flex items-center gap-4 shadow-lg shadow-pink-500/5">
+                        <div className="w-12 h-12 rounded-full bg-pink-500/10 flex items-center justify-center border border-pink-500/20">
+                            <ShoppingBag className="w-6 h-6 text-pink-500" />
+                        </div>
+                        <div>
+                            <p className="text-sm text-gray-400 uppercase tracking-wider">Total Balance</p>
+                            <p className="text-3xl font-bold text-white">{totalTokens.toLocaleString()} TKN</p>
+                        </div>
                     </div>
                 </div>
 
-                <aside className="lg:col-span-1 bg-gradient-to-br from-[#040408] to-[#1f1f1f] p-6 rounded-xl border border-teal-500/30 h-fit sticky top-8">
-                    <h3 className="text-2xl font-bold text-teal-400 mb-6">Shopping Cart</h3>
-                    {cartItems.length === 0 ? (
-                        <p className="text-[#b0b0b0] text-center py-8">Your cart is empty</p>
-                    ) : (
-                        <>
-                            <div className="space-y-3 mb-6 max-h-96 overflow-y-auto">
-                                {cartItems.map((item, index) => (
-                                    <div
-                                        key={index}
-                                        className="flex items-center justify-between p-3 bg-[#1a1a1a] rounded-lg border border-[#444]"
-                                    >
-                                        <div>
-                                            <p className="font-semibold text-white">{item.symbol}</p>
-                                            <p className="text-sm text-[#b0b0b0]">₹{item.price.toFixed(2)}</p>
-                                        </div>
-                                        <button
-                                            onClick={() => handleRemoveFromCart(index)}
-                                            className="text-red-500 hover:text-red-400 text-lg font-bold transition-colors"
-                                        >
-                                            ✕
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-                            <div className="border-t border-[#444] pt-4 mb-4">
-                                <p className="text-white font-bold">
-                                    Total: <span className="text-purple-500">₹{totalCartValue.toFixed(2)}</span>
-                                </p>
-                            </div>
-                            <button
-                                onClick={handleCheckout}
-                                disabled={loading}
-                                className={`w-full px-6 py-3 bg-gradient-brand text-white font-bold rounded-lg hover:shadow-lg hover:shadow-teal-500/50 transition-all duration-300 hover:-translate-y-1 active:translate-y-0 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            >
-                                {loading ? 'Processing...' : 'Proceed to Checkout'}
-                            </button>
-                        </>
-                    )}
-                </aside>
+                <div className="bg-[#0f0f1a] rounded-2xl border border-white/5 overflow-hidden shadow-xl">
+                    <div className="p-6 border-b border-white/5 flex items-center gap-2">
+                        <Activity className="w-5 h-5 text-pink-500" />
+                        <h2 className="text-lg font-semibold">Token History</h2>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                        <table className="w-full">
+                            <thead className="bg-[#1a1a2e]">
+                                <tr>
+                                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Date</th>
+                                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Source</th>
+                                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-white/5">
+                                {loading ? (
+                                    <tr><td colSpan="3" className="px-6 py-8 text-center text-gray-500">Loading token history...</td></tr>
+                                ) : tokens.length === 0 ? (
+                                    <tr><td colSpan="3" className="px-6 py-8 text-center text-gray-500">No shopping tokens found.</td></tr>
+                                ) : (
+                                    tokens.map((item) => (
+                                        <tr key={item._id} className="hover:bg-white/5 transition-colors">
+                                            <td className="px-6 py-4 whitespace-nowrap text-gray-300">
+                                                <div className="flex items-center gap-2">
+                                                    <Calendar className="w-4 h-4 text-gray-500" />
+                                                    {new Date(item.created_at).toLocaleDateString()}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-white font-medium">
+                                                <span className="capitalize">{item.source}</span>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <span className="text-pink-400 font-bold font-mono">+{item.amount}</span>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
     )

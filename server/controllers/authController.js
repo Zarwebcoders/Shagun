@@ -12,10 +12,13 @@ const generateToken = (id) => {
 // @desc    Register new user
 // @route   POST /api/auth/register
 // @access  Public
+// @desc    Register new user
+// @route   POST /api/auth/register
+// @access  Public
 const registerUser = async (req, res) => {
-    const { name, email, password, referralCode } = req.body;
+    const { full_name, email, password, referral_id } = req.body;
 
-    if (!name || !email || !password) {
+    if (!full_name || !email || !password) {
         return res.status(400).json({ message: 'Please add all fields' });
     }
 
@@ -26,36 +29,36 @@ const registerUser = async (req, res) => {
         return res.status(400).json({ message: 'User already exists' });
     }
 
-    let sponsorId = null;
-    if (referralCode) {
-        const sponsor = await User.findOne({ referralCode });
+    let sponsor_id = null;
+    if (referral_id) {
+        const sponsor = await User.findOne({ referral_id });
         if (sponsor) {
-            sponsorId = sponsor._id;
+            sponsor_id = sponsor._id;
         }
     }
 
     // Generate random referral code for new user
-    const newReferralCode = name.substring(0, 3).toUpperCase() + Math.floor(1000 + Math.random() * 9000);
+    // Using full_name for generation logic
+    const newReferralCode = full_name.substring(0, 3).toUpperCase() + Math.floor(1000 + Math.random() * 9000);
 
     // Create user
     try {
         const user = await User.create({
-            name,
+            full_name,
             email,
             password,
-            referralCode: newReferralCode,
-            referredBy: sponsorId
+            referral_id: newReferralCode,
+            sponsor_id: sponsor_id,
+            // Default values for other new fields are handled by schema defaults
         });
 
         if (user) {
             res.status(201).json({
                 _id: user.id,
-                name: user.name,
+                full_name: user.full_name,
                 email: user.email,
-                role: user.role,
-                token: generateToken(user._id),
-                wallet: user.wallet,
-                balance: user.balance
+                is_admin: user.is_admin,
+                token: generateToken(user._id)
             });
         } else {
             res.status(400).json({ message: 'Invalid user data' });
@@ -77,12 +80,10 @@ const loginUser = async (req, res) => {
     if (user && (await user.matchPassword(password))) {
         res.json({
             _id: user.id,
-            name: user.name,
+            full_name: user.full_name,
             email: user.email,
-            role: user.role,
-            token: generateToken(user._id),
-            wallet: user.wallet,
-            balance: user.balance
+            is_admin: user.is_admin,
+            token: generateToken(user._id)
         });
     } else {
         res.status(400).json({ message: 'Invalid credentials' });

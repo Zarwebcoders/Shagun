@@ -111,7 +111,7 @@ const getInvestments = async (req, res) => {
 const getAllInvestments = async (req, res) => {
     try {
         const investments = await Investment.find({})
-            .populate('user', 'name email wallet')
+            .populate('user', 'name email')
             .populate('package', 'name dailyReturn duration')
             .sort({ createdAt: -1 });
         res.json(investments);

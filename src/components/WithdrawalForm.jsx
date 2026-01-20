@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { toast } from "react-hot-toast"
 
-export default function WithdrawalForm({ onSubmit, userData, kycData }) {
+export default function WithdrawalForm({ onSubmit, userData, kycData, savedWallet }) {
     const [formData, setFormData] = useState({
         source: "rex",
         amount: "",
@@ -35,6 +35,10 @@ export default function WithdrawalForm({ onSubmit, userData, kycData }) {
     }
 
     useEffect(() => {
+        if (savedWallet) {
+            setFormData(prev => ({ ...prev, walletAddress: savedWallet }))
+        }
+
         if (kycData?.status === 'approved' && kycData?.bankDetails) {
             setFormData(prev => ({
                 ...prev,
@@ -47,7 +51,7 @@ export default function WithdrawalForm({ onSubmit, userData, kycData }) {
                 }
             }))
         }
-    }, [kycData])
+    }, [kycData, savedWallet])
 
     const getMaxAmount = () => {
         switch (formData.source) {

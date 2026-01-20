@@ -66,11 +66,11 @@ export default function Downline() {
                 const currentDate = new Date();
                 const lastMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1);
                 const currentMonthMembers = downlineData.filter(user =>
-                    new Date(user.createdAt) >= new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
+                    new Date(user.create_at) >= new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
                 ).length;
                 const lastMonthMembers = downlineData.filter(user =>
-                    new Date(user.createdAt) >= lastMonth &&
-                    new Date(user.createdAt) < new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
+                    new Date(user.create_at) >= lastMonth &&
+                    new Date(user.create_at) < new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
                 ).length;
 
                 const networkGrowth = lastMonthMembers > 0
@@ -98,7 +98,7 @@ export default function Downline() {
 
                 setUserInfo({
                     userId: userData._id.substring(userData._id.length - 8).toUpperCase(),
-                    name: userData.name,
+                    name: userData.full_name,
                     email: userData.email,
                     totalNetwork: totalMembers,
                     activeLevels: activeLevelsCount,
@@ -364,7 +364,6 @@ export default function Downline() {
                                 <tr className="border-b border-teal-500/30 bg-teal-500/5">
                                     <th className="text-left py-3 px-6 text-gray-300 font-medium text-sm">Member</th>
                                     <th className="text-left py-3 px-6 text-gray-300 font-medium text-sm">Join Date</th>
-                                    <th className="text-left py-3 px-6 text-gray-300 font-medium text-sm">Status</th>
                                     <th className="text-left py-3 px-6 text-gray-300 font-medium text-sm">Total Investment</th>
                                 </tr>
                             </thead>
@@ -383,27 +382,18 @@ export default function Downline() {
                                                 <td className="py-3 px-6">
                                                     <div className="flex item-center gap-3">
                                                         <div className="w-8 h-8 rounded-full bg-gradient-brand flex items-center justify-center text-white text-xs font-bold">
-                                                            {user.name?.charAt(0) || 'U'}
+                                                            {user.full_name?.charAt(0) || 'U'}
                                                         </div>
                                                         <div>
-                                                            <div className="text-white font-medium">{user.name}</div>
+                                                            <div className="text-white font-medium">{user.full_name}</div>
                                                             <div className="text-xs text-gray-500">{user.email}</div>
                                                         </div>
                                                     </div>
                                                 </td>
                                                 <td className="py-3 px-6 text-gray-300 text-sm">
-                                                    {new Date(user.createdAt).toLocaleDateString()}
+                                                    {new Date(user.create_at).toLocaleDateString()}
                                                 </td>
-                                                <td className="py-3 px-6">
-                                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${user.kycStatus === 'approved'
-                                                        ? 'bg-green-500/20 text-green-400'
-                                                        : user.kycStatus === 'pending'
-                                                            ? 'bg-yellow-500/20 text-yellow-400'
-                                                            : 'bg-red-500/20 text-red-400'
-                                                        }`}>
-                                                        {user.kycStatus === 'approved' ? 'Verified' : user.kycStatus || 'Unverified'}
-                                                    </span>
-                                                </td>
+
                                                 <td className="py-3 px-6 text-white font-bold text-sm">
                                                     ₹{(user.totalInvestment || 0).toLocaleString()}
                                                 </td>

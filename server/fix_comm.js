@@ -16,10 +16,10 @@ const fixCommissions = async () => {
         const users = await User.find({});
 
         for (const user of users) {
-            console.log(`Checking user: ${user.name} (${user._id})`);
+            console.log(`Checking user: ${user.full_name} (${user._id})`);
 
             // 2. Find direct referrals (Level 1)
-            const downlines = await User.find({ referredBy: user._id });
+            const downlines = await User.find({ sponsor_id: user._id });
 
             if (downlines.length === 0) continue;
 

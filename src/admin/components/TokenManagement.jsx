@@ -10,7 +10,7 @@ export default function TokenManagement() {
         phase: ""
     })
     const [recoveryData, setRecoveryData] = useState({
-        wallet: "",
+        email: "",
         amount: ""
     })
     const [loading, setLoading] = useState(false)
@@ -60,7 +60,7 @@ export default function TokenManagement() {
             const { data } = await client.post('/token/recover', recoveryData);
             toast.success(data.message);
             setRecoveryData({
-                wallet: "",
+                email: "",
                 amount: ""
             });
         } catch (error) {
@@ -155,13 +155,13 @@ export default function TokenManagement() {
 
                     <form onSubmit={handleRecoverTokens} className="space-y-4">
                         <div>
-                            <label className="block text-gray-400 text-sm mb-2">Wallet Address (Old)</label>
+                            <label className="block text-gray-400 text-sm mb-2">User Email</label>
                             <input
-                                type="text"
-                                value={recoveryData.wallet}
-                                onChange={(e) => setRecoveryData({ ...recoveryData, wallet: e.target.value })}
+                                type="email"
+                                value={recoveryData.email}
+                                onChange={(e) => setRecoveryData({ ...recoveryData, email: e.target.value })}
                                 className="w-full px-4 py-3 bg-[#1a1a2e] text-white rounded-lg border border-teal-500/30 focus:border-teal-500 focus:outline-none"
-                                placeholder="0x..."
+                                placeholder="user@example.com"
                                 required
                             />
                         </div>

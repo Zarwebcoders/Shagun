@@ -14,24 +14,18 @@ const importData = async () => {
 
         const createdUser = await User.create([
             {
-                name: 'Admin User',
+                full_name: 'Admin User',
                 email: 'admin@rextoken.com',
                 password: 'admin123', // Will be hashed by pre-save hook
-                role: 'admin',
-                wallet: '0xAdminWalletAddress',
-                status: 'active',
-                kycStatus: 'verified',
-                referralCode: 'ADM1001'
+                is_admin: 1,
+                referral_id: 'ADM1001'
             },
             {
-                name: 'John Doe',
+                full_name: 'John Doe',
                 email: 'user@example.com',
                 password: 'password123',
-                role: 'user',
-                wallet: '0xUserWalletAddress',
-                status: 'active',
-                kycStatus: 'pending',
-                referralCode: 'JOH1002'
+                is_admin: 0,
+                referral_id: 'JOH1002'
             },
         ]);
 

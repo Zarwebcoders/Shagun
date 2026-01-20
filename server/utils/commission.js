@@ -1,6 +1,9 @@
 const mongoose = require('mongoose');
 const User = require('../models/User');
 const Transaction = require('../models/Transaction');
+const ReferralIncomes = require('../models/ReferralIncomes');
+const LevelIncome = require('../models/LevelIncome');
+const Commission = require('../models/Commission');
 
 /**
  * Distributes level income to upline users based on the investment amount.
@@ -34,14 +37,14 @@ const distributeLevelIncome = async (userId, amount, transactionId) => {
         // Loop through 10 levels
         for (let i = 0; i < percentages.length; i++) {
             // Find referrer
-            if (!currentUser.referredBy) {
+            if (!currentUser.sponsor_id) {
                 break; // No more upline
             }
 
-            const uplineUser = await User.findById(currentUser.referredBy);
+            const uplineUser = await User.findById(currentUser.sponsor_id);
 
             if (!uplineUser) {
-                console.warn(`Upline user not found for ID: ${currentUser.referredBy}`);
+                console.warn(`Upline user not found for ID: ${currentUser.sponsor_id}`);
                 break;
             }
 
@@ -64,6 +67,40 @@ const distributeLevelIncome = async (userId, amount, transactionId) => {
                         : `Level ${i + 1} Income from user ${userId}`,
                     status: 'completed',
                     hash: `COM${Date.now()}${Math.floor(Math.random() * 1000)}`
+                });
+
+                // Create Referral Income Record
+                await ReferralIncomes.create({
+                    earner_user_id: uplineUser._id, // User ID (ObjectId/String)
+                    referred_user_id: userId,
+                    product_transcation_id: transactionId,
+                    amount: amount, // Base Investment Amount
+                    percentage: percentages[i],
+                    referral_amount: commissionAmount, // Calculated Commission
+                    status: 'credited',
+                    create_at: new Date()
+                });
+
+                // Create Level Income Record (Keeping for backward compatibility if needed, or user can remove)
+                await LevelIncome.create({
+                    user_id: uplineUser._id,
+                    from_user_id: userId,
+                    level: i + 1,
+                    amount: commissionAmount,
+                    created_at: new Date(),
+                    product_id: transactionId
+                });
+
+                // Create Commission Record (New Structure)
+                await Commission.create({
+                    from_user_id: userId,
+                    to_user_id: uplineUser._id,
+                    level: i + 1,
+                    percentage: percentages[i],
+                    amount: commissionAmount,
+                    stake_amount: amount, // The investment amount
+                    tx_hash: transactionId,
+                    created_at: new Date()
                 });
 
                 console.log(`Distributed Level ${i + 1} income (${commissionAmount}) to ${uplineUser.email}`);

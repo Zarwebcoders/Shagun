@@ -47,7 +47,7 @@ export default function AdminDashboard() {
             setStats({
                 totalUsers: users.length,
                 totalRevenue: totalRevenue,
-                pendingKYC: pendingKYC,
+
                 activeInvestments: activeInvestments,
                 pendingWithdrawals: pendingWithdrawals,
                 totalTransactions: transactions.length
@@ -105,7 +105,7 @@ export default function AdminDashboard() {
     const statsConfig = [
         { label: "Total Users", value: stats.totalUsers, change: "+12%", icon: "👥", color: "from-blue-500 to-blue-600" },
         { label: "Total Revenue", value: `₹${(stats.totalRevenue / 1000).toFixed(1)}K`, change: "+8%", icon: "💰", color: "from-green-500 to-green-600" },
-        { label: "Pending KYC", value: stats.pendingKYC, change: "-5%", icon: "⏳", color: "from-yellow-500 to-yellow-600" },
+
         { label: "Active Investments", value: stats.activeInvestments, change: "+15%", icon: "📦", color: "from-purple-500 to-purple-600" },
         { label: "Pending Withdrawals", value: stats.pendingWithdrawals, change: "+3%", icon: "💳", color: "from-red-500 to-red-600" },
         { label: "Total Transactions", value: stats.totalTransactions, change: "+22%", icon: "🔄", color: "from-teal-500 to-purple-500" },

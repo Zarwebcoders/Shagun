@@ -7,11 +7,6 @@ import client from "../../api/client"
 export default function UserManagement() {
     const [searchTerm, setSearchTerm] = useState("")
     const [debouncedSearch, setDebouncedSearch] = useState("")
-    const [filterStatus, setFilterStatus] = useState("all")
-    const [filterKYC, setFilterKYC] = useState("all")
-    // const [selectedUsers, setSelectedUsers] = useState([]) // Selection not yet implemented on backend for bulk actions
-    const [users, setUsers] = useState([])
-    const [loading, setLoading] = useState(true)
     const [selectedUser, setSelectedUser] = useState(null)
     const [showUserModal, setShowUserModal] = useState(false)
     const [isEditing, setIsEditing] = useState(false)
@@ -34,14 +29,11 @@ export default function UserManagement() {
         };
     }, [searchTerm]);
 
-    useEffect(() => {
-        // Reset to page 1 when filters change
-        setPage(1);
-    }, [filterStatus, filterKYC]);
+
 
     useEffect(() => {
         fetchUsers();
-    }, [page, debouncedSearch, filterStatus, filterKYC]);
+    }, [page, debouncedSearch]);
 
     const fetchUsers = async () => {
         try {
@@ -50,8 +42,7 @@ export default function UserManagement() {
                 page,
                 limit: 10,
                 search: debouncedSearch,
-                status: filterStatus,
-                kycStatus: filterKYC
+                search: debouncedSearch
             };
             const { data } = await client.get('/users', { params });
 
@@ -71,15 +62,22 @@ export default function UserManagement() {
     //     setSelectedUsers((prev) => (prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]))
     // }
 
-    const handleViewUser = (user) => {
+    const [userWallet, setUserWallet] = useState(null)
+
+    const handleViewUser = async (user) => {
         setSelectedUser(user);
-        setEditFormData({
-            status: user.status,
-            kycStatus: user.kycStatus,
-            wallet: user.wallet
-        });
+        setEditFormData({});
         setIsEditing(false);
+        setUserWallet(null); // Reset
         setShowUserModal(true);
+
+        // Fetch wallet
+        try {
+            const { data } = await client.get(`/wallet/user/${user._id}`);
+            setUserWallet(data);
+        } catch (error) {
+            console.error("Error fetching user wallet:", error);
+        }
     }
 
     const handleEditUser = () => {
@@ -129,33 +127,12 @@ export default function UserManagement() {
                     <div className="md:col-span-2">
                         <input
                             type="text"
-                            placeholder="Search users by name, email, or wallet..."
+                            placeholder="Search users by name or email..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-full px-4 py-3 bg-[#1a1a2e] text-white rounded-lg border border-teal-500/30 focus:border-teal-500 focus:outline-none transition-all"
                         />
                     </div>
-                    <select
-                        value={filterStatus}
-                        onChange={(e) => setFilterStatus(e.target.value)}
-                        className="px-4 py-3 bg-[#1a1a2e] text-white rounded-lg border border-teal-500/30 focus:border-teal-500 focus:outline-none transition-all"
-                    >
-                        <option value="all">All Status</option>
-                        <option value="active">Active</option>
-                        <option value="suspended">Suspended</option>
-                        <option value="inactive">Inactive</option>
-                    </select>
-                    <select
-                        value={filterKYC}
-                        onChange={(e) => setFilterKYC(e.target.value)}
-                        className="px-4 py-3 bg-[#1a1a2e] text-white rounded-lg border border-teal-500/30 focus:border-teal-500 focus:outline-none transition-all"
-                    >
-                        <option value="all">All KYC Status</option>
-                        <option value="verified">Verified</option>
-                        <option value="pending">Pending</option>
-                        <option value="verification_needed">Verification Needed</option>
-                        <option value="rejected">Rejected</option>
-                    </select>
                 </div>
             </div>
 
@@ -166,10 +143,7 @@ export default function UserManagement() {
                         <thead className="bg-[#1a1a2e] text-center">
                             <tr>
                                 <th className="px-6 py-4 text-gray-400 font-semibold text-sm">User</th>
-                                <th className="px-6 py-4 text-gray-400 font-semibold text-sm">Wallet Address</th>
-                                <th className="px-6 py-4 text-gray-400 font-semibold text-sm">Investment</th>
-                                <th className="px-6 py-4 text-gray-400 font-semibold text-sm">Status</th>
-                                <th className="px-6 py-4 text-gray-400 font-semibold text-sm">KYC</th>
+
                                 <th className="px-6 py-4 text-gray-400 font-semibold text-sm">Join Date</th>
                                 <th className="px-6 py-4 text-gray-400 font-semibold text-sm">Actions</th>
                             </tr>
@@ -201,34 +175,6 @@ export default function UserManagement() {
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4">
-                                            <code className="text-teal-400 text-sm">{user.wallet ? `${user.wallet.substring(0, 6)}...${user.wallet.substring(user.wallet.length - 4)}` : 'Not connected'}</code>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span className="text-green-500 font-semibold">
-                                                ₹{(user.totalInvestment || 0).toLocaleString()}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span
-                                                className={`px-3 py-1 rounded-full text-xs font-semibold ${user.status === "active" ? "bg-green-500/20 text-green-500" : "bg-red-500/20 text-red-500"
-                                                    }`}
-                                            >
-                                                {user.status}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span
-                                                className={`px-3 py-1 rounded-full text-xs font-semibold ${user.kycStatus === "verified"
-                                                    ? "bg-green-500/20 text-green-500"
-                                                    : user.kycStatus === "pending"
-                                                        ? "bg-yellow-500/20 text-yellow-500"
-                                                        : "bg-red-500/20 text-red-500"
-                                                    }`}
-                                            >
-                                                {user.kycStatus}
-                                            </span>
-                                        </td>
                                         <td className="px-6 py-4 text-gray-400 text-sm">
                                             {new Date(user.joinedDate || user.createdAt).toLocaleDateString()}
                                         </td>
@@ -245,9 +191,7 @@ export default function UserManagement() {
                                                     onClick={() => {
                                                         setSelectedUser(user);
                                                         setEditFormData({
-                                                            status: user.status,
-                                                            kycStatus: user.kycStatus,
-                                                            wallet: user.wallet
+                                                            // Removed edited fields
                                                         });
                                                         setShowUserModal(true);
                                                         setIsEditing(true);
@@ -293,8 +237,8 @@ export default function UserManagement() {
                                             key={i + 1}
                                             onClick={() => setPage(i + 1)}
                                             className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all ${page === i + 1
-                                                    ? "bg-teal-500 text-white font-bold"
-                                                    : "bg-[#0f0f1a] text-gray-400 hover:bg-[#2a2a3e]"
+                                                ? "bg-teal-500 text-white font-bold"
+                                                : "bg-[#0f0f1a] text-gray-400 hover:bg-[#2a2a3e]"
                                                 }`}
                                         >
                                             {i + 1}
@@ -344,40 +288,7 @@ export default function UserManagement() {
                                 <div>
                                     <h4 className="text-2xl font-bold text-white">{selectedUser.name}</h4>
                                     <p className="text-gray-400">{selectedUser.email}</p>
-                                    <div className="flex gap-2 mt-2">
-                                        {isEditing ? (
-                                            <>
-                                                <select
-                                                    value={editFormData.status}
-                                                    onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
-                                                    className="bg-[#1a1a2e] text-white text-xs px-2 py-1 rounded border border-[#3f3f3f]"
-                                                >
-                                                    <option value="active">Active</option>
-                                                    <option value="suspended">Suspended</option>
-                                                    <option value="inactive">Inactive</option>
-                                                </select>
-                                                <select
-                                                    value={editFormData.kycStatus}
-                                                    onChange={(e) => setEditFormData({ ...editFormData, kycStatus: e.target.value })}
-                                                    className="bg-[#1a1a2e] text-white text-xs px-2 py-1 rounded border border-[#3f3f3f]"
-                                                >
-                                                    <option value="verified">Verified</option>
-                                                    <option value="pending">Pending</option>
-                                                    <option value="verification_needed">Verification Needed</option>
-                                                    <option value="rejected">Rejected</option>
-                                                </select>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${selectedUser.status === "active" ? "bg-green-500/20 text-green-500" : "bg-red-500/20 text-red-500"}`}>
-                                                    {selectedUser.status}
-                                                </span>
-                                                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${selectedUser.kycStatus === "verified" ? "bg-green-500/20 text-green-500" : selectedUser.kycStatus === "pending" ? "bg-yellow-500/20 text-yellow-500" : "bg-red-500/20 text-red-500"}`}>
-                                                    KYC: {selectedUser.kycStatus}
-                                                </span>
-                                            </>
-                                        )}
-                                    </div>
+
                                 </div>
                             </div>
 
@@ -409,19 +320,26 @@ export default function UserManagement() {
                                 </div>
                             </div>
 
-                            {/* Wallet Information */}
-                            <div className="bg-[#1a1a2e] p-4 rounded-lg">
-                                <p className="text-gray-400 text-sm mb-2">Wallet Address</p>
-                                {isEditing ? (
-                                    <input
-                                        type="text"
-                                        value={editFormData.wallet || ''}
-                                        onChange={(e) => setEditFormData({ ...editFormData, wallet: e.target.value })}
-                                        className="w-full bg-[#000] text-teal-400 text-sm p-2 rounded border border-[#3f3f3f]"
-                                    />
-                                ) : (
-                                    <code className="text-teal-400 text-sm break-all">{selectedUser.wallet || 'Not connected'}</code>
-                                )}
+
+
+                            {/* Wallet Info */}
+                            <div className="bg-[#1a1a2e] p-4 rounded-lg border border-teal-500/30">
+                                <h5 className="text-lg font-bold text-white mb-3">Crypto Wallet</h5>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <p className="text-gray-400 text-sm mb-1">Wallet Address</p>
+                                        <p className="text-white font-mono break-all text-sm">{userWallet?.wallet_add || 'Not Linked'}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-gray-400 text-sm mb-1">Status</p>
+                                        <span className={`px-2 py-1 rounded-md text-xs font-bold ${userWallet?.approve === 1 ? 'bg-green-500/20 text-green-500' :
+                                                userWallet?.approve === 0 ? 'bg-yellow-500/20 text-yellow-500' :
+                                                    'bg-red-500/20 text-red-500'
+                                            }`}>
+                                            {userWallet?.approve === 1 ? 'Approved' : userWallet?.approve === 0 ? 'Pending' : 'Not Approved'}
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
 
                             {/* Wallet Balances */}
@@ -430,19 +348,19 @@ export default function UserManagement() {
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                                     <div className="bg-[#1a1a2e] p-3 rounded-lg">
                                         <p className="text-gray-400 text-xs mb-1">Monthly ROI</p>
-                                        <p className="text-white font-semibold">₹{(selectedUser.monthlyROI || 0).toLocaleString()}</p>
+                                        <p className="text-white font-semibold">₹{(selectedUser.mining_bonus || 0).toLocaleString()}</p>
                                     </div>
                                     <div className="bg-[#1a1a2e] p-3 rounded-lg">
                                         <p className="text-gray-400 text-xs mb-1">Level Income</p>
-                                        <p className="text-white font-semibold">₹{(selectedUser.levelIncomeROI || 0).toLocaleString()}</p>
+                                        <p className="text-white font-semibold">₹{(selectedUser.level_income || 0).toLocaleString()}</p>
                                     </div>
                                     <div className="bg-[#1a1a2e] p-3 rounded-lg">
                                         <p className="text-gray-400 text-xs mb-1">Total Income</p>
-                                        <p className="text-white font-semibold">₹{(selectedUser.totalIncome || 0).toLocaleString()}</p>
+                                        <p className="text-white font-semibold">₹{(selectedUser.total_income || 0).toLocaleString()}</p>
                                     </div>
                                     <div className="bg-[#1a1a2e] p-3 rounded-lg">
                                         <p className="text-gray-400 text-xs mb-1">SOS Withdrawal</p>
-                                        <p className="text-white font-semibold">₹{(selectedUser.sosWithdrawal || 0).toLocaleString()}</p>
+                                        <p className="text-white font-semibold">₹{(selectedUser.shopping_tokens || 0).toLocaleString()}</p>
                                     </div>
                                 </div>
                             </div>

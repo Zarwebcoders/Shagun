@@ -6,14 +6,13 @@ import client from "../api/client"
 
 export default function Profile() {
     const [profile, setProfile] = useState({
-        name: "",
+        full_name: "",
         email: "",
-        phone: "",
-        wallet: "",
-        joined: "",
-        kyc_status: "",
-        referral_code: "",
-        walletConnected: false
+        mobile: "",
+        created_at: "",
+        referral_id: "",
+        walletConnected: false,
+        walletAddress: ""
     })
     const [isEditing, setIsEditing] = useState(false)
     const [loading, setLoading] = useState(true)
@@ -33,23 +32,30 @@ export default function Profile() {
         try {
             const res = await client.get('/auth/me');
             const data = res.data;
+
+            let walletData = null;
+            try {
+                const walletRes = await client.get('/api/wallet/me');
+                walletData = walletRes.data;
+            } catch (err) {
+                console.log("No wallet found or error fetching wallet", err);
+            }
+
             const formattedProfile = {
-                name: data.name,
+                full_name: data.full_name,
                 email: data.email,
-                phone: data.phone || "Not set",
-                wallet: data.wallet || "",
-                walletConnected: data.wallet ? true : false,
-                joined: new Date(data.joinedDate).toLocaleDateString(),
-                kyc_status: data.kycStatus === 'verification_needed' ? 'Unverified' :
-                    data.kycStatus === 'verified' ? 'Verified' : data.kycStatus,
-                referral_code: data.referralCode || "No Code",
+                mobile: data.mobile || "Not set",
+                walletConnected: !!walletData?.wallet_add,
+                walletAddress: walletData?.wallet_add || "",
+                created_at: new Date(data.create_at).toLocaleDateString(),
+                referral_id: data.referral_id || "No Code",
                 _id: data._id
             };
             setProfile(formattedProfile);
             setFormData({
-                name: data.name,
+                full_name: data.full_name,
                 email: data.email,
-                phone: data.phone || ""
+                mobile: data.mobile || ""
             });
             setLoading(false);
         } catch (error) {
@@ -64,9 +70,9 @@ export default function Profile() {
             const data = res.data;
             setProfile(prev => ({
                 ...prev,
-                name: data.name,
+                full_name: data.full_name,
                 email: data.email,
-                phone: data.phone
+                mobile: data.mobile
             }));
             setIsEditing(false);
             toast.success("Profile updated successfully!");
@@ -83,20 +89,15 @@ export default function Profile() {
                 const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
                 const walletAddress = accounts[0];
 
-                // Update user's wallet in backend (will update even if wallet already exists)
-                await client.put(`/users/${profile._id}`, { wallet: walletAddress });
+                await client.post('/api/wallet', { wallet_add: walletAddress });
 
                 setProfile(prev => ({
                     ...prev,
-                    wallet: walletAddress,
+                    walletAddress: walletAddress,
                     walletConnected: true
                 }));
 
-                if (profile.wallet && profile.wallet !== walletAddress) {
-                    toast.success("Wallet address updated successfully!");
-                } else {
-                    toast.success("Wallet connected successfully!");
-                }
+                toast.success("Wallet connected successfully!");
             } else {
                 toast.error("Please install MetaMask or another Web3 wallet!");
             }
@@ -136,7 +137,7 @@ export default function Profile() {
     }
 
     const handleCopyReferralLink = () => {
-        const referralLink = `${window.location.origin}/register?ref=${profile.referral_code}`;
+        const referralLink = `${window.location.origin}/register?ref=${profile.referral_id}`;
         navigator.clipboard.writeText(referralLink);
         toast.success("Referral link copied to clipboard!");
     }
@@ -158,11 +159,11 @@ export default function Profile() {
             <div className="bg-gradient-to-br from-[#040408] to-[#1f1f1f] p-4 md:p-6 lg:p-8 rounded-xl border border-[#444]">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 md:gap-6 mb-6 md:mb-8 pb-6 md:pb-8 border-b border-[#444]">
                     <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-gradient-brand flex items-center justify-center text-2xl md:text-3xl font-bold text-white flex-shrink-0">
-                        {profile.name.charAt(0)}
+                        {profile.full_name?.charAt(0)}
                     </div>
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-3 mb-2">
-                            <h3 className="text-xl md:text-2xl lg:text-3xl font-bold text-white truncate">{profile.name}</h3>
+                            <h3 className="text-xl md:text-2xl lg:text-3xl font-bold text-white truncate">{profile.full_name}</h3>
                             <button
                                 onClick={handleConnectWallet}
                                 className="px-3 md:px-4 py-1 md:py-2 rounded-lg font-semibold text-xs md:text-sm transition-all bg-gradient-brand text-white hover:shadow-lg"
@@ -170,9 +171,12 @@ export default function Profile() {
                                 {profile.walletConnected ? "Update Wallet" : "Connect Wallet"}
                             </button>
                         </div>
-                        <p className="inline-block px-2 md:px-3 py-1 bg-green-600/20 text-green-400 rounded-full text-xs md:text-sm font-semibold">
-                            {profile.kyc_status}
-                        </p>
+                        {profile.walletConnected && (
+                            <p className="text-teal-400 text-xs md:text-sm font-mono truncate">
+                                {profile.walletAddress}
+                            </p>
+                        )}
+
                     </div>
                 </div>
 
@@ -186,11 +190,11 @@ export default function Profile() {
                                     <input
                                         type="text"
                                         className="w-full bg-[#333] text-white p-2 rounded"
-                                        value={formData.name}
-                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                        value={formData.full_name}
+                                        onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
                                     />
                                 ) : (
-                                    <p className="text-base md:text-lg text-white font-semibold truncate">{profile.name}</p>
+                                    <p className="text-base md:text-lg text-white font-semibold truncate">{profile.full_name}</p>
                                 )}
                             </div>
                             <div className="bg-[#1a1a1a] p-3 md:p-4 rounded-lg border border-[#444]">
@@ -207,21 +211,21 @@ export default function Profile() {
                                 )}
                             </div>
                             <div className="bg-[#1a1a1a] p-3 md:p-4 rounded-lg border border-[#444]">
-                                <label className="text-xs md:text-sm text-[#b0b0b0] mb-1 md:mb-2 block">Phone</label>
+                                <label className="text-xs md:text-sm text-[#b0b0b0] mb-1 md:mb-2 block">Mobile</label>
                                 {isEditing ? (
                                     <input
                                         type="text"
                                         className="w-full bg-[#333] text-white p-2 rounded"
-                                        value={formData.phone}
-                                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                        value={formData.mobile}
+                                        onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
                                     />
                                 ) : (
-                                    <p className="text-base md:text-lg text-white font-semibold truncate">{profile.phone}</p>
+                                    <p className="text-base md:text-lg text-white font-semibold truncate">{profile.mobile}</p>
                                 )}
                             </div>
                             <div className="bg-[#1a1a1a] p-3 md:p-4 rounded-lg border border-[#444]">
                                 <label className="text-xs md:text-sm text-[#b0b0b0] mb-1 md:mb-2 block">Member Since</label>
-                                <p className="text-base md:text-lg text-white font-semibold">{profile.joined}</p>
+                                <p className="text-base md:text-lg text-white font-semibold">{profile.created_at}</p>
                             </div>
                         </div>
                     </div>
@@ -233,7 +237,7 @@ export default function Profile() {
                             <div className="flex-1 min-w-0">
                                 <label className="text-xs md:text-sm text-[#b0b0b0] mb-1 md:mb-2 block">Your Referral Link</label>
                                 <code className="text-white font-mono text-xs md:text-sm break-all">
-                                    {`${window.location.origin}/register?ref=${profile.referral_code}`}
+                                    {`${window.location.origin}/register?ref=${profile.referral_id}`}
                                 </code>
                             </div>
                             <button

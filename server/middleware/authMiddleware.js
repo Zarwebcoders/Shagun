@@ -16,7 +16,7 @@ const protect = async (req, res, next) => {
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
             // Get user from the token
-            req.user = await User.findById(decoded.id).select('-password').populate('referredBy', 'name email referralCode');
+            req.user = await User.findById(decoded.id).select('-password').populate('sponsor_id', 'full_name email referral_id');
 
             next();
         } catch (error) {

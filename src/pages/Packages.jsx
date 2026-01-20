@@ -60,16 +60,16 @@ export default function Packages() {
             try {
                 const [packagesRes, investmentsRes, userRes] = await Promise.all([
                     client.get('/packages'),
-                    client.get('/investments'),
+                    client.get('/products'),
                     client.get('/auth/me')
                 ]);
                 setPackages(packagesRes.data);
                 setInvestments(investmentsRes.data);
                 // Set sponsor ID from user data
                 if (userRes.data) {
-                    if (userRes.data.referredBy) {
-                        const sponsor = userRes.data.referredBy;
-                        setUserSponsorId(sponsor.referralCode || sponsor._id || sponsor);
+                    if (userRes.data.sponsor_id) {
+                        const sponsor = userRes.data.sponsor_id;
+                        setUserSponsorId(sponsor.referral_id || sponsor._id || sponsor);
                     } else if (userRes.data.sponsorId) {
                         setUserSponsorId(userRes.data.sponsorId);
                     }
@@ -122,7 +122,7 @@ export default function Packages() {
                 paymentSlipBase64 = await fileToBase64(formData.paymentSlip);
             }
 
-            await client.post('/investments', {
+            await client.post('/products', {
                 amount: formData.amount,
                 transactionId: formData.transactionId || `TXN${Date.now()}`,
                 sponsorId: userSponsorId,
@@ -131,10 +131,10 @@ export default function Packages() {
                 walletAddress: account || "" // Connect with contract/wallet
             });
 
-            toast.success("Investment request submitted successfully!");
+            toast.success("Product purchased successfully!");
 
-            // Refresh investments
-            const { data } = await client.get('/investments');
+            // Refresh products
+            const { data } = await client.get('/products');
             setInvestments(data);
 
             // Reset form
@@ -146,8 +146,8 @@ export default function Packages() {
             });
 
         } catch (error) {
-            console.error("Error creating investment:", error);
-            toast.error(error.response?.data?.message || "Failed to submit investment");
+            console.error("Error creating product:", error);
+            toast.error(error.response?.data?.message || "Failed to submit product");
         }
     };
 
@@ -184,10 +184,10 @@ export default function Packages() {
             <motion.div variants={itemVariants} className="space-y-4 relative">
                 <div className="absolute -top-10 -left-10 w-64 h-64 bg-teal-500/20 rounded-full blur-[100px] -z-10"></div>
                 <h2 className="text-3xl md:text-5xl font-bold text-white mb-2">
-                    Investment <span className="bg-gradient-brand bg-clip-text text-transparent">Plans</span>
+                    Product <span className="bg-gradient-brand bg-clip-text text-transparent">Purchases</span>
                 </h2>
                 <p className="text-[#b0b0b0] text-lg max-w-2xl">
-                    Secure your future with our strategic investment packages. Start earning daily rewards and exclusive bonuses.
+                    Secure your future with our strategic product packages. Start earning daily rewards and exclusive bonuses.
                 </p>
             </motion.div>
 
@@ -199,9 +199,9 @@ export default function Packages() {
                     <div>
                         <h3 className="text-2xl font-bold text-white flex items-center gap-3">
                             <BanknotesIcon className="w-7 h-7 text-teal-400" />
-                            New Investment
+                            New Global Product
                         </h3>
-                        <p className="text-gray-400 mt-1">Submit your request to activate a new package</p>
+                        <p className="text-gray-400 mt-1">Submit your request to purchase a new product</p>
                     </div>
                     {!isConnected && (
                         <button
@@ -354,8 +354,8 @@ export default function Packages() {
             <motion.div variants={itemVariants} className="space-y-6">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div>
-                        <h3 className="text-2xl font-bold text-white">History</h3>
-                        <p className="text-gray-400 text-sm">Track your past investments</p>
+                        <h3 className="text-2xl font-bold text-white">Purchase History</h3>
+                        <p className="text-gray-400 text-sm">Track your past purchases</p>
                     </div>
                     <button className="flex items-center gap-2 px-5 py-2.5 bg-[#1a1a2e] border border-teal-500/30 text-white rounded-xl hover:bg-teal-500/10 transition-colors">
                         <ArrowDownTrayIcon className="w-5 h-5 text-teal-400" />
@@ -370,6 +370,7 @@ export default function Packages() {
                                 <thead>
                                     <tr className="bg-white/5 border-b border-white/10">
                                         <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Date</th>
+                                        <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Product</th>
                                         <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Amount</th>
                                         <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Transaction</th>
                                         <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Status</th>
@@ -380,7 +381,10 @@ export default function Packages() {
                                     {investments.map((item) => (
                                         <tr key={item._id} className="hover:bg-white/5 transition-colors">
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                                                {new Date(item.createdAt).toLocaleDateString()}
+                                                {new Date(item.cereate_at).toLocaleDateString()}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
+                                                {item.product_name || "Product"}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="flex items-center gap-2">
@@ -389,17 +393,17 @@ export default function Packages() {
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <span className="text-sm text-gray-400 font-mono py-1 px-2 rounded bg-black/30 border border-white/5">
-                                                    {item.transactionId}
+                                                    {item.transcation_id}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className={`px-3 py-1 rounded-full text-xs font-bold border ${item.status === 'active' || item.status === 'completed'
+                                                <span className={`px-3 py-1 rounded-full text-xs font-bold border ${item.status === 1
                                                     ? 'bg-green-500/10 text-green-400 border-green-500/20'
-                                                    : item.status === 'pending'
+                                                    : item.status === 2
                                                         ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
                                                         : 'bg-red-500/10 text-red-400 border-red-500/20'
                                                     }`}>
-                                                    {item.status.toUpperCase()}
+                                                    {item.status === 1 ? 'APPROVED' : item.status === 2 ? 'PENDING' : 'REJECTED'}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-right">

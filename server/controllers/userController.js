@@ -6,6 +6,9 @@ const User = require('../models/User');
 // @desc    Get all users (Admin)
 // @route   GET /api/users
 // @access  Private/Admin
+// @desc    Get all users (Admin)
+// @route   GET /api/users
+// @access  Private/Admin
 const getUsers = async (req, res) => {
     try {
         const pageSize = Number(req.query.limit) || 10;
@@ -14,24 +17,17 @@ const getUsers = async (req, res) => {
         const keyword = req.query.search
             ? {
                 $or: [
-                    { name: { $regex: req.query.search, $options: 'i' } },
+                    { full_name: { $regex: req.query.search, $options: 'i' } },
                     { email: { $regex: req.query.search, $options: 'i' } },
-                    { wallet: { $regex: req.query.search, $options: 'i' } },
                 ],
             }
             : {};
 
-        const filterStatus = req.query.status && req.query.status !== 'all'
-            ? { status: req.query.status }
-            : {};
 
-        const filterKYC = req.query.kycStatus && req.query.kycStatus !== 'all'
-            ? { kycStatus: req.query.kycStatus }
-            : {};
 
-        const count = await User.countDocuments({ ...keyword, ...filterStatus, ...filterKYC });
-        const users = await User.find({ ...keyword, ...filterStatus, ...filterKYC })
-            .sort({ createdAt: -1 })
+        const count = await User.countDocuments({ ...keyword });
+        const users = await User.find({ ...keyword })
+            .sort({ create_at: -1 })
             .limit(pageSize)
             .skip(pageSize * (page - 1));
 
@@ -66,40 +62,35 @@ const updateUser = async (req, res) => {
 
         if (user) {
             // Check permissions: Admin or Self
-            if (req.user.role !== 'admin' && req.user._id.toString() !== user._id.toString()) {
+            // is_admin: 1 is admin
+            const requester = req.user;
+            const isAdmin = requester.is_admin === 1;
+
+            if (!isAdmin && requester._id.toString() !== user._id.toString()) {
                 return res.status(401).json({ message: 'Not authorized' });
             }
 
-            user.name = req.body.name || user.name;
+            user.full_name = req.body.full_name || user.full_name;
             user.email = req.body.email || user.email;
-            user.phone = req.body.phone || user.phone;
+            user.mobile = req.body.mobile || user.mobile;
             if (req.body.password) {
                 user.password = req.body.password;
             }
-            if (req.user.role === 'admin') {
-                user.role = req.body.role || user.role;
-                user.status = req.body.status || user.status;
-                user.kycStatus = req.body.kycStatus || user.kycStatus;
-                user.balance = req.body.balance || user.balance;
+            if (isAdmin) {
+                user.is_admin = req.body.is_admin !== undefined ? req.body.is_admin : user.is_admin;
             }
 
-            // Allow user to update their wallet address (or admin)
-            if (req.body.wallet) {
-                user.wallet = req.body.wallet;
-            }
+
 
             const updatedUser = await user.save();
 
             res.json({
                 _id: updatedUser._id,
-                name: updatedUser.name,
+                full_name: updatedUser.full_name,
                 email: updatedUser.email,
-                phone: updatedUser.phone,
-                role: updatedUser.role,
-                status: updatedUser.status,
-                kycStatus: updatedUser.kycStatus,
-                wallet: updatedUser.wallet,
-                balance: updatedUser.balance
+                mobile: updatedUser.mobile,
+                is_admin: updatedUser.is_admin,
+
             });
         } else {
             res.status(404).json({ message: 'User not found' });
@@ -117,6 +108,16 @@ const deleteUser = async (req, res) => {
         const user = await User.findById(req.params.id);
 
         if (user) {
+            // Check if deleted via flag or actual delete? Image has is_deleted field.
+            // If soft delete:
+            user.is_deleted = 1;
+            await user.save();
+            // Or hard delete if previously hard delete
+            // await user.deleteOne(); 
+            // Sticking to hard delete for now to match previous logic, but user added is_deleted so maybe soft delete is intended.
+            // I will use hard delete for now to not break too much logic unless I see is_deleted usage elsewhere.
+            // Actually, let's just do hard delete as before but maybe set is_deleted if I want to be safe? 
+            // The previous code was: await user.deleteOne();
             await user.deleteOne();
             res.json({ message: 'User removed' });
         } else {
@@ -146,7 +147,7 @@ const getDownline = async (req, res) => {
                     from: "users",
                     startWith: "$_id",
                     connectFromField: "_id",
-                    connectToField: "referredBy",
+                    connectToField: "sponsor_id",
                     as: "network",
                     maxDepth: 4,
                     depthField: "level"
@@ -181,7 +182,7 @@ const getDownline = async (req, res) => {
                 }
             },
             {
-                $sort: { "network.createdAt": -1 }
+                $sort: { "network.create_at": -1 }
             },
             {
                 $project: {

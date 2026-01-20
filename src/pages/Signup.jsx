@@ -8,11 +8,11 @@ import { User, Mail, Lock, Hash, ArrowRight, Loader2 } from "lucide-react"
 
 export default function Signup({ setIsAuthenticated }) {
     const [formData, setFormData] = useState({
-        name: "",
+        full_name: "",
         email: "",
         password: "",
         confirmPassword: "",
-        referralCode: "",
+        referral_id: "",
     })
     const [error, setError] = useState("")
     const [isLoading, setIsLoading] = useState(false)
@@ -29,7 +29,7 @@ export default function Signup({ setIsAuthenticated }) {
             setError("Passwords do not match")
             return
         }
-        if (formData.name && formData.email && formData.password) {
+        if (formData.full_name && formData.email && formData.password) {
             setIsLoading(true)
             try {
                 const { _id, confirmPassword, ...registerData } = formData; // Remove confirmPassword
@@ -82,7 +82,7 @@ export default function Signup({ setIsAuthenticated }) {
                     <form onSubmit={handleSubmit} className="space-y-5">
                         {/* Name Input */}
                         <div className="space-y-2">
-                            <label htmlFor="name" className="text-xs font-semibold text-gray-400 uppercase tracking-wider ml-1">
+                            <label htmlFor="full_name" className="text-xs font-semibold text-gray-400 uppercase tracking-wider ml-1">
                                 Full Name
                             </label>
                             <div className="relative group">
@@ -90,11 +90,11 @@ export default function Signup({ setIsAuthenticated }) {
                                     <User className="w-5 h-5" />
                                 </div>
                                 <input
-                                    id="name"
+                                    id="full_name"
                                     type="text"
-                                    name="name"
+                                    name="full_name"
                                     placeholder="John Doe"
-                                    value={formData.name}
+                                    value={formData.full_name}
                                     onChange={handleChange}
                                     className="w-full pl-12 pr-4 py-3.5 bg-black/40 border border-white/10 rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-teal-500/50 focus:ring-2 focus:ring-teal-500/20 transition-all duration-300 hover:border-white/20"
                                 />
@@ -166,7 +166,7 @@ export default function Signup({ setIsAuthenticated }) {
 
                         {/* Referral Code Input */}
                         <div className="space-y-2">
-                            <label htmlFor="referralCode" className="text-xs font-semibold text-gray-400 uppercase tracking-wider ml-1">
+                            <label htmlFor="referral_id" className="text-xs font-semibold text-gray-400 uppercase tracking-wider ml-1">
                                 Referral Code (Optional)
                             </label>
                             <div className="relative group">
@@ -174,11 +174,11 @@ export default function Signup({ setIsAuthenticated }) {
                                     <Hash className="w-5 h-5" />
                                 </div>
                                 <input
-                                    id="referralCode"
+                                    id="referral_id"
                                     type="text"
-                                    name="referralCode"
+                                    name="referral_id"
                                     placeholder="Enter referral code"
-                                    value={formData.referralCode}
+                                    value={formData.referral_id}
                                     onChange={handleChange}
                                     className="w-full pl-12 pr-4 py-3.5 bg-black/40 border border-white/10 rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-teal-500/50 focus:ring-2 focus:ring-teal-500/20 transition-all duration-300 hover:border-white/20"
                                 />

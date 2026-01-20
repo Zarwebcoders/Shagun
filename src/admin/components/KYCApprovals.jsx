@@ -80,8 +80,8 @@ export default function KYCApprovals() {
     }
 
     const filteredRequests = kycRequests.filter(req =>
-        (req.user?.name || req.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (req.user?.email || req.email || "").toLowerCase().includes(searchTerm.toLowerCase())
+        (req.user_id?.name || req.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (req.user_id?.email || req.email || "").toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     return (
@@ -173,8 +173,8 @@ export default function KYCApprovals() {
                                     key={request._id}
                                     onClick={() => setSelectedKYC(request)}
                                     className={`w-full text-left p-3 rounded-lg border transition-all duration-200 group relative overflow-hidden ${selectedKYC?._id === request._id
-                                            ? "bg-teal-500/10 border-teal-500/50 shadow-[0_0_15px_rgba(20,184,166,0.15)]"
-                                            : "bg-[#1a1a2e]/40 border-transparent hover:bg-[#1a1a2e]/80 hover:border-teal-500/30"
+                                        ? "bg-teal-500/10 border-teal-500/50 shadow-[0_0_15px_rgba(20,184,166,0.15)]"
+                                        : "bg-[#1a1a2e]/40 border-transparent hover:bg-[#1a1a2e]/80 hover:border-teal-500/30"
                                         }`}
                                 >
                                     {selectedKYC?._id === request._id && (
@@ -183,14 +183,14 @@ export default function KYCApprovals() {
                                     <div className="flex items-center gap-3 pl-2">
                                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#2a2a3e] to-[#1a1a2e] border border-teal-500/20 flex items-center justify-center shrink-0">
                                             <span className="text-teal-500 font-bold text-lg">
-                                                {(request.user?.name || request.name || "U").charAt(0).toUpperCase()}
+                                                {(request.user_id?.name || request.name || "U").charAt(0).toUpperCase()}
                                             </span>
                                         </div>
                                         <div className="min-w-0 flex-1">
                                             <p className={`font-medium truncate ${selectedKYC?._id === request._id ? 'text-white' : 'text-gray-300 group-hover:text-white'}`}>
-                                                {request.user?.name || request.name}
+                                                {request.user_id?.name || request.name}
                                             </p>
-                                            <p className="text-xs text-gray-500 truncate">{request.user?.email || request.email}</p>
+                                            <p className="text-xs text-gray-500 truncate">{request.user_id?.email || request.email}</p>
                                         </div>
                                         <ChevronRight className={`w-4 h-4 text-gray-600 transition-transform ${selectedKYC?._id === request._id ? 'text-teal-500 translate-x-1' : ''}`} />
                                     </div>
@@ -222,7 +222,7 @@ export default function KYCApprovals() {
                             {/* Toolbar */}
                             <div className="p-4 border-b border-teal-500/20 bg-[#1a1a2e]/80 flex justify-between items-center backdrop-blur-md sticky top-0 z-10">
                                 <div>
-                                    <h3 className="font-bold text-white text-lg">{selectedKYC.user?.name || selectedKYC.name}</h3>
+                                    <h3 className="font-bold text-white text-lg">{selectedKYC.user_id?.name || selectedKYC.name}</h3>
                                     <p className="text-xs text-teal-400 flex items-center gap-1">
                                         <AlertCircle className="w-3 h-3" /> Awaiting Action
                                     </p>
@@ -249,49 +249,28 @@ export default function KYCApprovals() {
                                 {/* Info Grid */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {/* Personal Info Module */}
-                                    <div className="bg-[#1a1a2e]/60 p-4 rounded-xl border border-teal-500/10">
+                                    <div className="col-span-2 bg-[#1a1a2e]/60 p-4 rounded-xl border border-teal-500/10">
                                         <h4 className="flex items-center gap-2 text-sm font-semibold text-teal-400 mb-4 border-b border-white/5 pb-2">
                                             <UserCheck className="w-4 h-4" /> Identity Info
                                         </h4>
                                         <div className="space-y-3">
                                             <div>
                                                 <p className="text-xs text-gray-500">Full Name</p>
-                                                <p className="text-sm font-medium text-white">{selectedKYC.user?.name || selectedKYC.name}</p>
+                                                <p className="text-sm font-medium text-white">{selectedKYC.user_id?.name || selectedKYC.name}</p>
                                             </div>
                                             <div>
                                                 <p className="text-xs text-gray-500">Email Address</p>
-                                                <p className="text-sm font-medium text-white">{selectedKYC.user?.email || selectedKYC.email}</p>
+                                                <p className="text-sm font-medium text-white">{selectedKYC.user_id?.email || selectedKYC.email}</p>
                                             </div>
                                             <div className="grid grid-cols-2 gap-2">
                                                 <div>
                                                     <p className="text-xs text-gray-500">Aadhar Number</p>
-                                                    <p className="text-sm font-medium text-white font-mono tracking-wide">{selectedKYC.aadharNumber || "N/A"}</p>
+                                                    <p className="text-sm font-medium text-white font-mono tracking-wide">{selectedKYC.aadhar || "N/A"}</p>
                                                 </div>
                                                 <div>
                                                     <p className="text-xs text-gray-500">PAN Number</p>
-                                                    <p className="text-sm font-medium text-white font-mono tracking-wide">{selectedKYC.panNumber || "N/A"}</p>
+                                                    <p className="text-sm font-medium text-white font-mono tracking-wide">{selectedKYC.pan || "N/A"}</p>
                                                 </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Bank Info Module */}
-                                    <div className="bg-[#1a1a2e]/60 p-4 rounded-xl border border-teal-500/10">
-                                        <h4 className="flex items-center gap-2 text-sm font-semibold text-purple-400 mb-4 border-b border-white/5 pb-2">
-                                            <Building className="w-4 h-4" /> Banking Details
-                                        </h4>
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <div className="col-span-2">
-                                                <p className="text-xs text-gray-500">Bank Name</p>
-                                                <p className="text-sm font-medium text-white">{selectedKYC.bankDetails?.bankName || "N/A"}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-xs text-gray-500">Account No.</p>
-                                                <p className="text-sm font-medium text-white font-mono">{selectedKYC.bankDetails?.accountNumber || "N/A"}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-xs text-gray-500">IFSC Code</p>
-                                                <p className="text-sm font-medium text-white font-mono">{selectedKYC.bankDetails?.ifscCode || "N/A"}</p>
                                             </div>
                                         </div>
                                     </div>
@@ -304,10 +283,10 @@ export default function KYCApprovals() {
                                     </h4>
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                         {[
-                                            { title: "Aadhar Front", src: selectedKYC.documents.aadharFront },
-                                            { title: "Aadhar Back", src: selectedKYC.documents.aadharBack },
-                                            { title: "PAN Card", src: selectedKYC.documents.panCard },
-                                            { title: "Selfie", src: selectedKYC.documents.profilePhoto },
+                                            { title: "Aadhar Front", src: selectedKYC.aadharcard },
+                                            { title: "Aadhar Back", src: selectedKYC.aadhar_back },
+                                            { title: "PAN Card", src: selectedKYC.pancard },
+                                            { title: "Agreement", src: selectedKYC.agreement },
                                         ].map((doc, i) => (
                                             <div key={i} className="group relative aspect-[4/3] bg-[#0f0f1a] rounded-lg border border-white/10 overflow-hidden cursor-zoom-in">
                                                 <img

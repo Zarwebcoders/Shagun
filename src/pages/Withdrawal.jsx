@@ -23,54 +23,46 @@ export default function Withdrawal() {
         pendingWithdrawals: 0
     })
     const [kycData, setKycData] = useState(null)
+    const [walletData, setWalletData] = useState(null)
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [userRes, txRes, kycRes] = await Promise.all([
+                const [userRes, withdrawRes, kycRes, walletRes] = await Promise.all([
                     client.get('/auth/me'),
-                    client.get('/transactions'),
-                    client.get('/kyc/me').catch(() => ({ data: null }))
+                    client.get('/api/withdrawals/me'), // Fetch from new API
+                    client.get('/kyc/me').catch(() => ({ data: null })),
+                    client.get('/api/wallet/me').catch(() => ({ data: null }))
                 ]);
 
                 const user = userRes.data;
                 setUserData({
-                    name: user.name,
-                    monthlyROI: user.monthlyROI || 0,
-                    levelIncomeROI: user.levelIncomeROI || 0,
-                    normalWithdrawal: user.normalWithdrawal || user.balance || 0,
-                    sosWithdrawal: user.sosWithdrawal || user.shoppingPoints || 0,
+                    name: user.full_name,
+                    monthlyROI: user.mining_bonus || 0,
+                    levelIncomeROI: user.level_income || 0,
+                    normalWithdrawal: user.normalWithdrawal || 0,
+                    sosWithdrawal: user.shopping_tokens || 0,
                     totalWithdrawal: user.totalWithdrawal || 0,
-                    totalIncome: user.totalIncome || user.rexToken || 0,
+                    totalIncome: user.total_income || 0,
                     stakeROI: user.stakeROI || 0,
                     stakeToken: user.stakeToken || 0
                 });
 
-                // Filter withdrawals from transactions
-                const withdrawals = txRes.data
-                    .filter(tx => tx.type === 'withdrawal')
-                    .map(tx => {
-                        // Extract source from description if available
-                        const sourceMatch = tx.description.match(/from (.*)$/);
-                        return {
-                            id: tx._id,
-                            amount: tx.amount,
-                            date: new Date(tx.createdAt).toISOString().split('T')[0],
-                            status: tx.status.charAt(0).toUpperCase() + tx.status.slice(1),
-                            method: tx.description.includes("Bank") ? "Bank Transfer" : "Crypto Wallet",
-                            source: (sourceMatch ? sourceMatch[1] : "Total Income") === "REX Token" ? "ShagunPro" : (sourceMatch ? sourceMatch[1] : "Total Income")
-                        };
-                    });
+                // Map withdrawals from new schema
+                const withdrawals = withdrawRes.data.map(tx => ({
+                    id: tx._id,
+                    amount: tx.amount,
+                    date: new Date(tx.create_at).toISOString().split('T')[0],
+                    status: tx.approve === 1 ? 'Completed' : tx.approve === 0 ? 'Rejected' : 'Pending',
+                    method: tx.withdraw_type,
+                    source: "Wallet Balance" // Default source since schema doesn't have it, or we can add it later if needed
+                }));
                 setWithdrawalHistory(withdrawals);
 
                 // Calculate withdrawal statistics
-                const completedWithdrawals = txRes.data.filter(
-                    tx => tx.type === 'withdrawal' && tx.status === 'completed'
-                );
-                const pendingWithdrawals = txRes.data.filter(
-                    tx => tx.type === 'withdrawal' && tx.status === 'pending'
-                );
+                const completedWithdrawals = withdrawRes.data.filter(tx => tx.approve === 1);
+                const pendingWithdrawals = withdrawRes.data.filter(tx => tx.approve === 2);
 
                 const totalWithdrawn = completedWithdrawals.reduce((sum, tx) => sum + tx.amount, 0);
                 const pendingAmount = pendingWithdrawals.reduce((sum, tx) => sum + tx.amount, 0);
@@ -81,6 +73,7 @@ export default function Withdrawal() {
                 });
 
                 setKycData(kycRes.data);
+                setWalletData(walletRes.data);
 
             } catch (error) {
                 console.error("Error fetching data:", error);
@@ -93,39 +86,27 @@ export default function Withdrawal() {
 
     const handleWithdraw = async (data) => {
         try {
-            await client.post('/transactions', {
-                type: 'withdrawal',
+            await client.post('/api/withdrawals', {
                 amount: data.amount,
-                description: `Withdrawal via ${data.method} from ${data.source}`,
-                bankDetails: data.bankDetails, // Include bank details
-                status: 'pending' // Default to pending
+                withdraw_type: data.method // Mapping method to withdraw_type
             });
             toast.success("Withdrawal request submitted successfully!");
 
-            // Refresh history and stats
-            const { data: txData } = await client.get('/transactions');
-            const withdrawals = txData
-                .filter(tx => tx.type === 'withdrawal')
-                .map(tx => {
-                    const sourceMatch = tx.description.match(/from (.*)$/);
-                    return {
-                        id: tx._id,
-                        amount: tx.amount,
-                        date: new Date(tx.createdAt).toISOString().split('T')[0],
-                        status: tx.status.charAt(0).toUpperCase() + tx.status.slice(1),
-                        method: tx.description.includes("Bank") ? "Bank Transfer" : "Crypto Wallet",
-                        source: (sourceMatch ? sourceMatch[1] : "Total Income") === "REX Token" ? "ShagunPro" : (sourceMatch ? sourceMatch[1] : "Total Income")
-                    };
-                });
+            // Refresh history
+            const { data: withdrawData } = await client.get('/api/withdrawals/me');
+            const withdrawals = withdrawData.map(tx => ({
+                id: tx._id,
+                amount: tx.amount,
+                date: new Date(tx.create_at).toISOString().split('T')[0],
+                status: tx.approve === 1 ? 'Completed' : tx.approve === 0 ? 'Rejected' : 'Pending',
+                method: tx.withdraw_type,
+                source: "Wallet Balance"
+            }));
             setWithdrawalHistory(withdrawals);
 
             // Recalculate stats
-            const completedWithdrawals = txData.filter(
-                tx => tx.type === 'withdrawal' && tx.status === 'completed'
-            );
-            const pendingWithdrawals = txData.filter(
-                tx => tx.type === 'withdrawal' && tx.status === 'pending'
-            );
+            const completedWithdrawals = withdrawData.filter(tx => tx.approve === 1);
+            const pendingWithdrawals = withdrawData.filter(tx => tx.approve === 2);
 
             setWithdrawalStats({
                 totalWithdrawn: completedWithdrawals.reduce((sum, tx) => sum + tx.amount, 0),
@@ -233,7 +214,7 @@ export default function Withdrawal() {
                         </div>
                     </div>
                     <div className="mb-2">
-                        <span className="text-2xl md:text-3xl font-bold text-white">₹{userData.totalWithdrawal.toLocaleString()}</span>
+                        <span className="text-2xl md:text-3xl font-bold text-white">₹{withdrawalStats.totalWithdrawn.toLocaleString()}</span>
                     </div>
                     <div className="w-full bg-[#444]/50 rounded-full h-1.5 md:h-2">
                         <div className="bg-gradient-to-r from-[#a29bfe] to-[#6c5ce7] h-1.5 md:h-2 rounded-full" style={{ width: "90%" }}></div>
@@ -311,6 +292,7 @@ export default function Withdrawal() {
                         onSubmit={handleWithdraw}
                         userData={userData}
                         kycData={kycData}
+                        savedWallet={walletData?.wallet_add || ""}
                     />
                 </div>
 

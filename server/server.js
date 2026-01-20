@@ -48,7 +48,26 @@ app.use('/api/settings', require('./routes/settingRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
 app.use('/api/investments', require('./routes/investmentRoutes'));
 app.use('/api/token', require('./routes/tokenRoutes'));
+app.use('/api/wallet', require('./routes/walletRoutes'));
+app.use('/api/withdrawals', require('./routes/withdrawalRoutes'));
+app.use('/api/vendor-withdraw', require('./routes/vendorWithdrawRoutes'));
+app.use('/api/vendor-wallet', require('./routes/vendorWalletRoutes'));
+app.use('/api/vendor-kyc', require('./routes/vendorKYCRoutes'));
+app.use('/api/vendor-account', require('./routes/vendorAccountRoutes'));
+app.use('/api/vendors', require('./routes/vendorRoutes'));
+app.use('/api/token-rate', require('./routes/tokenRateRoutes'));
+app.use('/api/sponsor-income', require('./routes/sponsorIncomeRoutes'));
+app.use('/api/shopping-token', require('./routes/shoppingTokenRoutes'));
+app.use('/api/referral-incomes', require('./routes/referralIncomesRoutes'));
 app.use('/api/income', require('./routes/incomeRoutes'));
+app.use('/api/products', require('./routes/productRoutes'));
+app.use('/api/payments', require('./routes/paymentRoutes'));
+app.use('/api/my-account', require('./routes/myAccountRoutes'));
+app.use('/api/mining-bonus', require('./routes/miningBonusRoutes'));
+app.use('/api/migrations', require('./routes/migrationRoutes'));
+app.use('/api/level-income', require('./routes/levelIncomeRoutes'));
+app.use('/api/contract-queue', require('./routes/contractUpdateQueueRoutes'));
+app.use('/api/commissions', require('./routes/commissionRoutes'));
 
 const PORT = process.env.PORT || 5000;
 

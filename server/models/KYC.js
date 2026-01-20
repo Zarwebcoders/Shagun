@@ -1,46 +1,42 @@
 const mongoose = require('mongoose');
 
 const kycSchema = new mongoose.Schema({
-    user: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
+    user_id: {
+        type: String, // Matching User Model Ref (String/ObjectId)
         required: true,
-        unique: true, // One KYC per user
+        ref: 'User',
+        unique: true
     },
-    documentType: {
-        type: String,
-        default: 'Aadhar'
+    aadharcard: {
+        type: String, // Front Image URL
+        required: true
     },
-    aadharNumber: { type: String },
-    panNumber: { type: String },
-    bankDetails: {
-        accountName: String,
-        bankName: String,
-        accountNumber: String,
-        branch: String,
-        ifscCode: String
+    aadhar_back: {
+        type: String, // Back Image URL
+        required: true
     },
-    documents: {
-        profilePhoto: String,
-        aadharFront: String,
-        aadharBack: String,
-        panCard: String,
-        agreement: String
+    pancard: {
+        type: String, // PAN Image URL
+        required: true
     },
-    status: {
-        type: String,
-        enum: ['pending', 'approved', 'rejected'],
-        default: 'pending',
+    agreement: {
+        type: String, // Agreement Image URL
+        required: true
     },
-    adminNotes: {
-        type: String,
+    approval: {
+        type: Number, // 0: Rejected, 1: Approved, 2: Pending
+        default: 2
     },
-    submittedDate: {
-        type: Date,
-        default: Date.now,
+    aadhar: {
+        type: String, // Aadhar Number
+        required: true
     },
+    pan: {
+        type: String, // PAN Number
+        required: true
+    }
 }, {
-    timestamps: true,
+    timestamps: true // Schema doesn't explicitly show timestamps but usually good to have. Schema didn't forbid created_at.
 });
 
 module.exports = mongoose.model('KYC', kycSchema);

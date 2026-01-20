@@ -82,7 +82,7 @@ export default function KYC() {
     }
 
     const handleNext = () => {
-        if (step < 4) setStep(step + 1)
+        if (step < 3) setStep(step + 1)
     }
 
     const handleBack = () => {
@@ -92,7 +92,7 @@ export default function KYC() {
     const handleSubmit = async (e) => {
         e.preventDefault()
 
-        if (step !== 4) return;
+        if (step !== 3) return; // Now max step is 3
 
         setIsSubmitting(true)
 
@@ -100,13 +100,6 @@ export default function KYC() {
             await client.post('/kyc', {
                 aadharNumber: formData.aadharNumber,
                 panNumber: formData.panNumber,
-                bankDetails: {
-                    accountName: formData.accountName,
-                    bankName: formData.bankName,
-                    accountNumber: formData.accountNumber,
-                    branch: formData.branch,
-                    ifscCode: formData.ifscCode
-                },
                 documents: {
                     profilePhoto: previewUrls.profile,
                     aadharFront: previewUrls.aadharFront,
@@ -177,7 +170,6 @@ export default function KYC() {
         { id: 1, title: "Profile", icon: UserCircleIcon },
         { id: 2, title: "Aadhar", icon: IdentificationIcon },
         { id: 3, title: "PAN Card", icon: DocumentCheckIcon },
-        { id: 4, title: "Bank", icon: BuildingLibraryIcon },
     ]
 
     return (
@@ -410,30 +402,7 @@ export default function KYC() {
                         </motion.div>
                     )}
 
-                    {/* Step 4: Bank Details */}
-                    {step === 4 && (
-                        <motion.div
-                            key="step4"
-                            variants={containerVariants}
-                            initial="hidden"
-                            animate="show"
-                            exit="exit"
-                            className="p-6 md:p-12"
-                        >
-                            <div className="mb-8">
-                                <h3 className="text-2xl font-bold text-white mb-2">Bank Account</h3>
-                                <p className="text-gray-400">Where should we send your payouts?</p>
-                            </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <InputBox label="Account Holder Name" name="accountName" value={formData.accountName} onChange={handleChange} placeholder="As per bank records" />
-                                <InputBox label="Bank Name" name="bankName" value={formData.bankName} onChange={handleChange} placeholder="e.g. HDFC Bank" />
-                                <InputBox label="Account Number" name="accountNumber" value={formData.accountNumber} onChange={handleChange} placeholder="000000000000" />
-                                <InputBox label="IFSC Code" name="ifscCode" value={formData.ifscCode} onChange={handleChange} placeholder="HDFC0001234" />
-                                <InputBox label="Branch Code/Name" name="branch" value={formData.branch} onChange={handleChange} placeholder="Main Branch" />
-                            </div>
-                        </motion.div>
-                    )}
                 </AnimatePresence>
 
                 {/* Footer Navigation */}
@@ -448,7 +417,7 @@ export default function KYC() {
                         Back
                     </button>
 
-                    {step < 4 ? (
+                    {step < 3 ? (
                         <button
                             onClick={handleNext}
                             className="flex items-center gap-2 px-8 py-3 bg-white text-black font-bold rounded-xl hover:bg-gray-100 transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)]"

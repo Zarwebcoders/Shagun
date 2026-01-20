@@ -19,8 +19,8 @@ const getTransactions = async (req, res) => {
             }
 
             transactions = await Transaction.find(query)
-                .populate('user', 'name email wallet')
-                .populate('relatedUser', 'name')
+                .populate('user', 'full_name email wallet')
+                .populate('relatedUser', 'full_name')
                 .sort({ createdAt: -1 })
                 .lean();
 
@@ -47,7 +47,7 @@ const getTransactions = async (req, res) => {
 
         } else {
             transactions = await Transaction.find({ user: req.user.id })
-                .populate('relatedUser', 'name')
+                .populate('relatedUser', 'full_name')
                 .sort({ createdAt: -1 });
         }
         res.json(transactions);

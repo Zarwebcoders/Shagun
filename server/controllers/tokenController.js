@@ -51,16 +51,11 @@ const getTokenPrice = async (req, res) => {
 // @route   POST /api/token/recover
 // @access  Private/Admin
 const recoverTokens = async (req, res) => {
-    const { wallet, amount } = req.body;
+    const { email, amount } = req.body; // Expecting email
 
     try {
-        // Find user by wallet or email (reuse wallet field for flexibility if needed, but primarily wallet)
-        const user = await User.findOne({
-            $or: [
-                { wallet: wallet },
-                { email: wallet } // Allow email as fallback identifier
-            ]
-        });
+        // Find user by email
+        const user = await User.findOne({ email });
 
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
@@ -72,20 +67,20 @@ const recoverTokens = async (req, res) => {
             return res.status(400).json({ message: 'Invalid amount' });
         }
 
-        if (user.rexToken < amountToRecover) {
+        if (user.real_tokens < amountToRecover) {
             return res.status(400).json({ message: 'Insufficient token balance' });
         }
 
         // Deduct tokens
-        user.rexToken -= amountToRecover;
+        user.real_tokens -= amountToRecover;
 
         // Log action (Optional: could create a transaction record here)
         // For now just save user
         await user.save();
 
         res.json({
-            message: `Successfully recovered ${amountToRecover} REX tokens from ${user.name}`,
-            remainingBalance: user.rexToken
+            message: `Successfully recovered ${amountToRecover} REX tokens from ${user.full_name}`,
+            remainingBalance: user.real_tokens
         });
     } catch (error) {
         res.status(500).json({ message: error.message });

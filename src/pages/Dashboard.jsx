@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { toast } from "react-hot-toast"
 import client from "../api/client"
-import WalletCard from "../components/WalletCard"
+import MiningOperationsCard from "../components/MiningOperationsCard"
 import StatsCard from "../components/StatsCard"
 import { useWeb3 } from "../hooks/useWeb3"
 import {
@@ -81,14 +81,14 @@ export default function Dashboard() {
                 const userData = userRes.data;
                 const downlineData = downlineRes.data || [];
 
-                setWalletBalance(userData.balance || 0);
-                setUserName(userData.name || "User");
+                setWalletBalance(0);
+                setUserName(userData.full_name || "User");
 
                 setTokenStats(prev => ({
                     ...prev,
                     loyaltyToken: userData.loyaltyPoints || 0,
-                    rexToken: userData.rexToken || 0,
-                    shoppingPoint: userData.shoppingPoints || 0,
+                    rexToken: userData.real_tokens || 0,
+                    shoppingPoint: userData.shopping_tokens || 0,
                 }));
 
                 // Calculate direct team size (Level 0 in downline response)
@@ -96,10 +96,22 @@ export default function Dashboard() {
 
                 setReferralProgram(prev => ({
                     ...prev,
-                    referralId: userData.referralCode || "---",
-                    sponsor: userData.referredBy ? userData.referredBy.name : "None",
+                    referralId: userData.referral_id || "---",
+                    sponsor: userData.sponsor_id ? userData.sponsor_id.full_name : "None",
                     totalDirectTeam: directTeamCount,
+                    levelIncomeEarned: userData.level_income || 0,
+                    sponsorIncomeEarned: userData.sponsor_income || 0,
+                    totalEarnedIncome: userData.total_income || 0,
                 }));
+
+                setIncomeBreakdown({
+                    miningBonus: userData.mining_bonus || 0,
+                    dailyMiningRewards: 0, // Not in user schema, maybe need calculation
+                    yearlyBonus: userData.anual_bonus || 0,
+                    sponsorIncome: userData.sponsor_income || 0,
+                    levelIncome: userData.level_income || 0,
+                    totalIncome: userData.total_income || 0,
+                });
 
             } catch (error) {
                 console.error("Error fetching dashboard data:", error);
@@ -180,8 +192,12 @@ export default function Dashboard() {
                         </div>
 
                         {/* Wallet Card Integration */}
-                        <div className="w-full max-w-md">
-                            <WalletCard balance={isConnected ? parseFloat(onChainBalance) * tokenStats.rexRate : walletBalance} />
+                        <div className="w-full max-w-lg">
+                            <MiningOperationsCard
+                                status={miningCenter.status}
+                                miningPower={miningCenter.miningPower}
+                                earningsToday={miningCenter.earningsToday}
+                            />
                         </div>
                     </div>
                 </div>
@@ -266,45 +282,7 @@ export default function Dashboard() {
                         </div>
                     </div>
 
-                    {/* Mining Center */}
-                    <div className="bg-[#1a1a2e]/40 backdrop-blur-xl border border-teal-500/20 rounded-3xl p-6 relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-green-500/5 rounded-full blur-[80px]"></div>
 
-                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-                            <div>
-                                <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                                    <CpuChipIcon className="w-5 h-5 text-green-400" />
-                                    Mining Operations
-                                </h3>
-                                <p className="text-gray-400 text-sm mt-1">System status and performance</p>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <button className="px-6 py-2 bg-gradient-brand text-white font-bold rounded-xl shadow-lg shadow-teal-500/20 hover:shadow-teal-500/40 hover:scale-105 transition-all duration-300 active:scale-95 text-sm flex items-center gap-2">
-                                    <GiftIcon className="w-4 h-4" />
-                                    Claim ROI
-                                </button>
-                                <div className="px-3 py-2 bg-green-500/10 border border-green-500/20 rounded-lg text-green-400 text-xs font-bold uppercase tracking-wider flex items-center gap-2 h-fit">
-                                    <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                                    {miningCenter.status}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="bg-[#0f0f1a]/60 p-4 rounded-2xl border border-white/5">
-                                <span className="text-gray-400 text-xs uppercase tracking-wider">Monthly Percentage</span>
-                                <div className="text-2xl font-bold text-white mt-1">{miningCenter.miningPower}</div>
-                                <div className="w-full bg-gray-700 h-1.5 rounded-full mt-3 overflow-hidden">
-                                    <div className="bg-gradient-to-r from-green-400 to-emerald-600 h-full w-[0%] animate-[width_1s_ease-out_forwards]" style={{ width: '75%' }}></div>
-                                </div>
-                            </div>
-                            <div className="bg-[#0f0f1a]/60 p-4 rounded-2xl border border-white/5">
-                                <span className="text-gray-400 text-xs uppercase tracking-wider">Total Income</span>
-                                <div className="text-2xl font-bold text-purple-500 mt-1">₹{miningCenter.earningsToday.toFixed(2)}</div>
-                                <button className="text-xs text-teal-400 mt-2 hover:text-teal-300 transition-colors">View History &rarr;</button>
-                            </div>
-                        </div>
-                    </div>
                 </motion.section>
 
                 {/* Right Column - Referral & Profile */}

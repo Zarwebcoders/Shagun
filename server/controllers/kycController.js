@@ -5,23 +5,30 @@ const User = require('../models/User');
 // @route   POST /api/kyc
 // @access  Private
 const submitKYC = async (req, res) => {
+    // Expecting flat structure or mapped from frontend
+    // Frontend sends: aadharNumber, panNumber, documents: { aadharFront, aadharBack, panCard, agreement }
     const {
-        aadharNumber, panNumber, bankDetails, documents
+        aadharNumber,
+        panNumber,
+        documents
     } = req.body;
 
     try {
-        const kycExists = await KYC.findOne({ user: req.user.id });
+        const kycExists = await KYC.findOne({ user_id: req.user.id });
 
         if (kycExists) {
             return res.status(400).json({ message: 'KYC already submitted' });
         }
 
         const kyc = await KYC.create({
-            user: req.user.id,
-            aadharNumber,
-            panNumber,
-            bankDetails,
-            documents,
+            user_id: req.user.id,
+            aadhar: aadharNumber,
+            pan: panNumber,
+            aadharcard: documents.aadharFront, // Mapping to schema field
+            aadhar_back: documents.aadharBack, // Mapping to schema field
+            pancard: documents.panCard,       // Mapping to schema field
+            agreement: documents.agreement,    // Mapping to schema field
+            approval: 2 // Pending
         });
 
         // Update user status
@@ -38,7 +45,8 @@ const submitKYC = async (req, res) => {
 // @access  Private/Admin
 const getPendingKYC = async (req, res) => {
     try {
-        const kycs = await KYC.find({ status: 'pending' }).populate('user', 'name email');
+        // approval: 2 is Pending
+        const kycs = await KYC.find({ approval: 2 }).populate('user_id', 'name email');
         res.json(kycs);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -50,7 +58,7 @@ const getPendingKYC = async (req, res) => {
 // @access  Private
 const getMyKYC = async (req, res) => {
     try {
-        const kyc = await KYC.findOne({ user: req.user.id });
+        const kyc = await KYC.findOne({ user_id: req.user.id });
         if (!kyc) {
             return res.status(404).json({ message: 'KYC not found' });
         }
@@ -64,22 +72,28 @@ const getMyKYC = async (req, res) => {
 // @route   PUT /api/kyc/:id
 // @access  Private/Admin
 const updateKYCStatus = async (req, res) => {
-    const { status, adminNotes } = req.body;
+    const { status } = req.body; // Expecting 'approved' or 'rejected' string from frontend, need to map to int
 
     try {
         const kyc = await KYC.findById(req.params.id);
 
         if (kyc) {
-            kyc.status = status;
-            kyc.adminNotes = adminNotes || kyc.adminNotes;
+            let approvalStatus = 2;
+            let userStatus = 'pending';
+
+            if (status === 'approved') {
+                approvalStatus = 1;
+                userStatus = 'verified';
+            } else if (status === 'rejected') {
+                approvalStatus = 0;
+                userStatus = 'rejected';
+            }
+
+            kyc.approval = approvalStatus;
             await kyc.save();
 
             // Update user KYC status
-            if (status === 'approved') {
-                await User.findByIdAndUpdate(kyc.user, { kycStatus: 'verified' });
-            } else if (status === 'rejected') {
-                await User.findByIdAndUpdate(kyc.user, { kycStatus: 'rejected' });
-            }
+            await User.findByIdAndUpdate(kyc.user_id, { kycStatus: userStatus });
 
             res.json(kyc);
         } else {
@@ -99,10 +113,10 @@ const getKYCStats = async (req, res) => {
         today.setHours(0, 0, 0, 0);
 
         const [pendingReview, approvedToday, rejectedToday, totalVerified] = await Promise.all([
-            KYC.countDocuments({ status: 'pending' }),
-            KYC.countDocuments({ status: 'approved', updatedAt: { $gte: today } }),
-            KYC.countDocuments({ status: 'rejected', updatedAt: { $gte: today } }),
-            KYC.countDocuments({ status: 'approved' })
+            KYC.countDocuments({ approval: 2 }),
+            KYC.countDocuments({ approval: 1, updatedAt: { $gte: today } }),
+            KYC.countDocuments({ approval: 0, updatedAt: { $gte: today } }),
+            KYC.countDocuments({ approval: 1 })
         ]);
 
         res.json({

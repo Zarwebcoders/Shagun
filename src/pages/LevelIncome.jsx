@@ -11,16 +11,16 @@ export default function LevelIncome() {
     useEffect(() => {
         const fetchLevelIncome = async () => {
             try {
-                const { data } = await client.get('/income/level-income');
+                const { data } = await client.get('/level-income');
 
                 // Process level income data
                 const processed = data.map(income => ({
                     level: income.level,
                     members: 1, // Each income record represents one member
-                    totalInvestment: income.fromUser?.totalInvestment || 0,
+                    totalInvestment: 0, // Not directly available in new flat structure unless populated
                     income: income.amount,
-                    fromUser: income.fromUser?.name || "Unknown User",
-                    date: new Date(income.createdAt).toLocaleDateString()
+                    fromUser: income.from_user_id?.name || "Unknown User",
+                    date: new Date(income.created_at).toLocaleDateString()
                 }));
 
                 setLevelData(processed);
@@ -120,7 +120,6 @@ export default function LevelIncome() {
                                     <tr className="border-b border-[#444] bg-[#0f0f1a]">
                                         <th className="text-left py-3 px-3 md:px-4 text-white font-semibold text-xs md:text-sm">Level</th>
                                         <th className="text-left py-3 px-3 md:px-4 text-white font-semibold text-xs md:text-sm">Members</th>
-                                        <th className="text-left py-3 px-3 md:px-4 text-white font-semibold text-xs md:text-sm">Total Investment</th>
                                         <th className="text-left py-3 px-3 md:px-4 text-white font-semibold text-xs md:text-sm">Income</th>
                                     </tr>
                                 </thead>
@@ -133,7 +132,6 @@ export default function LevelIncome() {
                                                 </span>
                                             </td>
                                             <td className="py-3 px-3 md:px-4 text-white text-sm md:text-base">{item.members}</td>
-                                            <td className="py-3 px-3 md:px-4 text-white text-sm md:text-base">₹{item.totalInvestment.toLocaleString()}</td>
                                             <td className="py-3 px-3 md:px-4 text-teal-400 font-bold text-sm md:text-base">₹{item.income.toLocaleString()}</td>
                                         </tr>
                                     ))}
