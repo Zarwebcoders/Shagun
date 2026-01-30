@@ -16,6 +16,8 @@ import {
     CheckCircleIcon,
     SparklesIcon
 } from '@heroicons/react/24/outline';
+import Pagination from "../components/common/Pagination"; // Import Pagination
+
 
 export default function Packages() {
     const [packages, setPackages] = useState([])
@@ -24,8 +26,15 @@ export default function Packages() {
     const [userSponsorId, setUserSponsorId] = useState("")
     const { connectWallet, isConnected, account } = useWeb3()
 
+    // Pagination & Search State
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalResults, setTotalResults] = useState(0); // Add totalResults state
+    const [searchTerm, setSearchTerm] = useState("");
+    const [debouncedSearch, setDebouncedSearch] = useState("");
+
     const [formData, setFormData] = useState({
-        amount: "",
+        amount: "11000",
         transactionId: "",
         paymentSlip: null,
         product: "Milkish Herbal Animal Feed" // Default product
@@ -36,35 +45,72 @@ export default function Packages() {
             id: "milkish",
             name: "Milkish Herbal Animal Feed",
             image: "/products/milkish-feed.jpg",
-            minAmount: 500,
+            minAmount: 11000,
             description: "Natural herbal supplement for dairy animals"
+        },
+        {
+            id: "petro",
+            name: "Petro",
+            image: "/products/petro.jpg",
+            minAmount: 12500,
+            description: "High-quality petroleum products"
         },
         {
             id: "smarthome",
             name: "Smart Home Automation",
             image: "/products/smart-home.jpg",
-            minAmount: 5000,
+            minAmount: 20000,
             description: "Next-gen touch panels and control systems"
         },
         {
             id: "shagunev",
             name: "Shagun EV",
             image: "/products/shagun-ev.jpg",
-            minAmount: 10000,
+            minAmount: 85000,
             description: "Eco-friendly electric scooters"
         }
     ];
 
+    // Debounce search
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(searchTerm);
+            setPage(1); // Reset to page 1 on search change
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
+
+    // Fetch Investments (Purchase History)
+    useEffect(() => {
+        const fetchInvestments = async () => {
+            try {
+                const { data } = await client.get('/products', {
+                    params: {
+                        page,
+                        search: debouncedSearch,
+                        limit: 10
+                    }
+                });
+                setInvestments(data.products || []);
+                setTotalPages(data.pages || 1);
+                setTotalResults(data.total || 0); // Capture total
+            } catch (error) {
+                console.error("Error fetching investments:", error);
+            }
+        };
+        fetchInvestments();
+    }, [page, debouncedSearch]);
+
+    // Initial Data Load (Packages & User)
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [packagesRes, investmentsRes, userRes] = await Promise.all([
+                const [packagesRes, userRes] = await Promise.all([
                     client.get('/packages'),
-                    client.get('/products'),
                     client.get('/auth/me')
                 ]);
                 setPackages(packagesRes.data);
-                setInvestments(investmentsRes.data);
+
                 // Set sponsor ID from user data
                 if (userRes.data) {
                     if (userRes.data.sponsor_id) {
@@ -133,13 +179,18 @@ export default function Packages() {
 
             toast.success("Product purchased successfully!");
 
+            toast.success("Product purchased successfully!");
+
             // Refresh products
-            const { data } = await client.get('/products');
-            setInvestments(data);
+            // const { data } = await client.get('/products');
+            // setInvestments(data);
+            // Trigger re-fetch via dependency update if logic allows, or manually call fetch
+            // For now, let's just reset page to 1 to trigger refresh
+            setPage(1);
 
             // Reset form
             setFormData({
-                amount: "",
+                amount: "11000",
                 transactionId: "",
                 paymentSlip: null,
                 product: PRODUCTS[0].name
@@ -225,7 +276,11 @@ export default function Packages() {
                                     {PRODUCTS.map((prod) => (
                                         <div
                                             key={prod.id}
-                                            onClick={() => setFormData({ ...formData, product: prod.name })}
+                                            onClick={() => setFormData({
+                                                ...formData,
+                                                product: prod.name,
+                                                amount: prod.minAmount
+                                            })}
                                             className={`relative rounded-xl border-2 p-3 cursor-pointer transition-all duration-300 group overflow-hidden ${formData.product === prod.name
                                                 ? 'border-teal-500 bg-teal-500/10'
                                                 : 'border-white/5 bg-[#0f0f1a] hover:border-teal-500/30'
@@ -253,7 +308,7 @@ export default function Packages() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-300 mb-2 pl-1">Investment Amount</label>
+                                <label className="block text-sm font-medium text-gray-300 mb-2 pl-1">Investment Amount (Fixed)</label>
                                 <div className="relative group">
                                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                         <CurrencyRupeeIcon className="h-5 w-5 text-gray-500 group-focus-within:text-teal-400 transition-colors" />
@@ -262,12 +317,11 @@ export default function Packages() {
                                         type="number"
                                         name="amount"
                                         value={formData.amount}
-                                        onChange={handleChange}
-                                        placeholder={`Min: ₹${PRODUCTS.find(p => p.name === formData.product)?.minAmount || 500}`}
-                                        className="w-full pl-11 pr-4 py-4 bg-[#0f0f1a] border border-white/10 rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all"
+                                        readOnly
+                                        className="w-full pl-11 pr-4 py-4 bg-[#0f0f1a]/50 border border-white/10 rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all cursor-not-allowed opacity-80"
                                     />
                                 </div>
-                                <p className="text-gray-500 text-xs mt-2 pl-1">Enter amount in INR (Minimum ₹{PRODUCTS.find(p => p.name === formData.product)?.minAmount || 500})</p>
+                                <p className="text-gray-500 text-xs mt-2 pl-1">Amount is fixed for the selected product</p>
                             </div>
 
                             <div>
@@ -364,67 +418,95 @@ export default function Packages() {
                 </div>
 
                 <div className="bg-[#1a1a2e]/40 backdrop-blur-md rounded-2xl border border-teal-500/20 overflow-hidden">
+                    {/* Search Bar */}
+                    <div className="p-4 border-b border-white/10">
+                        <input
+                            type="text"
+                            placeholder="Search by Transaction ID, Product Name..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full max-w-md px-4 py-2 bg-[#0f0f1a] border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-teal-500 transition-colors"
+                        />
+                    </div>
+
                     {investments.length > 0 ? (
-                        <div className="overflow-x-auto">
-                            <table className="w-full">
-                                <thead>
-                                    <tr className="bg-white/5 border-b border-white/10">
-                                        <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Date</th>
-                                        <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Product</th>
-                                        <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Amount</th>
-                                        <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Transaction</th>
-                                        <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Status</th>
-                                        <th className="px-6 py-4 text-right text-xs font-bold text-gray-400 uppercase tracking-wider">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-white/5">
-                                    {investments.map((item) => (
-                                        <tr key={item._id} className="hover:bg-white/5 transition-colors">
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                                                {new Date(item.cereate_at).toLocaleDateString()}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
-                                                {item.product_name || "Product"}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-white font-bold">₹{item.amount}</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className="text-sm text-gray-400 font-mono py-1 px-2 rounded bg-black/30 border border-white/5">
-                                                    {item.transcation_id}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className={`px-3 py-1 rounded-full text-xs font-bold border ${item.status === 1
-                                                    ? 'bg-green-500/10 text-green-400 border-green-500/20'
-                                                    : item.status === 2
-                                                        ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
-                                                        : 'bg-red-500/10 text-red-400 border-red-500/20'
-                                                    }`}>
-                                                    {item.status === 1 ? 'APPROVED' : item.status === 2 ? 'PENDING' : 'REJECTED'}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-right">
-                                                <button className="text-teal-400 hover:text-white hover:underline text-sm font-medium flex items-center justify-end gap-1 w-full">
-                                                    <DocumentTextIcon className="w-4 h-4" />
-                                                    Invoice
-                                                </button>
-                                            </td>
+                        <>
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead>
+                                        <tr className="bg-white/5 border-b border-white/10">
+                                            <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Date</th>
+                                            <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Product</th>
+                                            <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Quantity</th>
+                                            <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Amount</th>
+                                            <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Token</th>
+                                            <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Transaction</th>
+                                            <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Status</th>
+                                            <th className="px-6 py-4 text-right text-xs font-bold text-gray-400 uppercase tracking-wider">Action</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                                    </thead>
+                                    <tbody className="divide-y divide-white/5">
+                                        {investments.map((item) => (
+                                            <tr key={item._id} className="hover:bg-white/5 transition-colors">
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                                                    {new Date(item.cereate_at).toLocaleDateString()}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-white font-medium">
+                                                    {item.packag_type || "Standard"}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                                                    {item.quantity}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-white font-bold">₹{item.amount}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-teal-400">
+                                                    {item.token_amount}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <span className="text-xs text-gray-400 font-mono py-1 px-2 rounded bg-black/30 border border-white/5">
+                                                        {item.transcation_id}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <span className={`px-3 py-1 rounded-full text-xs font-bold border ${item.approve === 1
+                                                        ? 'bg-green-500/10 text-green-400 border-green-500/20'
+                                                        : item.approve === 2 // Assuming 2 is rejected
+                                                            ? 'bg-red-500/10 text-red-400 border-red-500/20'
+                                                            : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
+                                                        }`}>
+                                                        {item.approve === 1 ? 'APPROVED' : item.approve === 2 ? 'REJECTED' : 'PENDING'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-right">
+                                                    <button className="text-teal-400 hover:text-white hover:underline text-sm font-medium flex items-center justify-end gap-1 w-full">
+                                                        <DocumentTextIcon className="w-4 h-4" />
+                                                        Invoice
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                                <Pagination
+                                    currentPage={page}
+                                    totalPages={totalPages}
+                                    onPageChange={setPage}
+                                    totalResults={totalResults} // Pass actual total
+                                    itemsPerPage={10}
+                                />
+                            </div>
+                        </>
                     ) : (
                         <div className="p-12 text-center flex flex-col items-center justify-center">
-                            <div className="w-20 h-20 bg-teal-500/10 rounded-full flex items-center justify-center mb-6 animate-pulse">
+                            <div className="w-20 h-20 bg-teal-500/10 rounded-full flex items-center justify-center mb-6">
                                 <BanknotesIcon className="w-10 h-10 text-teal-400" />
                             </div>
-                            <h3 className="text-xl font-bold text-white mb-2">No Investments Yet</h3>
+                            <h3 className="text-xl font-bold text-white mb-2">No Investments Found</h3>
                             <p className="text-gray-400 max-w-sm mx-auto mb-6">
-                                Start your journey by making your first investment above.
+                                {searchTerm ? "No results match your search." : "Start your journey by making your first investment above."}
                             </p>
                         </div>
                     )}

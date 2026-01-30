@@ -10,6 +10,7 @@ export default function AdminDashboard() {
         totalRevenue: 0,
         pendingKYC: 0,
         activeInvestments: 0,
+        totalWithdrawal: 0,
         pendingWithdrawals: 0,
         totalTransactions: 0
     })
@@ -23,67 +24,25 @@ export default function AdminDashboard() {
 
     const fetchDashboardData = async () => {
         try {
-            const [usersRes, transactionsRes, kycRes, investmentsRes] = await Promise.all([
-                client.get('/users'),
-                client.get('/transactions/all').catch(() => ({ data: [] })),
-                client.get('/kyc/all').catch(() => ({ data: [] })),
-                client.get('/investments/all').catch(() => ({ data: [] }))
-            ]);
-
-            const users = usersRes.data || [];
-            const transactions = transactionsRes.data || [];
-            const kycRequests = kycRes.data || [];
-            const investments = investmentsRes.data || [];
-
-            // Calculate stats
-            const totalRevenue = investments
-                .filter(inv => inv.status === 'approved')
-                .reduce((sum, inv) => sum + inv.amount, 0);
-
-            const pendingKYC = kycRequests.filter(kyc => kyc.status === 'pending').length;
-            const activeInvestments = investments.filter(inv => inv.status === 'approved').length;
-            const pendingWithdrawals = transactions.filter(tx => tx.type === 'withdrawal' && tx.status === 'pending').length;
+            const { data } = await client.get('/admin/stats');
 
             setStats({
-                totalUsers: users.length,
-                totalRevenue: totalRevenue,
-
-                activeInvestments: activeInvestments,
-                pendingWithdrawals: pendingWithdrawals,
-                totalTransactions: transactions.length
+                totalUsers: data.stats.totalUsers,
+                totalRevenue: data.stats.totalRevenue,
+                activeInvestments: data.stats.activeInvestments,
+                totalWithdrawal: data.stats.totalWithdrawal,
+                pendingWithdrawals: data.stats.pendingWithdrawals,
+                totalTransactions: data.stats.totalTransactions
             });
 
-            // Get recent activities (last 5 transactions/registrations)
-            const recentTx = transactions
-                .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-                .slice(0, 5)
-                .map(tx => ({
-                    type: tx.type,
-                    action: `${tx.type.charAt(0).toUpperCase() + tx.type.slice(1)} ${tx.status}`,
-                    user: tx.user?.email || 'Unknown',
-                    time: getTimeAgo(tx.createdAt),
-                    status: tx.status
-                }));
+            // Process activities for time ago display
+            const processedActivities = data.recentActivities.map(activity => ({
+                ...activity,
+                time: getTimeAgo(activity.time)
+            }));
 
-            setRecentActivities(recentTx);
-
-            // Get top users by investment
-            const userInvestments = users
-                .map(user => {
-                    const userInvs = investments.filter(inv => inv.user?._id === user._id && inv.status === 'approved');
-                    const totalInvestment = userInvs.reduce((sum, inv) => sum + inv.amount, 0);
-                    return {
-                        name: user.name,
-                        investment: totalInvestment,
-                        returns: totalInvestment * 0.15, // Mock 15% returns
-                        level: totalInvestment > 50000 ? 'Diamond' : totalInvestment > 30000 ? 'Platinum' : totalInvestment > 15000 ? 'Gold' : 'Silver'
-                    };
-                })
-                .filter(user => user.investment > 0)
-                .sort((a, b) => b.investment - a.investment)
-                .slice(0, 5);
-
-            setTopUsers(userInvestments);
+            setRecentActivities(processedActivities);
+            setTopUsers(data.topUsers);
             setLoading(false);
         } catch (error) {
             console.error("Error fetching dashboard data:", error);
@@ -104,10 +63,10 @@ export default function AdminDashboard() {
 
     const statsConfig = [
         { label: "Total Users", value: stats.totalUsers, change: "+12%", icon: "👥", color: "from-blue-500 to-blue-600" },
-        { label: "Total Revenue", value: `₹${(stats.totalRevenue / 1000).toFixed(1)}K`, change: "+8%", icon: "💰", color: "from-green-500 to-green-600" },
-
+        { label: "Total Revenue", value: `₹${(stats.totalRevenue).toLocaleString()}`, change: "+8%", icon: "💰", color: "from-green-500 to-green-600" },
         { label: "Active Investments", value: stats.activeInvestments, change: "+15%", icon: "📦", color: "from-purple-500 to-purple-600" },
-        { label: "Pending Withdrawals", value: stats.pendingWithdrawals, change: "+3%", icon: "💳", color: "from-red-500 to-red-600" },
+        { label: "Total Withdrawal", value: `₹${(stats.totalWithdrawal).toLocaleString()}`, change: "+5%", icon: "💸", color: "from-orange-500 to-red-500" },
+        { label: "Pending Withdrawals", value: stats.pendingWithdrawals, change: "+3%", icon: "⏳", color: "from-red-500 to-red-600" },
         { label: "Total Transactions", value: stats.totalTransactions, change: "+22%", icon: "🔄", color: "from-teal-500 to-purple-500" },
     ];
 

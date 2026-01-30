@@ -5,45 +5,64 @@ const productSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
-    // Required Schema Fields
-    product_name: {
+    // Required Schema Fields matching products.json
+    transcation_id: {
         type: String,
         required: true
+    },
+    w2_transaction_id: {
+        type: String,
+        default: ""
+    },
+    packag_type: { // Matches JSON spelling
+        type: String,
+        default: 'Standard'
     },
     amount: {
         type: Number,
         required: true
     },
-    packag_type: { // Schema typo maintained
-        type: String,
-        default: 'Standard'
+    token_amount: {
+        type: Number,
+        default: 0
     },
-    status: {
-        type: Number, // 0: Rejected, 1: Approved, 2: Pending
-        default: 2
-    },
-    transcation_id: { // Schema typo maintained
-        type: String,
-        required: true
-    },
-    cereate_at: { // Schema typo maintained
-        type: Date,
-        default: Date.now
-    },
-    update_at: { // Schema typo maintained
-        type: Date,
-        default: Date.now
-    },
-
-    // Additional Fields for Business Logic (mapped to snake_case for consistency)
-    sponsor_id: {
+    wallet_address: {
         type: String,
         default: ""
     },
-    payment_slip: {
-        type: String, // Base64 or URL
-        default: ""
+    approvel: { // Matches JSON spelling
+        type: Number,
+        default: 0
     },
+    cereate_at: { // Matches JSON spelling
+        type: Date,
+        default: Date.now
+    },
+    update_at: { // Matches JSON spelling
+        type: Date,
+        default: Date.now
+    },
+    quantity: {
+        type: Number,
+        default: 1
+    },
+    approve: { // Matches JSON spelling (seems duplicate of approvel but present in data)
+        type: Number,
+        default: 0
+    },
+    next_commission_date: {
+        type: Date,
+        default: null
+    },
+    cycle_count: {
+        type: Number,
+        default: 0
+    },
+    total_cycles: {
+        type: Number,
+        default: 24
+    },
+    // Keeping logic fields that might be useful but are not in JSON explicitly or mapped
     business_volume: {
         type: Number,
         default: 0
@@ -62,23 +81,12 @@ const productSchema = new mongoose.Schema({
     },
     end_date: {
         type: Date
-    },
-    next_roi_date: {
-        type: Date,
-        default: Date.now
-    },
-    wallet_address: {
-        type: String,
-        default: ""
     }
 }, {
     timestamps: false // We use cereate_at and update_at
 });
 
-// Middleware to update 'update_at' on save
-productSchema.pre('save', function (next) {
-    this.update_at = Date.now();
-    next();
-});
+// Middleware removed to fix 'next is not a function' error with Mongoose 9? 
+// update_at is handled manually or by timestamps if enabled.
 
 module.exports = mongoose.model('Product', productSchema);

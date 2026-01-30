@@ -7,6 +7,7 @@ export default function LevelIncome() {
     const [selectedLevel, setSelectedLevel] = useState("all")
     const [levelData, setLevelData] = useState([])
     const [loading, setLoading] = useState(true)
+    const [expandedLevel, setExpandedLevel] = useState(null)
 
     useEffect(() => {
         const fetchLevelIncome = async () => {
@@ -18,9 +19,14 @@ export default function LevelIncome() {
                     level: income.level,
                     members: 1, // Each income record represents one member
                     totalInvestment: 0, // Not directly available in new flat structure unless populated
-                    income: income.amount,
+                    income: Number(income.amount),
                     fromUser: income.from_user_id?.name || "Unknown User",
-                    date: new Date(income.created_at).toLocaleDateString()
+                    email: income.from_user_id?.email || "N/A",
+                    // Format date and time
+                    date: new Date(income.created_at).toLocaleDateString(),
+                    time: new Date(income.created_at).toLocaleTimeString(),
+                    originalDate: new Date(income.created_at), // For sorting if needed
+                    id: income._id // Unique ID for key
                 }));
 
                 setLevelData(processed);
@@ -37,15 +43,17 @@ export default function LevelIncome() {
     const groupedData = levelData.reduce((acc, curr) => {
         const existing = acc.find(item => item.level === curr.level);
         if (existing) {
-            existing.income += curr.income;
+            existing.income += Number(curr.income);
             existing.members += 1;
             existing.totalInvestment += curr.totalInvestment;
+            existing.details.push(curr); // Add to details array
         } else {
             acc.push({
                 level: curr.level,
-                income: curr.income,
+                income: Number(curr.income),
                 members: 1,
-                totalInvestment: curr.totalInvestment
+                totalInvestment: curr.totalInvestment,
+                details: [curr] // Initialize details array
             });
         }
         return acc;
@@ -58,6 +66,14 @@ export default function LevelIncome() {
     const totalLevelIncome = displayData.reduce((sum, item) => sum + item.income, 0);
     const totalMembers = displayData.reduce((sum, item) => sum + item.members, 0);
 
+    const toggleExpand = (level) => {
+        if (expandedLevel === level) {
+            setExpandedLevel(null);
+        } else {
+            setExpandedLevel(level);
+        }
+    };
+
     if (loading) return <div className="text-white">Loading level income...</div>
 
     return (
@@ -68,22 +84,8 @@ export default function LevelIncome() {
                     <p className="text-[#b0b0b0] text-sm md:text-lg">View your income from network levels</p>
                 </div>
 
-                {/* Dropdown for level selection */}
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 md:gap-3">
-                    <span className="text-[#b0b0b0] text-sm md:text-base">Select Level:</span>
-                    <select
-                        value={selectedLevel}
-                        onChange={(e) => setSelectedLevel(e.target.value)}
-                        className="bg-[#040408] border border-teal-500 text-white rounded-lg px-3 md:px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 w-full sm:w-auto min-w-[150px] text-sm md:text-base"
-                    >
-                        <option value="all">All Levels</option>
-                        {[1, 2, 3, 4, 5].map((lvl) => (
-                            <option key={lvl} value={lvl}>
-                                Level {lvl}
-                            </option>
-                        ))}
-                    </select>
-                </div>
+                {/* Dropdown removed as per request */}
+
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
@@ -113,31 +115,69 @@ export default function LevelIncome() {
                         <p className="text-gray-500 text-sm mt-2">Build your network to start earning level income!</p>
                     </div>
                 ) : (
-                    <div className="bg-gradient-to-br from-[#040408] to-[#1f1f1f] rounded-lg border border-[#444] overflow-hidden">
-                        <div className="overflow-x-auto">
-                            <table className="w-full min-w-max">
-                                <thead>
-                                    <tr className="border-b border-[#444] bg-[#0f0f1a]">
-                                        <th className="text-left py-3 px-3 md:px-4 text-white font-semibold text-xs md:text-sm">Level</th>
-                                        <th className="text-left py-3 px-3 md:px-4 text-white font-semibold text-xs md:text-sm">Members</th>
-                                        <th className="text-left py-3 px-3 md:px-4 text-white font-semibold text-xs md:text-sm">Income</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {displayData.map((item, index) => (
-                                        <tr key={index} className="border-b border-[#444] hover:bg-teal-500/5 transition-colors">
-                                            <td className="py-3 px-3 md:px-4">
-                                                <span className="px-2 md:px-3 py-1 bg-teal-500/20 text-teal-400 rounded-full text-xs md:text-sm font-semibold">
-                                                    Level {item.level}
-                                                </span>
-                                            </td>
-                                            <td className="py-3 px-3 md:px-4 text-white text-sm md:text-base">{item.members}</td>
-                                            <td className="py-3 px-3 md:px-4 text-teal-400 font-bold text-sm md:text-base">₹{item.income.toLocaleString()}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                    <div className="space-y-4">
+                        {displayData.map((item) => (
+                            <div key={item.level} className="bg-gradient-to-br from-[#040408] to-[#1f1f1f] rounded-lg border border-[#444] overflow-hidden">
+                                <div
+                                    className="p-4 flex flex-wrap justify-between items-center cursor-pointer hover:bg-[#1a1a24] transition-colors"
+                                    onClick={() => toggleExpand(item.level)}
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <span className="px-3 py-1 bg-teal-500/20 text-teal-400 rounded-full text-sm font-semibold">
+                                            Level {item.level}
+                                        </span>
+                                        <span className="text-gray-300 text-sm md:text-base">
+                                            {item.members} Members
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-4 mt-2 sm:mt-0">
+                                        <span className="text-teal-400 font-bold text-lg">
+                                            ₹{item.income.toLocaleString()}
+                                        </span>
+                                        <span className="text-[#b0b0b0]">
+                                            {expandedLevel === item.level ? '▲' : '▼'}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {expandedLevel === item.level && (
+                                    <div className="border-t border-[#444] bg-[#0a0a10] overflow-x-auto">
+                                        <table className="w-full text-sm text-left">
+                                            <thead className="text-xs text-gray-400 uppercase bg-[#0f0f1a]">
+                                                <tr className="text-center">
+                                                    <th className="px-4 py-3">From User</th>
+                                                    <th className="px-4 py-3">Email</th>
+                                                    <th className="px-4 py-3">Income</th>
+                                                    <th className="px-4 py-3">Date</th>
+                                                    <th className="px-4 py-3">Time</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="text-center">
+                                                {item.details.map((detail, idx) => (
+                                                    <tr key={idx} className="border-b border-[#333] hover:bg-[#1f1f2e]">
+                                                        <td className="px-4 py-3 font-medium text-white">
+                                                            {detail.fromUser}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-gray-300">
+                                                            {detail.email}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-teal-400">
+                                                            ₹{detail.income}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-gray-400">
+                                                            {detail.date}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-gray-400">
+                                                            {detail.time}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </div>
+                        ))}
                     </div>
                 )}
             </div>

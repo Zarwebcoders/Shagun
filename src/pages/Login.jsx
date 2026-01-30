@@ -73,11 +73,11 @@ export default function Login({ setIsAuthenticated, setIsAdminAuthenticated }) {
                     </div>
 
                     {/* Form */}
-                    <form onSubmit={handleSubmit} className="space-y-6">
+                    <form onSubmit={handleSubmit} className="space-y-6" noValidate>
                         {/* Email Input */}
                         <div className="space-y-2">
                             <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider ml-1">
-                                Email Address
+                                Email Address or User ID
                             </label>
                             <div className="relative group">
                                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none transition-colors group-focus-within:text-teal-400 text-gray-500">
@@ -85,8 +85,8 @@ export default function Login({ setIsAuthenticated, setIsAdminAuthenticated }) {
                                 </div>
                                 <input
                                     id="email"
-                                    type="email"
-                                    placeholder="name@example.com"
+                                    type="text"
+                                    placeholder="Enter SGN ID or Email"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     className="w-full pl-12 pr-4 py-3.5 bg-black/40 border border-white/10 rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-teal-500/50 focus:ring-2 focus:ring-teal-500/20 transition-all duration-300 hover:border-white/20"

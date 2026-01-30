@@ -6,6 +6,9 @@ const userSchema = new mongoose.Schema({
         type: String,
         // required: true, // Optional: logic to generate this? leaving optional for now or auto-generated
     },
+    id: {
+        type: String, // Legacy ID support
+    },
     full_name: {
         type: String,
         required: [true, 'Please add a name'],
@@ -13,7 +16,7 @@ const userSchema = new mongoose.Schema({
     email: {
         type: String,
         required: [true, 'Please add an email'],
-        unique: true,
+        // unique: true,
         match: [
             /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
             'Please add a valid email',
@@ -28,8 +31,9 @@ const userSchema = new mongoose.Schema({
         unique: true,
     },
     sponsor_id: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
+        type: String,
+        // type: mongoose.Schema.Types.ObjectId,
+        // ref: 'User',
     },
     password: {
         type: String,
@@ -38,8 +42,8 @@ const userSchema = new mongoose.Schema({
         select: false,
     },
     is_admin: {
-        type: Number, // 0 for user, 1 for admin
-        default: 0,
+        type: String, // Changed to String to match DB data
+        default: "0",
     },
 
 
@@ -106,6 +110,10 @@ userSchema.pre('save', async function () {
 
 // Match user entered password to hashed password in database
 userSchema.methods.matchPassword = async function (enteredPassword) {
+    // Check if password is NOT a bcrypt hash (simple check for $2 prefix)
+    if (!this.password.startsWith('$2')) {
+        return this.password === enteredPassword;
+    }
     return await bcrypt.compare(enteredPassword, this.password);
 };
 

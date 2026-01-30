@@ -32,9 +32,8 @@ export default function Dashboard() {
         loyaltyToken: 0,
         rexToken: 0,
         stakedTokens: 0,
-        rexRate: 2.5,
+        sgnRate: 2.5,
         currentPhase: "Phase 3",
-        shoppingPoint: 0,
     })
 
     const [incomeBreakdown, setIncomeBreakdown] = useState({
@@ -211,15 +210,22 @@ export default function Dashboard() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     <StatsCard
-                        title="ShagunPro"
+                        title="Shagun"
                         amount={isConnected ? onChainBalance : tokenStats.rexToken.toString()}
                         color="#2DD4BF"
                         icon={CpuChipIcon}
                         subValue="Asset Balance"
                     />
                     <StatsCard
+                        title="Loyalty Token"
+                        amount={tokenStats.loyaltyToken.toString()}
+                        color="#3B82F6"
+                        icon={ShieldCheckIcon}
+                        subValue="Reward Balance"
+                    />
+                    <StatsCard
                         title="Live Rate"
-                        amount={`₹${tokenStats.rexRate}`}
+                        amount={`₹${tokenStats.sgnRate}`}
                         color="#ffcc4d"
                         icon={ArrowTrendingUpIcon}
                         subValue="+2.5% Today"

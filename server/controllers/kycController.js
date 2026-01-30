@@ -130,10 +130,41 @@ const getKYCStats = async (req, res) => {
     }
 };
 
+// @desc    Get KYC history (Approved/Rejected)
+// @route   GET /api/kyc/history
+// @access  Private/Admin
+const getKYCHistory = async (req, res) => {
+    try {
+        // Fetch history records
+        const historyDocs = await KYC.find({ approval: { $ne: 2 } })
+            .sort({ updatedAt: -1 })
+            .lean();
+
+        // Provide User details manually via id lookup
+        const enrichedHistory = await Promise.all(historyDocs.map(async (doc) => {
+            // Find user where User.id matches KYC.user_id (legacy string ID)
+            const user = await User.findOne({ id: doc.user_id }).select('full_name email');
+            return {
+                ...doc,
+                user_id: user ? {
+                    name: user.full_name, // Map full_name to name for frontend display
+                    email: user.email
+                } : null
+            };
+        }));
+
+        res.json(enrichedHistory);
+    } catch (error) {
+        console.error("KYC History Error:", error);
+        res.status(500).json({ message: error.message });
+    }
+};
+
 module.exports = {
     submitKYC,
     getPendingKYC,
     getMyKYC,
     updateKYCStatus,
     getKYCStats,
+    getKYCHistory,
 };

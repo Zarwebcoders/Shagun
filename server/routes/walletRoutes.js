@@ -5,12 +5,14 @@ const {
     addOrUpdateWallet,
     getMyWallet,
     getAllWallets,
-    getWalletByUser
+    getWalletByUser,
+    updateWalletStatus
 } = require('../controllers/walletController');
 
 router.post('/', protect, addOrUpdateWallet);
 router.get('/me', protect, getMyWallet);
 router.get('/all', protect, admin, getAllWallets);
 router.get('/user/:id', protect, admin, getWalletByUser);
+router.put('/:id', protect, admin, updateWalletStatus);
 
 module.exports = router;

@@ -15,6 +15,8 @@ export default function AdminLayout({ children, setIsAdminAuthenticated }) {
         { id: "users", name: "User Management", icon: "👥", path: "/admin/users" },
         { id: "kyc", name: "KYC Approvals", icon: "✅", path: "/admin/kyc-approvals" },
         { id: "withdrawals", name: "Withdrawal Requests", icon: "💰", path: "/admin/withdrawals" },
+        { id: "bank-accounts", name: "Bank Accounts", icon: "🏛️", path: "/admin/bank-accounts" },
+        { id: "manage-wallet", name: "Manage Wallet", icon: "💼", path: "/admin/manage-wallet" },
         { id: "packages", name: "Package Management", icon: "📦", path: "/admin/packages" },
         { id: "transactions", name: "Transaction Monitor", icon: "💳", path: "/admin/transactions" },
         { id: "settings", name: "System Settings", icon: "⚙️", path: "/admin/settings" },

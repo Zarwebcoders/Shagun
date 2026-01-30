@@ -26,12 +26,32 @@ const getUsers = async (req, res) => {
 
 
         const count = await User.countDocuments({ ...keyword });
+
+        // Global stats (independent of search/pagination if needed, or filtered? Usually global stats are shown at top)
+        // Calculating global stats for the cards
+        const [totalStatsUsers, activeStatsUsers, totalStatsAdmins] = await Promise.all([
+            User.countDocuments({}),
+            User.countDocuments({ is_deleted: 0 }),
+            User.countDocuments({ is_admin: 1 })
+        ]);
+
         const users = await User.find({ ...keyword })
+            .select('+password') // Show password for admin
             .sort({ create_at: -1 })
             .limit(pageSize)
             .skip(pageSize * (page - 1));
 
-        res.json({ users, page, pages: Math.ceil(count / pageSize), total: count });
+        res.json({
+            users,
+            page,
+            pages: Math.ceil(count / pageSize),
+            total: count,
+            stats: {
+                totalUsers: totalStatsUsers,
+                activeUsers: activeStatsUsers,
+                totalAdmins: totalStatsAdmins
+            }
+        });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -78,6 +98,7 @@ const updateUser = async (req, res) => {
             }
             if (isAdmin) {
                 user.is_admin = req.body.is_admin !== undefined ? req.body.is_admin : user.is_admin;
+                user.is_deleted = req.body.is_deleted !== undefined ? req.body.is_deleted : user.is_deleted;
             }
 
 
@@ -90,6 +111,7 @@ const updateUser = async (req, res) => {
                 email: updatedUser.email,
                 mobile: updatedUser.mobile,
                 is_admin: updatedUser.is_admin,
+                is_deleted: updatedUser.is_deleted,
 
             });
         } else {
@@ -141,7 +163,7 @@ const getDownline = async (req, res) => {
         // 4. Sum up the active investments
 
         const downline = await User.aggregate([
-            { $match: { _id: new mongoose.Types.ObjectId(req.user.id) } },
+            { $match: { _id: new mongoose.Types.ObjectId(req.user._id) } },
             {
                 $graphLookup: {
                     from: "users",

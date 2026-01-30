@@ -11,7 +11,11 @@ import Packages from "./pages/Packages"
 import KYC from "./pages/KYC"
 import Shopping from "./pages/Shopping"
 import Withdrawal from "./pages/Withdrawal"
-import PaymentRequests from "./admin/components/PaymentRequests"
+import BankAccountManagement from "./admin/components/BankAccountManagement"
+
+// ... existing imports
+
+
 import BankDetails from "./pages/BankDetails"
 import BankRequests from "./admin/components/BankRequests"
 import MiningBonus from "./pages/MiningBonus"
@@ -41,6 +45,9 @@ import AdminLayout from "./admin/components/AdminLayout"
 import UserManagement from "./admin/components/UserManagement"
 import KYCApprovals from "./admin/components/KYCApprovals"
 import WithdrawalRequests from "./admin/components/WidthrawalRequest"
+import PaymentRequests from "./admin/components/PaymentRequests"
+import ManageWallet from "./admin/components/ManageWallet"
+
 import PackageManagement from "./admin/components/PackageManagement"
 import TransactionMonitor from "./admin/components/TransactionMonitor"
 import SystemSettings from "./admin/components/SystemSetting"
@@ -50,18 +57,24 @@ import Reports from "./admin/components/Reports"
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false)
+  const [isAuthChecking, setIsAuthChecking] = useState(true)
 
   useEffect(() => {
     const user = localStorage.getItem("user")
     if (user) {
       const userData = JSON.parse(user)
-      if (userData.role === "admin") {
+      if (userData.is_admin === 1) {
         setIsAdminAuthenticated(true)
       } else {
         setIsAuthenticated(true)
       }
     }
+    setIsAuthChecking(false)
   }, [])
+
+  if (isAuthChecking) {
+    return <div className="min-h-screen bg-[#050505] flex items-center justify-center text-teal-500">Loading...</div>
+  }
 
   // Layout wrapper component for protected routes
   const ProtectedLayout = () => {
@@ -155,6 +168,8 @@ export default function App() {
           <Route path="users" element={<UserManagement />} />
           <Route path="kyc-approvals" element={<KYCApprovals />} />
           <Route path="withdrawals" element={<WithdrawalRequests />} />
+          <Route path="bank-accounts" element={<BankAccountManagement />} />
+          <Route path="manage-wallet" element={<ManageWallet />} />
           <Route path="vendor-withdrawals" element={<VendorWithdrawalRequests />} />
           <Route path="vendor-wallets" element={<VendorWallets />} />
           <Route path="vendor-kyc" element={<VendorKYCRequests />} />

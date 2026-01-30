@@ -3,6 +3,8 @@
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useNavigate } from "react-router-dom"
+import client from "../api/client" // Import API Client
+import { toast } from "react-hot-toast"
 import {
     ShoppingCart, Star, Leaf, Zap, ShieldCheck,
     ChevronDown, ChevronUp, Droplets, Heart,
@@ -17,12 +19,16 @@ const products = [
     {
         id: 1,
         name: "Milkish Herbal Feed",
-        price: 3500,
+        price: 3500, // Display Price per unit? Or Package Price?
+        // Note: Controller calculates based on amount. 
+        // Logic: Frontend should perhaps allow selecting a "Package" or amount. 
+        // For simplicity, we keep the UI but make the button action open a Purchase Modal or Trigger API.
         rating: 4.8,
         reviews: 128,
         image: "/feed-product.png",
         description: "Premium herbal feed supplement for cattle to boost milk production and immunity.",
-        popular: true
+        popular: true,
+        pkgType: "Standard"
     },
     {
         id: 2,
@@ -32,7 +38,8 @@ const products = [
         reviews: 85,
         image: "/growth-booster.png",
         description: "Essential minerals and vitamins premix for faster growth.",
-        popular: false
+        popular: false,
+        pkgType: "Silver"
     },
     {
         id: 3,
@@ -42,7 +49,8 @@ const products = [
         reviews: 210,
         image: "/tonic.png",
         description: "Advanced immunity booster tonic.",
-        popular: false
+        popular: false,
+        pkgType: "Gold"
     }
 ]
 
@@ -129,34 +137,7 @@ const HeroSection = () => (
                 >
                     <div className="relative z-10 grid grid-cols-2 gap-6 transform lg:rotate-y-12 lg:rotate-6 hover:rotate-0 transition-all duration-700 ease-out">
                         {products.slice(0, 2).map((product, i) => (
-                            <div key={product.id} className={`bg-[#0a0a0f] p-3 rounded-3xl shadow-2xl border border-white/10 relative group hover:-translate-y-4 transition-transform duration-500 ${i === 1 ? 'mt-12' : ''}`}>
-                                <div className="bg-gradient-to-b from-gray-800/50 to-black rounded-2xl p-6 h-[22rem] flex flex-col relative overflow-hidden">
-                                    {/* Mock Image Placeholder if image fails, else use image */}
-                                    <div className="flex-1 flex items-center justify-center mb-4 relative z-10 group-hover:scale-110 transition-transform duration-500">
-                                        {/* Using Lucide icons as fallbacks or overlays for a premium abstract look if images aren't real yet, 
-                                    but code says 'use real products', so we simulate the look 
-                                */}
-                                        <div className={`w-32 h-32 rounded-full flex items-center justify-center ${i === 0 ? 'bg-amber-500/20' : 'bg-purple-500/20'} blur-2xl absolute`} />
-                                        {i === 0 ? <Leaf className="w-20 h-20 text-amber-500" /> : <ShieldCheck className="w-20 h-20 text-purple-500" />}
-                                    </div>
-
-                                    <div className="relative z-10">
-                                        <h3 className="text-2xl font-bold text-white mb-1 group-hover:text-amber-400 transition-colors">{product.name}</h3>
-                                        <p className="text-xs text-gray-400 uppercase tracking-widest mb-3">Premium Series</p>
-                                        <div className="flex justify-between items-end border-t border-white/10 pt-4">
-                                            <span className="text-xl font-bold text-white">₹{product.price.toLocaleString()}</span>
-                                            <div className="flex gap-0.5">
-                                                {[...Array(5)].map((_, j) => (
-                                                    <Star key={j} className="w-3 h-3 text-amber-400 fill-amber-400" />
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Glowing effect */}
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60" />
-                                </div>
-                            </div>
+                            <ProductCard key={product.id} product={product} i={i} />
                         ))}
                     </div>
 
@@ -708,6 +689,64 @@ const Footer = () => (
         </div>
     </footer>
 )
+
+// Product Card Component with Purchase Logic
+const ProductCard = ({ product, i }) => {
+    const [isBuying, setIsBuying] = useState(false);
+
+    const handleBuy = async () => {
+        const user = localStorage.getItem('user');
+        if (!user) {
+            toast.error("Please login to purchase");
+            return;
+        }
+
+        setIsBuying(true);
+        try {
+            await client.post('/api/products', {
+                amount: product.price,
+                product: product.name,
+                packag_type: product.pkgType || "Standard",
+                quantity: 1
+            });
+            toast.success("Purchase Successful!");
+        } catch (error) {
+            console.error("Purchase Error", error);
+            toast.error(error.response?.data?.message || "Purchase Failed");
+        } finally {
+            setIsBuying(false);
+        }
+    };
+
+    return (
+        <div className={`bg-[#0a0a0f] p-3 rounded-3xl shadow-2xl border border-white/10 relative group hover:-translate-y-4 transition-transform duration-500 ${i === 1 ? 'mt-12' : ''}`}>
+            <div className="bg-gradient-to-b from-gray-800/50 to-black rounded-2xl p-6 h-[22rem] flex flex-col relative overflow-hidden">
+                <div className="flex-1 flex items-center justify-center mb-4 relative z-10 group-hover:scale-110 transition-transform duration-500">
+                    <div className={`w-32 h-32 rounded-full flex items-center justify-center ${i === 0 ? 'bg-amber-500/20' : 'bg-purple-500/20'} blur-2xl absolute`} />
+                    {i === 0 ? <Leaf className="w-20 h-20 text-amber-500" /> : <ShieldCheck className="w-20 h-20 text-purple-500" />}
+                </div>
+
+                <div className="relative z-10">
+                    <h3 className="text-2xl font-bold text-white mb-1 group-hover:text-amber-400 transition-colors">{product.name}</h3>
+                    <p className="text-xs text-gray-400 uppercase tracking-widest mb-3">Premium Series</p>
+                    <div className="flex justify-between items-end border-t border-white/10 pt-4">
+                        <span className="text-xl font-bold text-white">₹{product.price.toLocaleString()}</span>
+                        <div className="flex gap-2 items-center">
+                            <button
+                                onClick={handleBuy}
+                                disabled={isBuying}
+                                className="px-3 py-1 bg-amber-500 hover:bg-amber-600 text-black text-xs font-bold rounded-full transition-colors"
+                            >
+                                {isBuying ? "..." : "BUY"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60" />
+            </div>
+        </div>
+    );
+};
 
 export default function Products() {
     return (

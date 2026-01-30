@@ -74,8 +74,13 @@ const registerUser = async (req, res) => {
 const loginUser = async (req, res) => {
     const { email, password } = req.body;
 
-    // Check for user email
-    const user = await User.findOne({ email }).select('+password');
+    // Check for user by email or referral_id (user_id)
+    const user = await User.findOne({
+        $or: [
+            { email: email },
+            { referral_id: email }
+        ]
+    }).select('+password');
 
     if (user && (await user.matchPassword(password))) {
         res.json({

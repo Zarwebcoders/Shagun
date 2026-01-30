@@ -16,11 +16,35 @@ import {
     CheckCircle2,
     AlertCircle
 } from "lucide-react"
+// Image display helper with fallback
+function KYCImage({ src, alt }) {
+    const [error, setError] = useState(false);
+
+    if (error || !src) {
+        return (
+            <div className="w-full h-full bg-[#1a1a2e] flex flex-col items-center justify-center text-gray-500 gap-2">
+                <FileText className="w-8 h-8 opacity-40" />
+                <span className="text-xs">No Image Available</span>
+            </div>
+        );
+    }
+
+    return (
+        <img
+            src={src}
+            alt={alt}
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+            onError={() => setError(true)}
+        />
+    );
+}
 
 export default function KYCApprovals() {
     const [selectedKYC, setSelectedKYC] = useState(null)
     const [searchTerm, setSearchTerm] = useState("")
     const [kycRequests, setKycRequests] = useState([])
+    const [kycHistory, setKycHistory] = useState([]) // New state for history
+    const [activeTab, setActiveTab] = useState("pending") // pending | history
     const [stats, setStats] = useState({
         pendingReview: 0,
         approvedToday: 0,
@@ -29,15 +53,21 @@ export default function KYCApprovals() {
     })
     const [loading, setLoading] = useState(true)
 
-    // ... existing fetch logic ...
     const fetchKYCRequests = async () => {
         try {
             const { data } = await client.get('/kyc/pending');
             setKycRequests(data);
         } catch (error) {
             console.error("Error fetching KYC requests:", error);
-        } finally {
-            setLoading(false);
+        }
+    };
+
+    const fetchKYCHistory = async () => {
+        try {
+            const { data } = await client.get('/kyc/history');
+            setKycHistory(data);
+        } catch (error) {
+            console.error("Error fetching KYC history:", error);
         }
     };
 
@@ -50,17 +80,22 @@ export default function KYCApprovals() {
         }
     };
 
+    const loadAll = async () => {
+        setLoading(true);
+        await Promise.all([fetchKYCRequests(), fetchKYCHistory(), fetchStats()]);
+        setLoading(false);
+    };
+
     useEffect(() => {
-        fetchKYCRequests();
-        fetchStats();
+        loadAll();
     }, []);
 
     const handleApprove = async (id) => {
         try {
             await client.put(`/kyc/${id}`, { status: 'approved' });
-            fetchKYCRequests();
-            setSelectedKYC(null);
             toast.success(`KYC approved successfully`);
+            setSelectedKYC(null);
+            loadAll(); // Refresh all
         } catch (err) {
             console.error(err);
             toast.error("Failed to approve");
@@ -70,9 +105,9 @@ export default function KYCApprovals() {
     const handleReject = async (id) => {
         try {
             await client.put(`/kyc/${id}`, { status: 'rejected' });
-            fetchKYCRequests();
-            setSelectedKYC(null);
             toast.success(`KYC rejected`);
+            setSelectedKYC(null);
+            loadAll(); // Refresh all
         } catch (err) {
             console.error(err);
             toast.error("Failed to reject");
@@ -80,6 +115,11 @@ export default function KYCApprovals() {
     }
 
     const filteredRequests = kycRequests.filter(req =>
+        (req.user_id?.name || req.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (req.user_id?.email || req.email || "").toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const filteredHistory = kycHistory.filter(req =>
         (req.user_id?.name || req.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
         (req.user_id?.email || req.email || "").toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -148,175 +188,240 @@ export default function KYCApprovals() {
                 ))}
             </div>
 
-            {/* Main Content Area */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-280px)] min-h-[600px]">
+            {/* View Toggle */}
+            <div className="flex gap-4 border-b border-gray-700">
+                <button
+                    onClick={() => { setActiveTab("pending"); setSelectedKYC(null); }}
+                    className={`pb-2 px-4 text-sm font-medium transition-colors ${activeTab === "pending" ? "text-teal-400 border-b-2 border-teal-400" : "text-gray-400 hover:text-white"}`}
+                >
+                    Pending Requests ({kycRequests.length})
+                </button>
+                <button
+                    onClick={() => { setActiveTab("history"); setSelectedKYC(null); }}
+                    className={`pb-2 px-4 text-sm font-medium transition-colors ${activeTab === "history" ? "text-teal-400 border-b-2 border-teal-400" : "text-gray-400 hover:text-white"}`}
+                >
+                    History
+                </button>
+            </div>
 
-                {/* Left Panel: Request List */}
-                <div className="lg:col-span-4 glass-panel rounded-xl flex flex-col overflow-hidden">
-                    <div className="p-4 border-b border-teal-500/20 bg-[#1a1a2e]/50">
-                        <h3 className="text-sm font-semibold text-teal-400 uppercase tracking-wider">
-                            Pending Requests ({kycRequests.length})
-                        </h3>
-                    </div>
+            {activeTab === "pending" ? (
+                /* Pending Requests View */
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-350px)] min-h-[600px]">
+                    {/* Left Panel: Request List */}
+                    <div className="lg:col-span-4 glass-panel rounded-xl flex flex-col overflow-hidden">
+                        <div className="p-4 border-b border-teal-500/20 bg-[#1a1a2e]/50">
+                            <h3 className="text-sm font-semibold text-teal-400 uppercase tracking-wider">
+                                Requests List
+                            </h3>
+                        </div>
 
-                    <div className="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar">
-                        {loading ? (
-                            <div className="text-center py-8 text-gray-500 animate-pulse">Loading requests...</div>
-                        ) : filteredRequests.length === 0 ? (
-                            <div className="text-center py-12 text-gray-500 flex flex-col items-center gap-2">
-                                <Search className="w-8 h-8 opacity-20" />
-                                <p>No matching requests</p>
-                            </div>
-                        ) : (
-                            filteredRequests.map((request) => (
-                                <button
-                                    key={request._id}
-                                    onClick={() => setSelectedKYC(request)}
-                                    className={`w-full text-left p-3 rounded-lg border transition-all duration-200 group relative overflow-hidden ${selectedKYC?._id === request._id
-                                        ? "bg-teal-500/10 border-teal-500/50 shadow-[0_0_15px_rgba(20,184,166,0.15)]"
-                                        : "bg-[#1a1a2e]/40 border-transparent hover:bg-[#1a1a2e]/80 hover:border-teal-500/30"
-                                        }`}
-                                >
-                                    {selectedKYC?._id === request._id && (
-                                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-teal-500 shadow-[0_0_10px_#14b8a6]"></div>
-                                    )}
-                                    <div className="flex items-center gap-3 pl-2">
-                                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#2a2a3e] to-[#1a1a2e] border border-teal-500/20 flex items-center justify-center shrink-0">
-                                            <span className="text-teal-500 font-bold text-lg">
-                                                {(request.user_id?.name || request.name || "U").charAt(0).toUpperCase()}
+                        <div className="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar">
+                            {loading ? (
+                                <div className="text-center py-8 text-gray-500 animate-pulse">Loading requests...</div>
+                            ) : filteredRequests.length === 0 ? (
+                                <div className="text-center py-12 text-gray-500 flex flex-col items-center gap-2">
+                                    <Search className="w-8 h-8 opacity-20" />
+                                    <p>No matching requests</p>
+                                </div>
+                            ) : (
+                                filteredRequests.map((request) => (
+                                    <button
+                                        key={request._id}
+                                        onClick={() => setSelectedKYC(request)}
+                                        className={`w-full text-left p-3 rounded-lg border transition-all duration-200 group relative overflow-hidden ${selectedKYC?._id === request._id
+                                            ? "bg-teal-500/10 border-teal-500/50 shadow-[0_0_15px_rgba(20,184,166,0.15)]"
+                                            : "bg-[#1a1a2e]/40 border-transparent hover:bg-[#1a1a2e]/80 hover:border-teal-500/30"
+                                            }`}
+                                    >
+                                        {selectedKYC?._id === request._id && (
+                                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-teal-500 shadow-[0_0_10px_#14b8a6]"></div>
+                                        )}
+                                        <div className="flex items-center gap-3 pl-2">
+                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#2a2a3e] to-[#1a1a2e] border border-teal-500/20 flex items-center justify-center shrink-0">
+                                                <span className="text-teal-500 font-bold text-lg">
+                                                    {(request.user_id?.name || request.name || "U").charAt(0).toUpperCase()}
+                                                </span>
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <p className={`font-medium truncate ${selectedKYC?._id === request._id ? 'text-white' : 'text-gray-300 group-hover:text-white'}`}>
+                                                    {request.user_id?.name || request.name}
+                                                </p>
+                                                <p className="text-xs text-gray-500 truncate">{request.user_id?.email || request.email}</p>
+                                            </div>
+                                            <ChevronRight className={`w-4 h-4 text-gray-600 transition-transform ${selectedKYC?._id === request._id ? 'text-teal-500 translate-x-1' : ''}`} />
+                                        </div>
+                                        <div className="mt-2 flex items-center justify-between pl-2">
+                                            <span className="text-[10px] bg-teal-500/10 text-teal-400 px-2 py-0.5 rounded border border-teal-500/20">
+                                                ID Verification
+                                            </span>
+                                            <span className="text-[10px] text-gray-500">
+                                                {new Date(request.createdAt).toLocaleDateString()}
                                             </span>
                                         </div>
-                                        <div className="min-w-0 flex-1">
-                                            <p className={`font-medium truncate ${selectedKYC?._id === request._id ? 'text-white' : 'text-gray-300 group-hover:text-white'}`}>
-                                                {request.user_id?.name || request.name}
-                                            </p>
-                                            <p className="text-xs text-gray-500 truncate">{request.user_id?.email || request.email}</p>
+                                    </button>
+                                ))
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Right Panel: Details View */}
+                    <div className="lg:col-span-8 glass-panel rounded-xl overflow-hidden flex flex-col relative">
+                        {!selectedKYC ? (
+                            <div className="flex-1 flex flex-col items-center justify-center text-gray-500 gap-4">
+                                <div className="w-20 h-20 rounded-full bg-[#1a1a2e] flex items-center justify-center border border-teal-500/10">
+                                    <FileText className="w-8 h-8 opacity-40" />
+                                </div>
+                                <p className="text-sm">Select a request to view details</p>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col h-full">
+                                {/* Toolbar */}
+                                <div className="p-4 border-b border-teal-500/20 bg-[#1a1a2e]/80 flex justify-between items-center backdrop-blur-md sticky top-0 z-10">
+                                    <div>
+                                        <h3 className="font-bold text-white text-lg">{selectedKYC.user_id?.name || selectedKYC.name}</h3>
+                                        <p className="text-xs text-teal-400 flex items-center gap-1">
+                                            <AlertCircle className="w-3 h-3" /> Awaiting Action
+                                        </p>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => handleReject(selectedKYC._id)}
+                                            className="px-4 py-2 bg-rose-500/10 text-rose-500 border border-rose-500/50 rounded-lg hover:bg-rose-500 hover:text-white transition-all text-sm font-medium flex items-center gap-2"
+                                        >
+                                            <XCircle className="w-4 h-4" /> Reject
+                                        </button>
+                                        <button
+                                            onClick={() => handleApprove(selectedKYC._id)}
+                                            className="px-4 py-2 bg-emerald-500/10 text-emerald-500 border border-emerald-500/50 rounded-lg hover:bg-emerald-500 hover:text-white transition-all text-sm font-medium flex items-center gap-2"
+                                        >
+                                            <CheckCircle2 className="w-4 h-4" /> Approve
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Content Scroll Area */}
+                                <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+                                    {/* Info Grid */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {/* Personal Info Module */}
+                                        <div className="col-span-2 bg-[#1a1a2e]/60 p-4 rounded-xl border border-teal-500/10">
+                                            <h4 className="flex items-center gap-2 text-sm font-semibold text-teal-400 mb-4 border-b border-white/5 pb-2">
+                                                <UserCheck className="w-4 h-4" /> Identity Info
+                                            </h4>
+                                            <div className="space-y-3">
+                                                <div>
+                                                    <p className="text-xs text-gray-500">Full Name</p>
+                                                    <p className="text-sm font-medium text-white">{selectedKYC.user_id?.name || selectedKYC.name}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs text-gray-500">Email Address</p>
+                                                    <p className="text-sm font-medium text-white">{selectedKYC.user_id?.email || selectedKYC.email}</p>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    <div>
+                                                        <p className="text-xs text-gray-500">Aadhar Number</p>
+                                                        <p className="text-sm font-medium text-white font-mono tracking-wide">{selectedKYC.aadhar || "N/A"}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-xs text-gray-500">PAN Number</p>
+                                                        <p className="text-sm font-medium text-white font-mono tracking-wide">{selectedKYC.pan || "N/A"}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <ChevronRight className={`w-4 h-4 text-gray-600 transition-transform ${selectedKYC?._id === request._id ? 'text-teal-500 translate-x-1' : ''}`} />
                                     </div>
-                                    <div className="mt-2 flex items-center justify-between pl-2">
-                                        <span className="text-[10px] bg-teal-500/10 text-teal-400 px-2 py-0.5 rounded border border-teal-500/20">
-                                            {request.documentType || "ID Verification"}
-                                        </span>
-                                        <span className="text-[10px] text-gray-500">
-                                            {new Date(request.createdAt || request.submittedDate).toLocaleDateString()}
-                                        </span>
+
+                                    {/* Documents Gallery */}
+                                    <div>
+                                        <h4 className="flex items-center gap-2 text-sm font-semibold text-blue-400 mb-4">
+                                            <FileText className="w-4 h-4" /> Document Evidence
+                                        </h4>
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                            {[
+                                                { title: "Aadhar Front", src: selectedKYC.aadharcard },
+                                                { title: "Aadhar Back", src: selectedKYC.aadhar_back },
+                                                { title: "PAN Card", src: selectedKYC.pancard },
+                                                { title: "Agreement", src: selectedKYC.agreement },
+                                            ].map((doc, i) => (
+                                                <div key={i} className="group relative aspect-[4/3] bg-[#0f0f1a] rounded-lg border border-white/10 overflow-hidden cursor-zoom-in">
+                                                    <KYCImage src={doc.src} alt={doc.title} />
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2">
+                                                        <span className="text-xs font-medium text-white">{doc.title}</span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
-                                </button>
-                            ))
+                                </div>
+                            </div>
                         )}
                     </div>
                 </div>
-
-                {/* Right Panel: Details View */}
-                <div className="lg:col-span-8 glass-panel rounded-xl overflow-hidden flex flex-col relative">
-                    {!selectedKYC ? (
-                        <div className="flex-1 flex flex-col items-center justify-center text-gray-500 gap-4">
-                            <div className="w-20 h-20 rounded-full bg-[#1a1a2e] flex items-center justify-center border border-teal-500/10">
-                                <FileText className="w-8 h-8 opacity-40" />
-                            </div>
-                            <p className="text-sm">Select a request to view details</p>
-                        </div>
-                    ) : (
-                        <div className="flex flex-col h-full">
-                            {/* Toolbar */}
-                            <div className="p-4 border-b border-teal-500/20 bg-[#1a1a2e]/80 flex justify-between items-center backdrop-blur-md sticky top-0 z-10">
-                                <div>
-                                    <h3 className="font-bold text-white text-lg">{selectedKYC.user_id?.name || selectedKYC.name}</h3>
-                                    <p className="text-xs text-teal-400 flex items-center gap-1">
-                                        <AlertCircle className="w-3 h-3" /> Awaiting Action
-                                    </p>
-                                </div>
-                                <div className="flex gap-2">
-                                    <button
-                                        onClick={() => handleReject(selectedKYC._id)}
-                                        className="px-4 py-2 bg-rose-500/10 text-rose-500 border border-rose-500/50 rounded-lg hover:bg-rose-500 hover:text-white transition-all text-sm font-medium flex items-center gap-2"
-                                    >
-                                        <XCircle className="w-4 h-4" /> Reject
-                                    </button>
-                                    <button
-                                        onClick={() => handleApprove(selectedKYC._id)}
-                                        className="px-4 py-2 bg-emerald-500/10 text-emerald-500 border border-emerald-500/50 rounded-lg hover:bg-emerald-500 hover:text-white transition-all text-sm font-medium flex items-center gap-2"
-                                    >
-                                        <CheckCircle2 className="w-4 h-4" /> Approve
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Content Scroll Area */}
-                            <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
-
-                                {/* Info Grid */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {/* Personal Info Module */}
-                                    <div className="col-span-2 bg-[#1a1a2e]/60 p-4 rounded-xl border border-teal-500/10">
-                                        <h4 className="flex items-center gap-2 text-sm font-semibold text-teal-400 mb-4 border-b border-white/5 pb-2">
-                                            <UserCheck className="w-4 h-4" /> Identity Info
-                                        </h4>
-                                        <div className="space-y-3">
-                                            <div>
-                                                <p className="text-xs text-gray-500">Full Name</p>
-                                                <p className="text-sm font-medium text-white">{selectedKYC.user_id?.name || selectedKYC.name}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-xs text-gray-500">Email Address</p>
-                                                <p className="text-sm font-medium text-white">{selectedKYC.user_id?.email || selectedKYC.email}</p>
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-2">
+            ) : (
+                /* History View */
+                <div className="glass-panel rounded-xl overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left">
+                            <thead className="bg-[#1a1a2e]/80 text-xs uppercase text-gray-400">
+                                <tr className="text-center">
+                                    <th className="px-6 py-4">User</th>
+                                    <th className="px-6 py-4">Aadhar / PAN</th>
+                                    <th className="px-6 py-4">Status</th>
+                                    <th className="px-6 py-4">Documents</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-800 text-center">
+                                {filteredHistory.length === 0 ? (
+                                    <tr>
+                                        <td colSpan="5" className="px-6 py-8 text-center text-gray-500">
+                                            No history records found
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    filteredHistory.map((item) => (
+                                        <tr key={item._id} className="hover:bg-white/5 transition-colors">
+                                            <td className="px-6 py-4">
                                                 <div>
-                                                    <p className="text-xs text-gray-500">Aadhar Number</p>
-                                                    <p className="text-sm font-medium text-white font-mono tracking-wide">{selectedKYC.aadhar || "N/A"}</p>
+                                                    <p className="font-medium text-white">{item.user_id?.name || "Unknown"}</p>
+                                                    <p className="text-xs text-gray-500">{item.user_id?.email}</p>
                                                 </div>
-                                                <div>
-                                                    <p className="text-xs text-gray-500">PAN Number</p>
-                                                    <p className="text-sm font-medium text-white font-mono tracking-wide">{selectedKYC.pan || "N/A"}</p>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="text-sm text-gray-300 font-mono">
+                                                    <p>ADH: {item.aadhar}</p>
+                                                    <p>PAN: {item.pan}</p>
                                                 </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Documents Gallery */}
-                                <div>
-                                    <h4 className="flex items-center gap-2 text-sm font-semibold text-blue-400 mb-4">
-                                        <FileText className="w-4 h-4" /> Document Evidence
-                                    </h4>
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                        {[
-                                            { title: "Aadhar Front", src: selectedKYC.aadharcard },
-                                            { title: "Aadhar Back", src: selectedKYC.aadhar_back },
-                                            { title: "PAN Card", src: selectedKYC.pancard },
-                                            { title: "Agreement", src: selectedKYC.agreement },
-                                        ].map((doc, i) => (
-                                            <div key={i} className="group relative aspect-[4/3] bg-[#0f0f1a] rounded-lg border border-white/10 overflow-hidden cursor-zoom-in">
-                                                <img
-                                                    src={doc.src || "/placeholder.svg"}
-                                                    alt={doc.title}
-                                                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                                                />
-                                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2">
-                                                    <span className="text-xs font-medium text-white">{doc.title}</span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                {item.approval === 1 ? (
+                                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 text-emerald-400 text-xs font-medium rounded-full border border-emerald-500/20">
+                                                        <CheckCircle2 className="w-3 h-3" /> Approved
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-rose-500/10 text-rose-400 text-xs font-medium rounded-full border border-rose-500/20">
+                                                        <XCircle className="w-3 h-3" /> Rejected
+                                                    </span>
+                                                )}
+                                            </td>
+                                            <td className="py-4">
+                                                <div className="flex -space-x-2 gap-5 overflow-hidden">
+                                                    {['aadharcard', 'pancard', 'agreement'].map((doc, i) => (
+                                                        item[doc] ? (
+                                                            <div key={i} className="inline-block h-8 w-8 rounded-full ring-2 ring-[#0f0f1a] bg-gray-800 overflow-hidden">
+                                                                <img src={item[doc]} alt="Doc" className="h-full w-full object-cover" />
+                                                            </div>
+                                                        ) : null
+                                                    ))}
                                                 </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Notes */}
-                                <div>
-                                    <h4 className="text-sm font-semibold text-gray-400 mb-2">Admin Notes</h4>
-                                    <textarea
-                                        className="w-full px-4 py-3 bg-[#0f0f1a] text-white rounded-lg border border-teal-500/20 focus:border-teal-500 focus:outline-none resize-none text-sm placeholder-gray-600"
-                                        rows={2}
-                                        placeholder="Add internal notes about this verification..."
-                                    ></textarea>
-                                </div>
-
-                            </div>
-                        </div>
-                    )}
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-            </div>
+            )}
         </div>
     )
 }

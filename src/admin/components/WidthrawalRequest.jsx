@@ -3,11 +3,14 @@ import { useState, useEffect } from "react"
 import { ArrowUpRight, Check, X, Filter } from "lucide-react"
 import { toast } from "react-hot-toast"
 import client from "../../api/client"
+import Pagination from "../../components/common/Pagination"
 
 export default function WithdrawalRequests() {
     const [requests, setRequests] = useState([])
     const [loading, setLoading] = useState(true)
     const [filter, setFilter] = useState('all') // all, pending, approved, rejected
+    const [page, setPage] = useState(1)
+    const itemsPerPage = 10
 
     useEffect(() => {
         fetchRequests()
@@ -15,7 +18,7 @@ export default function WithdrawalRequests() {
 
     const fetchRequests = async () => {
         try {
-            const { data } = await client.get('/api/withdrawals/all');
+            const { data } = await client.get('/withdrawals/all');
             setRequests(data);
             setLoading(false);
         } catch (error) {
@@ -27,7 +30,7 @@ export default function WithdrawalRequests() {
 
     const handleStatusUpdate = async (id, status) => { // status: 1 for Approve, 0 for Reject
         try {
-            await client.put(`/api/withdrawals/${id}`, { approve: status });
+            await client.put(`/withdrawals/${id}`, { approve: status });
             toast.success(status === 1 ? "Withdrawal Approved" : "Withdrawal Rejected");
             fetchRequests(); // Refresh list
         } catch (error) {
@@ -43,6 +46,15 @@ export default function WithdrawalRequests() {
         if (filter === 'rejected') return req.approve === 0;
         return true;
     });
+
+    // Calculate pagination
+    const totalPages = Math.ceil(filteredRequests.length / itemsPerPage);
+    const paginatedRequests = filteredRequests.slice((page - 1) * itemsPerPage, page * itemsPerPage);
+
+    // Reset page when filter changes
+    useEffect(() => {
+        setPage(1);
+    }, [filter]);
 
     return (
         <div className="space-y-8 animate-fadeIn text-white">
@@ -71,8 +83,8 @@ export default function WithdrawalRequests() {
                             key={f}
                             onClick={() => setFilter(f)}
                             className={`px-3 py-1.5 rounded-lg text-sm font-medium capitalize transition-all ${filter === f
-                                    ? 'bg-teal-500 text-white shadow-lg shadow-teal-500/20'
-                                    : 'bg-[#1a1a2e] text-gray-400 hover:text-white border border-teal-500/20'
+                                ? 'bg-teal-500 text-white shadow-lg shadow-teal-500/20'
+                                : 'bg-[#1a1a2e] text-gray-400 hover:text-white border border-teal-500/20'
                                 }`}
                         >
                             {f}
@@ -100,35 +112,46 @@ export default function WithdrawalRequests() {
                             ) : filteredRequests.length === 0 ? (
                                 <tr><td colSpan="6" className="px-6 py-8 text-center text-gray-500">No requests found</td></tr>
                             ) : (
-                                filteredRequests.map((req) => (
+                                paginatedRequests.map((req) => (
                                     <tr key={req._id} className="hover:bg-[#1a1a2e]/50 transition-colors">
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="flex flex-col">
-                                                <span className="text-white font-medium">{req.user_id?.full_name || 'Unknown User'}</span>
-                                                <span className="text-xs text-gray-500">{req.user_id?.email}</span>
+                                                <span className="text-white font-medium">
+                                                    {req.user_id?.full_name ? req.user_id.full_name : 'User Not Found'}
+                                                </span>
+                                                <span className="text-xs text-gray-500">
+                                                    {req.user_id?.email || (req.user_id ? 'No Email' : 'ID Missing')}
+                                                </span>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <span className="text-teal-400 font-bold">₹{req.amount.toLocaleString()}</span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className="text-gray-300 text-sm">{req.withdraw_type}</span>
+                                            <span className="text-gray-300 text-sm capitalize">{req.withdraw_type}</span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className="text-gray-400 text-sm">{new Date(req.create_at).toLocaleDateString()}</span>
+                                            <div className="flex flex-col">
+                                                <span className="text-gray-300 text-sm">
+                                                    {new Date(req.create_at).toLocaleDateString()}
+                                                </span>
+                                                <span className="text-xs text-gray-500">
+                                                    {new Date(req.create_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </span>
+                                            </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${req.approve === 1
-                                                    ? 'bg-green-500/10 text-green-500 border-green-500/20'
-                                                    : req.approve === 0
-                                                        ? 'bg-red-500/10 text-red-500 border-red-500/20'
-                                                        : 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
+                                                ? 'bg-green-500/10 text-green-500 border-green-500/20'
+                                                : req.approve === 0
+                                                    ? 'bg-red-500/10 text-red-500 border-red-500/20'
+                                                    : 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
                                                 }`}>
                                                 {req.approve === 1 ? 'Approved' : req.approve === 0 ? 'Rejected' : 'Pending'}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-right">
-                                            {req.approve === 2 && (
+                                            {req.approve == 2 && (
                                                 <div className="flex items-center justify-end gap-2">
                                                     <button
                                                         onClick={() => handleStatusUpdate(req._id, 1)}
@@ -153,6 +176,18 @@ export default function WithdrawalRequests() {
                         </tbody>
                     </table>
                 </div>
+
+                {/* Pagination */}
+                {filteredRequests.length > itemsPerPage && (
+                    <Pagination
+                        currentPage={page}
+                        totalPages={totalPages}
+                        onPageChange={setPage}
+                        totalResults={filteredRequests.length}
+                        itemsPerPage={itemsPerPage}
+                        itemName="requests"
+                    />
+                )}
             </div>
         </div>
     )

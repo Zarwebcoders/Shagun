@@ -2,9 +2,10 @@ const mongoose = require('mongoose');
 
 const withdrawalSchema = new mongoose.Schema({
     user_id: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true
+        user_id: {
+            type: String,
+            required: true
+        },
     },
     amount: {
         type: Number,
@@ -15,8 +16,8 @@ const withdrawalSchema = new mongoose.Schema({
         required: true
     },
     approve: {
-        type: Number,
-        default: 2 // 2: Pending, 1: Approved, 0: Rejected
+        type: String,
+        default: "2" // 2: Pending, 1: Approved, 0: Rejected
     }
 }, {
     timestamps: { createdAt: 'create_at', updatedAt: 'update_at' }

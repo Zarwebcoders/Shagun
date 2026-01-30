@@ -18,11 +18,11 @@ export default function ReferralIncome() {
     const fetchIncome = async () => {
         try {
             // Using the new detailed endpoint
-            const { data } = await client.get('/api/referral-incomes/my-referrals')
+            const { data } = await client.get('/referral-incomes/my-referrals')
             setIncomes(data)
 
             // Calculate total referral_amount
-            const total = data.reduce((acc, curr) => acc + (curr.referral_amount || 0), 0)
+            const total = data.reduce((acc, curr) => acc + Number(curr.referral_amount || 0), 0)
             setTotalIncome(total)
 
             setLoading(false)
@@ -34,7 +34,7 @@ export default function ReferralIncome() {
     }
 
     return (
-        <div className="min-h-screen bg-[#050505] text-white p-6 md:p-12 font-sans">
+        <div className="min-h-screen bg-[#050505] text-white font-sans">
             <div className="max-w-6xl mx-auto space-y-8 animate-fadeIn">
                 <button
                     onClick={() => navigate('/dashboard')}
@@ -98,7 +98,10 @@ export default function ReferralIncome() {
                                             <td className="px-6 py-4 whitespace-nowrap text-white font-medium">
                                                 <div className="flex items-center gap-2">
                                                     <User className="w-4 h-4 text-indigo-400" />
-                                                    {item.referred_user_id}
+                                                    <div className="flex flex-col">
+                                                        <span className="font-semibold">{item.referred_user_name}</span>
+                                                        <span className="text-xs text-gray-400">{item.referred_user_official_id}</span>
+                                                    </div>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
@@ -128,8 +131,8 @@ export default function ReferralIncome() {
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <span className={`px-2 py-1 rounded-full text-xs font-medium border ${item.status === 'credited'
-                                                        ? 'bg-green-500/10 text-green-500 border-green-500/20'
-                                                        : 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
+                                                    ? 'bg-green-500/10 text-green-500 border-green-500/20'
+                                                    : 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
                                                     }`}>
                                                     {item.status}
                                                 </span>

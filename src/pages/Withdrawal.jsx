@@ -15,7 +15,8 @@ export default function Withdrawal() {
         totalWithdrawal: 0,
         totalIncome: 0,
         stakeROI: 0,
-        stakeToken: 0
+        stakeToken: 0,
+        anualBonus: 0
     })
     const [withdrawalHistory, setWithdrawalHistory] = useState([])
     const [withdrawalStats, setWithdrawalStats] = useState({
@@ -46,7 +47,8 @@ export default function Withdrawal() {
                     totalWithdrawal: user.totalWithdrawal || 0,
                     totalIncome: user.total_income || 0,
                     stakeROI: user.stakeROI || 0,
-                    stakeToken: user.stakeToken || 0
+                    stakeToken: user.stakeToken || 0,
+                    anualBonus: user.anual_bonus || 0
                 });
 
                 // Map withdrawals from new schema

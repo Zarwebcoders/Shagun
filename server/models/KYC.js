@@ -21,7 +21,7 @@ const kycSchema = new mongoose.Schema({
     },
     agreement: {
         type: String, // Agreement Image URL
-        required: true
+        default: ""
     },
     approval: {
         type: Number, // 0: Rejected, 1: Approved, 2: Pending

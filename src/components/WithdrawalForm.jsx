@@ -5,7 +5,7 @@ import { toast } from "react-hot-toast"
 
 export default function WithdrawalForm({ onSubmit, userData, kycData, savedWallet }) {
     const [formData, setFormData] = useState({
-        source: "rex",
+        source: "level",
         amount: "",
         method: "bank-transfer",
         useKYCAccount: true,
@@ -55,8 +55,9 @@ export default function WithdrawalForm({ onSubmit, userData, kycData, savedWalle
 
     const getMaxAmount = () => {
         switch (formData.source) {
-            case "rex": return userData.totalIncome || 0;
-            case "sos": return userData.sosWithdrawal || 0;
+            case "level": return userData.levelIncomeROI || 0;
+            case "mining": return userData.monthlyROI || 0;
+            case "annual": return userData.anualBonus || 0;
             default: return 0;
         }
     }
@@ -81,8 +82,9 @@ export default function WithdrawalForm({ onSubmit, userData, kycData, savedWalle
                 return
             }
 
-            let sourceName = "Total Income";
-            if (formData.source === "sos") sourceName = "SOS Withdrawal";
+            let sourceName = "Level Income";
+            if (formData.source === "mining") sourceName = "Mining Bonus";
+            if (formData.source === "annual") sourceName = "Annual Bonus";
 
             onSubmit({
                 amount: amount,
@@ -91,7 +93,7 @@ export default function WithdrawalForm({ onSubmit, userData, kycData, savedWalle
                 bankDetails: formData.useKYCAccount ? null : formData.bankDetails
             })
             setFormData({
-                source: "rex",
+                source: "level",
                 amount: "",
                 method: "bank-transfer",
                 useKYCAccount: true,
@@ -120,39 +122,56 @@ export default function WithdrawalForm({ onSubmit, userData, kycData, savedWalle
                     <label htmlFor="source" className="block text-xs md:text-sm font-semibold text-white mb-2 md:mb-3">
                         Select Source
                     </label>
-                    <div className="grid grid-cols-2 gap-2 md:gap-3 mb-3 md:mb-4">
+                    <div className="grid grid-cols-3 gap-2 md:gap-3 mb-3 md:mb-4">
                         <button
                             type="button"
-                            onClick={() => setFormData(prev => ({ ...prev, source: "rex" }))}
-                            className={`p-2 md:p-3 rounded-lg border transition-all ${formData.source === "rex"
-                                ? "border-teal-500 bg-teal-500/20"
-                                : "border-[#444] bg-[#1a1a2e] hover:border-teal-500/50"}`}
+                            onClick={() => setFormData(prev => ({ ...prev, source: "level" }))}
+                            className={`p-2 md:p-3 rounded-lg border transition-all ${formData.source === "level"
+                                ? "border-[#00b894] bg-[#00b894]/20"
+                                : "border-[#444] bg-[#1a1a2e] hover:border-[#00b894]/50"}`}
                         >
                             <div className="flex flex-col items-center">
-                                <div className={`w-6 h-6 md:w-8 md:h-8 rounded-full mb-1 md:mb-2 flex items-center justify-center ${formData.source === "rex" ? "bg-teal-500" : "bg-[#444]"}`}>
+                                <div className={`w-6 h-6 md:w-8 md:h-8 rounded-full mb-1 md:mb-2 flex items-center justify-center ${formData.source === "level" ? "bg-[#00b894]" : "bg-[#444]"}`}>
                                     <svg className="w-3 h-3 md:w-4 md:h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                                     </svg>
                                 </div>
-                                <span className="text-white text-[10px] md:text-xs font-medium">Total Income</span>
-                                <span className="text-gray-400 text-[10px] mt-1">₹{(userData.totalIncome || 0).toLocaleString()}</span>
+                                <span className="text-white text-[10px] md:text-xs font-medium">Level Income</span>
+                                <span className="text-gray-400 text-[10px] mt-1">₹{(userData.levelIncomeROI || 0).toLocaleString()}</span>
                             </div>
                         </button>
                         <button
                             type="button"
-                            onClick={() => setFormData(prev => ({ ...prev, source: "sos" }))}
-                            className={`p-2 md:p-3 rounded-lg border transition-all ${formData.source === "sos"
+                            onClick={() => setFormData(prev => ({ ...prev, source: "mining" }))}
+                            className={`p-2 md:p-3 rounded-lg border transition-all ${formData.source === "mining"
                                 ? "border-purple-500 bg-purple-500/20"
                                 : "border-[#444] bg-[#1a1a2e] hover:border-purple-500/50"}`}
                         >
                             <div className="flex flex-col items-center">
-                                <div className={`w-6 h-6 md:w-8 md:h-8 rounded-full mb-1 md:mb-2 flex items-center justify-center ${formData.source === "sos" ? "bg-purple-500" : "bg-[#444]"}`}>
+                                <div className={`w-6 h-6 md:w-8 md:h-8 rounded-full mb-1 md:mb-2 flex items-center justify-center ${formData.source === "mining" ? "bg-purple-500" : "bg-[#444]"}`}>
                                     <svg className="w-3 h-3 md:w-4 md:h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                                     </svg>
                                 </div>
-                                <span className="text-white text-[10px] md:text-xs font-medium">SOS Withdrawal</span>
-                                <span className="text-gray-400 text-[10px] mt-1">₹{(userData.sosWithdrawal || 0).toLocaleString()}</span>
+                                <span className="text-white text-[10px] md:text-xs font-medium">Mining Bonus</span>
+                                <span className="text-gray-400 text-[10px] mt-1">₹{(userData.monthlyROI || 0).toLocaleString()}</span>
+                            </div>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setFormData(prev => ({ ...prev, source: "annual" }))}
+                            className={`p-2 md:p-3 rounded-lg border transition-all ${formData.source === "annual"
+                                ? "border-orange-500 bg-orange-500/20"
+                                : "border-[#444] bg-[#1a1a2e] hover:border-orange-500/50"}`}
+                        >
+                            <div className="flex flex-col items-center">
+                                <div className={`w-6 h-6 md:w-8 md:h-8 rounded-full mb-1 md:mb-2 flex items-center justify-center ${formData.source === "annual" ? "bg-orange-500" : "bg-[#444]"}`}>
+                                    <svg className="w-3 h-3 md:w-4 md:h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                </div>
+                                <span className="text-white text-[10px] md:text-xs font-medium">Annual Bonus</span>
+                                <span className="text-gray-400 text-[10px] mt-1">₹{(userData.anualBonus || 0).toLocaleString()}</span>
                             </div>
                         </button>
                     </div>

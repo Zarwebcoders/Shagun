@@ -14,9 +14,27 @@ const protect = async (req, res, next) => {
 
             // Verify token
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            const mongoose = require('mongoose');
 
             // Get user from the token
-            req.user = await User.findById(decoded.id).select('-password').populate('sponsor_id', 'full_name email referral_id');
+            if (mongoose.isValidObjectId(decoded.id)) {
+                req.user = await User.findById(decoded.id).select('-password').populate('sponsor_id', 'full_name email referral_id');
+            } else {
+                // Handle legacy string IDs
+                req.user = await User.findOne({
+                    $or: [
+                        { user_id: decoded.id },
+                        { id: decoded.id }
+                    ]
+                }).select('-password').populate('sponsor_id', 'full_name email referral_id');
+            }
+
+            if (!req.user) {
+                // Double check if it might be an ObjectId string but stored in user_id field?
+                // Fallback to findById just in case isValidObjectId was strict but mongo could cast it?
+                // No, avoid crash. If not found, return 401.
+                throw new Error('User not found');
+            }
 
             next();
         } catch (error) {
@@ -31,7 +49,8 @@ const protect = async (req, res, next) => {
 };
 
 const admin = (req, res, next) => {
-    if (req.user && req.user.role === 'admin') {
+    // Check if user is admin (handles both number 1 and string "1")
+    if (req.user && (req.user.is_admin === 1 || req.user.is_admin === "1")) {
         next();
     } else {
         res.status(401).json({ message: 'Not authorized as an admin' });

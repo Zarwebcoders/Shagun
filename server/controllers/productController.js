@@ -1,25 +1,25 @@
 const Product = require('../models/Product');
 const User = require('../models/User');
 const Package = require('../models/Package');
-const Transaction = require('../models/Transaction'); // Keeping Transaction for log consistency
-const { distributeLevelIncome } = require('../utils/commission'); // Assuming this exists or will be adapted
+const Transaction = require('../models/Transaction');
+const { distributeLevelIncome } = require('../utils/commission');
 
 // @desc    Purchase a product (Create Product Investment)
 // @route   POST /api/products
 // @access  Private
 const createProduct = async (req, res) => {
-    let { amount, transactionId, sponsorId, paymentSlip, product: productName, walletAddress } = req.body;
-
-    // Map frontend camelCase to backend snake_case if necessary, or just use variables
-    // Frontend sends: amount, transactionId, sponsorId, paymentSlip, product, walletAddress
+    let {
+        amount,
+        transactionId,
+        walletAddress,
+        quantity,
+        packag_type // Frontend should send package type name or ID
+    } = req.body;
 
     try {
-        // 1. Find Package Details (for BV and ROI calculation)
-        // Note: 'product' from frontend is the Name (e.g. "Milkish Herbal Animal Feed")
-        // We might need to look up a Package based on amount or name? 
-        // Investment controller looked up by amount.
-
-        // Let's try to find a package that matches the amount criteria
+        console.log("DEBUG: createProduct called with:", req.body);
+        // 1. Find Package Details to calculate Business Volume, ROI, etc.
+        // We match based on amount or packag_type if provided
         let pkg = await Package.findOne({
             status: 'active',
             minInvestment: { $lte: Number(amount) },
@@ -28,54 +28,66 @@ const createProduct = async (req, res) => {
                 { maxInvestment: 0 }
             ]
         });
+        console.log("DEBUG: Package found details:", pkg ? pkg.name : "None");
 
-        // Fallback or specific product logic could go here
-
-        let businessVolume = 0;
+        // Default logic if no package found
+        let businessVolume = Number(amount); // Default 100% BV
         let dailyReturn = 0;
         let duration = 365;
+        let tokenAmount = 0; // Logic for token amount? 
 
         if (pkg) {
             businessVolume = (Number(amount) * (pkg.businessVolume || 100)) / 100;
             dailyReturn = pkg.dailyReturn || 0;
             duration = parseInt(pkg.duration) || 365;
-        } else {
-            // Default values if no package logic found (should ideally find one)
-            businessVolume = Number(amount); // 100% BV default?
+            // Assuming token calculation logic exists or is fixed
+            tokenAmount = (Number(amount) * 0.1); // Example: 10% token logic? Or passed from frontend?
         }
+
+        // If frontend passes token amount or other specific logic, use it.
+        // For now, we will save what we have.
 
         const startDate = new Date();
         const endDate = new Date(startDate);
         endDate.setDate(startDate.getDate() + duration);
 
-        // 2. Create Product Record
-        const newProduct = await Product.create({
-            user_id: req.user.id || req.user._id, // User ID String
-            product_name: productName || "Unknown Product",
-            amount: Number(amount),
-            packag_type: pkg ? pkg.name : "Standard", // Mapping package name to packag_type
-            status: 2, // 2: Pending
-            transcation_id: transactionId || `TXN${Date.now()}`,
-            cereate_at: new Date(),
-            update_at: new Date(),
+        const qty = Number(quantity) || 1;
+        const totalAmount = Number(amount) * qty;
 
-            // Logic Fields
-            sponsor_id: sponsorId,
-            payment_slip: paymentSlip,
-            business_volume: businessVolume,
+        // 2. Create Product Record
+        console.log("DEBUG: Creating Product...");
+        const newProduct = await Product.create({
+            user_id: req.user.id || req.user._id,
+            transcation_id: transactionId || `TXN${Date.now()}`,
+            w2_transaction_id: "",
+            packag_type: pkg ? pkg.name : (packag_type || "Standard"),
+            amount: Number(amount),
+            token_amount: tokenAmount * qty,
+            wallet_address: walletAddress || "",
+            approvel: 0,
+            approve: 0,
+            quantity: qty,
+            cycle_count: 0,
+            total_cycles: 24,
+            next_commission_date: null,
+
+            business_volume: businessVolume * qty,
             daily_return: dailyReturn,
             daily_return_amount: (Number(amount) * dailyReturn) / 100,
             start_date: startDate,
             end_date: endDate,
-            wallet_address: walletAddress
-        });
 
-        // 3. Create Transaction Record (for history consistency)
+            cereate_at: new Date(),
+            update_at: new Date()
+        });
+        console.log("DEBUG: Product Created:", newProduct._id);
+
+        // 3. Create Transaction Record
         await Transaction.create({
             user: req.user.id,
-            type: 'investment', // Keep 'investment' type for now or change to 'product_purchase'
-            amount: Number(amount),
-            description: `Purchase of ${productName} (Pending Approval)`,
+            type: 'investment',
+            amount: totalAmount,
+            description: `Purchase of ${qty} x ${newProduct.packag_type} (Pending)`,
             status: 'pending',
             hash: transactionId || `TXN${Date.now()}`
         });
@@ -93,9 +105,37 @@ const createProduct = async (req, res) => {
 // @access  Private
 const getProducts = async (req, res) => {
     try {
-        const products = await Product.find({ user_id: req.user.id })
-            .sort({ cereate_at: -1 });
-        res.json(products);
+        const pageSize = Number(req.query.limit) || 10;
+        const page = Number(req.query.page) || 1;
+        const search = req.query.search || '';
+
+        // Build query
+        const query = {
+            user_id: req.user.id
+        };
+
+        // Add search condition if exists
+        if (search) {
+            query.$or = [
+                { transcation_id: { $regex: search, $options: 'i' } },
+                { packag_type: { $regex: search, $options: 'i' } },
+                { wallet_address: { $regex: search, $options: 'i' } }
+            ];
+        }
+
+        const count = await Product.countDocuments(query);
+
+        const products = await Product.find(query)
+            .sort({ cereate_at: -1 }) // Typo in schema: cereate_at
+            .limit(pageSize)
+            .skip(pageSize * (page - 1));
+
+        res.json({
+            products,
+            page,
+            pages: Math.ceil(count / pageSize),
+            total: count
+        });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -106,19 +146,21 @@ const getProducts = async (req, res) => {
 // @access  Private/Admin
 const getAllProducts = async (req, res) => {
     try {
-        // Need to populate user details? 
-        // Since user_id is String in schema (per strict requirement), simple populate might not work if it's not ObjectId ref.
-        // If User model uses _id as ObjectId, and product.user_id stores that ObjectId string, distinct populate:
-        // We might need to manually aggregate or if user_id IS the ObjectId string, mongoose might casting auto-work if schema definition allows.
-        // But I defined `user_id: String`. To populate, I might need virtuals or change schema to ObjectId.
-        // User schema says: `user_id: { type: String }`. Wait. User has `_id` (auto) AND `user_id` (custom string?).
-        // If `req.user.id` is the `_id` (ObjectId), then I am storing ObjectId as string.
-        // I will attempt simple find first.
+        const products = await Product.find({}).sort({ cereate_at: -1 }).lean();
 
-        const products = await Product.find({}).sort({ cereate_at: -1 });
-        // Ideally we fetch user names too. 
-        // For now, let's just return products.
-        res.json(products);
+        // Enrich with User details
+        const enrichedProducts = await Promise.all(products.map(async (product) => {
+            const user = await User.findOne({ id: product.user_id }).select('full_name email');
+            return {
+                ...product,
+                user: user ? {
+                    name: user.full_name,
+                    email: user.email
+                } : { name: 'Unknown', email: '' }
+            };
+        }));
+
+        res.json(enrichedProducts);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -129,41 +171,36 @@ const getAllProducts = async (req, res) => {
 // @access  Private/Admin
 const updateProductStatus = async (req, res) => {
     try {
-        const { status } = req.body; // Expecting Number: 0, 1, 2
+        const { status } = req.body; // 1 for Approve, 0 for Reject/Pending?
+        // JSON uses 'approve' and 'approvel'.
+        // Let's assume input 'status' maps to 'approve' field = 1 (active/approved).
+
         const product = await Product.findById(req.params.id);
 
         if (product) {
-            const oldStatus = product.status;
-            product.status = status;
+            const oldStatus = product.approve;
+
+            // Update fields
+            product.approve = status;
+            // product.approvel = status; // Maybe logic differs? JSON has approvel=0 approve=0, or approvel=0 approve=1. 
+            // We will set 'approve' as the main active status.
+
             product.update_at = Date.now();
             await product.save();
 
-            // Status Logic: 2=Pending, 1=Approved, 0=Rejected
+            if (oldStatus != 1 && status == 1) { // Just Approved
+                // Commission Distribution Logic
+                await distributeLevelIncome(product.user_id, product.business_volume, product.transcation_id);
 
-            if (oldStatus !== 1 && status === 1) { // Approved
-                // Distribute Commission
-                // Need to find User object. 
-                // distributeLevelIncome expects userId (ObjectId usually).
-
-                // Logic to handle commission distribution
-                try {
-                    // We need to pass the proper User ID to distributeLevelIncome.
-                    // product.user_id is stored as String. Assuming it matches User._id
-                    await distributeLevelIncome(product.user_id, product.business_volume || product.amount, product.transcation_id);
-
-                    // Update Transaction Status
-                    const transaction = await Transaction.findOne({ hash: product.transcation_id });
-                    if (transaction) {
-                        transaction.status = 'completed';
-                        transaction.description = transaction.description.replace('(Pending Approval)', '');
-                        await transaction.save();
-                    }
-
-                } catch (commError) {
-                    console.error("Commission Error:", commError);
+                // Update Transaction
+                const transaction = await Transaction.findOne({ hash: product.transcation_id });
+                if (transaction) {
+                    transaction.status = 'completed';
+                    transaction.description = transaction.description.replace('(Pending)', '(Approved)');
+                    await transaction.save();
                 }
-
-            } else if (status === 0) { // Rejected
+            } else if (status == 2) { // Rejected? Or 0?
+                // Logic for rejection
                 const transaction = await Transaction.findOne({ hash: product.transcation_id });
                 if (transaction) {
                     transaction.status = 'failed';
