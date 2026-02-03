@@ -4,6 +4,7 @@ import { ArrowLeft, DollarSign, TrendingUp, Calendar, User, ShoppingBag, Percent
 import { useNavigate } from "react-router-dom"
 import client from "../api/client"
 import { toast } from "react-hot-toast"
+import { FaRupeeSign } from "react-icons/fa";
 
 export default function ReferralIncome() {
     const navigate = useNavigate()
@@ -53,11 +54,11 @@ export default function ReferralIncome() {
 
                     <div className="bg-[#0f0f1a] border border-yellow-500/20 rounded-2xl p-6 flex items-center gap-4 shadow-lg shadow-yellow-500/5">
                         <div className="w-12 h-12 rounded-full bg-yellow-500/10 flex items-center justify-center border border-yellow-500/20">
-                            <DollarSign className="w-6 h-6 text-yellow-500" />
-                        </div>
+                            <FaRupeeSign className="text-yellow-400 text-xl" />                        </div>
                         <div>
+
                             <p className="text-sm text-gray-400 uppercase tracking-wider">Total Referral Earnings</p>
-                            <p className="text-3xl font-bold text-white">${totalIncome.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                            <p className="text-3xl font-bold text-white">{totalIncome.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                         </div>
                     </div>
                 </div>
@@ -127,7 +128,7 @@ export default function ReferralIncome() {
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className="text-green-400 font-bold font-mono text-lg">+${item.referral_amount}</span>
+                                                <span className="text-green-400 font-bold font-mono text-lg">+<FaRupeeSign className="text-green-400 text-xl" />{item.referral_amount}</span>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <span className={`px-2 py-1 rounded-full text-xs font-medium border ${item.status === 'credited'

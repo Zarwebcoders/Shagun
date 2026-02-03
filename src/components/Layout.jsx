@@ -28,7 +28,7 @@ export default function Layout({ children, setIsAuthenticated }) {
 
     const menuItems = [
         { label: "Dashboard", path: "/dashboard", icon: <HomeIcon className="w-6 h-6" /> },
-        { label: "Investments", path: "/packages", icon: <BanknotesIcon className="w-6 h-6" /> },
+        { label: "Products", path: "/packages", icon: <BanknotesIcon className="w-6 h-6" /> },
         { label: "KYC Verification", path: "/kyc", icon: <CheckBadgeIcon className="w-6 h-6" /> },
         { label: "Withdrawal", path: "/withdrawal", icon: <ArrowDownTrayIcon className="w-6 h-6" /> },
         { label: "Downline", path: "/downline", icon: <UsersIcon className="w-6 h-6" /> },

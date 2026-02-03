@@ -262,19 +262,19 @@ export default function Dashboard() {
                     <div className="bg-[#1a1a2e]/40 backdrop-blur-xl border border-teal-500/20 rounded-3xl p-6">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <StatsCard
-                                title="ROI Earnings"
+                                title="Mining Commission"
                                 amount={`₹${incomeBreakdown.miningBonus.toFixed(2)}`}
                                 color="#2196f3"
                                 icon={CurrencyDollarIcon}
                             />
                             <StatsCard
-                                title="Yearly Bonus"
+                                title="- Holding Commission"
                                 amount={`₹${incomeBreakdown.yearlyBonus.toFixed(2)}`}
                                 color="#a855f7"
                                 icon={GiftIcon}
                             />
                             <StatsCard
-                                title="Sponsor Income"
+                                title="Referal income"
                                 amount={`₹${incomeBreakdown.sponsorIncome.toFixed(2)}`}
                                 color="#ff9800"
                                 icon={UserGroupIcon}

@@ -37,7 +37,8 @@ export default function Packages() {
         amount: "11000",
         transactionId: "",
         paymentSlip: null,
-        product: "Milkish Herbal Animal Feed" // Default product
+        product: "Milkish Herbal Animal Feed", // Default product
+        quantity: 1 // Default quantity
     });
 
     const PRODUCTS = [
@@ -155,6 +156,12 @@ export default function Packages() {
                 toast.error("Please enter amount");
                 return;
             }
+
+            if (!formData.quantity || formData.quantity < 1) {
+                toast.error("Please select at least 1 quantity");
+                return;
+            }
+
             const selectedProduct = PRODUCTS.find(p => p.name === formData.product);
             const minAmt = selectedProduct ? selectedProduct.minAmount : 500;
 
@@ -174,6 +181,7 @@ export default function Packages() {
                 sponsorId: userSponsorId,
                 paymentSlip: paymentSlipBase64,
                 product: formData.product,
+                quantity: formData.quantity,
                 walletAddress: account || "" // Connect with contract/wallet
             });
 
@@ -193,7 +201,8 @@ export default function Packages() {
                 amount: "11000",
                 transactionId: "",
                 paymentSlip: null,
-                product: PRODUCTS[0].name
+                product: PRODUCTS[0].name,
+                quantity: 1
             });
 
         } catch (error) {
@@ -204,10 +213,34 @@ export default function Packages() {
 
     const handleConnect = async () => {
         try {
+            console.log("Connect Wallet clicked");
+            console.log("window.ethereum exists:", !!window.ethereum);
+
+            // Check if MetaMask is installed
+            if (!window.ethereum) {
+                toast.error("MetaMask is not detected. Please install MetaMask extension!");
+                return;
+            }
+
+            const loadingToast = toast.loading("Connecting to MetaMask...");
+
+            console.log("Calling connectWallet()...");
             await connectWallet();
+
+            console.log("Connected! Account:", account);
+            toast.dismiss(loadingToast);
+            toast.success("Wallet connected successfully! ✅");
+
         } catch (error) {
-            console.error("Error connecting:", error);
-            toast.error("Failed to connect");
+            console.error("Error connecting wallet:", error);
+
+            if (error.code === 4001) {
+                toast.error("Connection rejected. Please approve in MetaMask.");
+            } else if (error.code === -32002) {
+                toast.error("Connection request pending. Please check MetaMask.");
+            } else {
+                toast.error(error?.message || "Failed to connect. Please try again.");
+            }
         }
     };
 
@@ -257,7 +290,7 @@ export default function Packages() {
                     {!isConnected && (
                         <button
                             onClick={handleConnect}
-                            className="hidden md:block px-6 py-2 bg-teal-500/10 border border-teal-500/50 text-teal-300 rounded-xl hover:bg-teal-500 hover:text-white transition-all text-sm font-bold"
+                            className="px-4 sm:px-6 py-2 bg-teal-500/10 border border-teal-500/50 text-teal-300 rounded-xl hover:bg-teal-500 hover:text-white transition-all text-xs sm:text-sm font-bold"
                         >
                             Connect Wallet
                         </button>
@@ -271,15 +304,15 @@ export default function Packages() {
 
                             {/* Product Selection */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-300 mb-2 pl-1">Select Product</label>
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <label className="block text-sm font-bold text-transparent bg-gradient-brand bg-clip-text mb-3 pl-1 text-base">📦 Select Product</label>
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                                     {PRODUCTS.map((prod) => (
                                         <div
                                             key={prod.id}
                                             onClick={() => setFormData({
                                                 ...formData,
                                                 product: prod.name,
-                                                amount: prod.minAmount
+                                                amount: prod.minAmount * formData.quantity
                                             })}
                                             className={`relative rounded-xl border-2 p-3 cursor-pointer transition-all duration-300 group overflow-hidden ${formData.product === prod.name
                                                 ? 'border-teal-500 bg-teal-500/10'
@@ -307,24 +340,109 @@ export default function Packages() {
                                 </div>
                             </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-300 mb-2 pl-1">Investment Amount (Fixed)</label>
-                                <div className="relative group">
-                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                        <CurrencyRupeeIcon className="h-5 w-5 text-gray-500 group-focus-within:text-teal-400 transition-colors" />
+                            {/* Quantity and Total Amount in one row */}
+                            <div className="grid grid-cols-2 gap-3 sm:gap-4 md:gap-6">
+                                {/* Quantity Selector */}
+                                <div>
+                                    <label className="block text-sm font-bold text-transparent bg-gradient-brand bg-clip-text mb-3 pl-1 text-base">🔢 Quantity</label>
+                                    <div className="relative group">
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const newQty = Math.max(1, formData.quantity - 1);
+                                                    const selectedProduct = PRODUCTS.find(p => p.name === formData.product);
+                                                    setFormData({
+                                                        ...formData,
+                                                        quantity: newQty,
+                                                        amount: selectedProduct ? selectedProduct.minAmount * newQty : formData.amount
+                                                    });
+                                                }}
+                                                className="w-10 h-10 sm:w-12 sm:h-12 bg-[#0f0f1a] border border-white/10 rounded-xl text-white font-bold text-xl hover:bg-teal-500/10 hover:border-teal-500 transition-all active:scale-95 flex-shrink-0"
+                                            >
+                                                −
+                                            </button>
+                                            <input
+                                                type="number"
+                                                name="quantity"
+                                                value={formData.quantity}
+                                                onChange={(e) => {
+                                                    const newQty = Math.max(1, parseInt(e.target.value) || 1);
+                                                    const selectedProduct = PRODUCTS.find(p => p.name === formData.product);
+                                                    setFormData({
+                                                        ...formData,
+                                                        quantity: newQty,
+                                                        amount: selectedProduct ? selectedProduct.minAmount * newQty : formData.amount
+                                                    });
+                                                }}
+                                                min="1"
+                                                className="w-14 sm:w-20 text-center py-3 sm:py-4 bg-[#0f0f1a] border border-white/10 rounded-xl text-white text-base sm:text-lg font-bold focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const newQty = formData.quantity + 1;
+                                                    const selectedProduct = PRODUCTS.find(p => p.name === formData.product);
+                                                    setFormData({
+                                                        ...formData,
+                                                        quantity: newQty,
+                                                        amount: selectedProduct ? selectedProduct.minAmount * newQty : formData.amount
+                                                    });
+                                                }}
+                                                className="w-10 h-10 sm:w-12 sm:h-12 bg-[#0f0f1a] border border-white/10 rounded-xl text-white font-bold text-xl hover:bg-teal-500/10 hover:border-teal-500 transition-all active:scale-95 flex-shrink-0"
+                                            >
+                                                +
+                                            </button>
+                                        </div>
                                     </div>
-                                    <input
-                                        type="number"
-                                        name="amount"
-                                        value={formData.amount}
-                                        readOnly
-                                        className="w-full pl-11 pr-4 py-4 bg-[#0f0f1a]/50 border border-white/10 rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all cursor-not-allowed opacity-80"
-                                    />
+                                    <p className="text-gray-500 text-xs mt-2 pl-1 hidden sm:block">Select how many units to purchase</p>
                                 </div>
-                                <p className="text-gray-500 text-xs mt-2 pl-1">Amount is fixed for the selected product</p>
+
+                                {/* Total Amount */}
+                                <div>
+                                    <label className="block text-sm font-bold text-transparent bg-gradient-brand bg-clip-text mb-3 pl-1 text-base">💰 Total Amount</label>
+                                    <div className="relative group">
+                                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                            <CurrencyRupeeIcon className="h-5 w-5 text-teal-400" />
+                                        </div>
+                                        <input
+                                            type="number"
+                                            name="amount"
+                                            value={formData.amount}
+                                            readOnly
+                                            className="w-full pl-11 pr-4 py-4 bg-gradient-to-r from-teal-500/10 to-purple-500/10 border border-teal-500/30 rounded-xl text-white text-xl font-bold placeholder-gray-600 focus:outline-none cursor-not-allowed"
+                                        />
+                                    </div>
+                                    <p className="text-teal-400 text-xs mt-2 pl-1 font-medium">
+                                        ₹{PRODUCTS.find(p => p.name === formData.product)?.minAmount || 0} × {formData.quantity} = ₹{formData.amount}
+                                    </p>
+                                </div>
                             </div>
 
+                            {/* Wallet Address */}
                             <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-2 pl-1">Wallet Address</label>
+                                <div className="relative group">
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                        <UserIcon className="h-5 w-5 text-gray-500 group-focus-within:text-teal-400 transition-colors" />
+                                    </div>
+                                    <input
+                                        type="text"
+                                        name="walletAddress"
+                                        value={account || ""}
+                                        readOnly
+                                        placeholder="Connect wallet to see address"
+                                        className="w-full pl-11 pr-4 py-4 bg-[#0f0f1a] border border-white/10 rounded-xl text-gray-400 placeholder-gray-600 focus:outline-none cursor-not-allowed"
+                                    />
+                                    {account && (
+                                        <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
+                                            <span className="text-xs font-bold text-green-500/80 bg-green-500/10 px-2 py-1 rounded">Connected</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* <div>
                                 <label className="block text-sm font-medium text-gray-300 mb-2 pl-1">Sponsor ID</label>
                                 <div className="relative group">
                                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -341,7 +459,7 @@ export default function Packages() {
                                         <span className="text-xs font-bold text-green-500/80 bg-green-500/10 px-2 py-1 rounded">Verified</span>
                                     </div>
                                 </div>
-                            </div>
+                            </div> */}
                         </div>
 
                         {/* Right Column - Transaction & Proof */}
@@ -396,9 +514,9 @@ export default function Packages() {
                         </p>
                         <button
                             onClick={handleSubmit}
-                            className="w-full sm:w-auto px-8 py-4 bg-gradient-brand text-white font-bold rounded-xl shadow-[0_0_20px_rgba(45,212,191,0.3)] hover:shadow-[0_0_30px_rgba(45,212,191,0.5)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
+                            className="w-full sm:w-auto px-12 py-4 bg-gradient-brand text-white font-bold rounded-xl shadow-[0_0_20px_rgba(45,212,191,0.3)] hover:shadow-[0_0_30px_rgba(45,212,191,0.5)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 text-lg"
                         >
-                            Submit Application
+                            BUY NOW
                         </button>
                     </div>
                 </div>

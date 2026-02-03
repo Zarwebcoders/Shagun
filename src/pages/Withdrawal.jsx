@@ -143,7 +143,7 @@ export default function Withdrawal() {
                 <div className="bg-gradient-to-br from-[#040408] to-[#1a1a2e] p-4 md:p-6 rounded-xl border border-teal-500/30 hover:border-teal-500 transition-all group hover:shadow-lg hover:shadow-teal-500/20">
                     <div className="flex items-start justify-between mb-3 md:mb-4">
                         <div>
-                            <h3 className="text-white font-bold text-base md:text-lg">Monthly ROI</h3>
+                            <h3 className="text-white font-bold text-base md:text-lg">Mining Commission </h3>
                             <p className="text-gray-400 text-xs md:text-sm">Return on Investment</p>
                         </div>
                         <div className="p-1 md:p-2 rounded-lg bg-teal-500/20 group-hover:bg-teal-500/30 transition-all">
@@ -164,7 +164,7 @@ export default function Withdrawal() {
                 <div className="bg-gradient-to-br from-[#040408] to-[#1a1a2e] p-4 md:p-6 rounded-xl border border-[#00b894]/30 hover:border-[#00b894] transition-all group hover:shadow-lg hover:shadow-[#00b894]/20">
                     <div className="flex items-start justify-between mb-3 md:mb-4">
                         <div>
-                            <h3 className="text-white font-bold text-base md:text-lg">Level Income ROI</h3>
+                            <h3 className="text-white font-bold text-base md:text-lg">Level Income </h3>
                             <p className="text-gray-400 text-xs md:text-sm">Level Earnings</p>
                         </div>
                         <div className="p-1 md:p-2 rounded-lg bg-[#00b894]/20 group-hover:bg-[#00b894]/30 transition-all">
