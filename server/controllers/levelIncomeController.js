@@ -65,7 +65,134 @@ const getAllLevelIncomes = async (req, res) => {
     }
 };
 
+// @desc    Get level income dashboard stats
+// @route   GET /api/level-income/dashboard
+// @access  Private
+const getDashboardStats = async (req, res) => {
+    try {
+        const userId = req.user.id || req.user._id;
+        const MonthlyTokenDistribution = require('../models/MonthlyTokenDistribution');
+        const User = require('../models/User');
+
+        // Get all monthly distributions for this user
+        const distributions = await MonthlyTokenDistribution.find({
+            user_id: userId,
+            status: 'pending' // Only count pending (future) distributions
+        });
+
+        // Calculate total annual income (sum of all monthly amounts × 12)
+        const monthlyAmounts = {};
+        distributions.forEach(dist => {
+            const key = `${dist.from_purchase_id}_${dist.level}`;
+            if (!monthlyAmounts[key]) {
+                monthlyAmounts[key] = dist.monthly_amount;
+            }
+        });
+
+        const totalAnnual = Object.values(monthlyAmounts).reduce((sum, amount) => sum + (amount * 12), 0);
+
+        // Bi-monthly amount (annual ÷ 24)
+        const biMonthlyAmount = totalAnnual / 24;
+
+        // Get user's withdrawal info
+        const user = await User.findById(userId);
+        const lastWithdrawal = user.level_income_last_withdrawal;
+        const withdrawnCount = user.level_income_withdrawn_count || 0;
+
+        // Check if user can withdraw (15 days passed)
+        let canWithdraw = false;
+        let daysSinceLastWithdrawal = 0;
+        let nextWithdrawalDate = null;
+
+        if (!lastWithdrawal) {
+            // Never withdrawn before
+            canWithdraw = true;
+            nextWithdrawalDate = new Date();
+        } else {
+            const now = new Date();
+            daysSinceLastWithdrawal = Math.floor((now - lastWithdrawal) / (1000 * 60 * 60 * 24));
+            canWithdraw = daysSinceLastWithdrawal >= 15 && withdrawnCount < 24;
+
+            // Calculate next withdrawal date
+            nextWithdrawalDate = new Date(lastWithdrawal);
+            nextWithdrawalDate.setDate(nextWithdrawalDate.getDate() + 15);
+        }
+
+        // Available amount
+        const availableNow = canWithdraw ? biMonthlyAmount : 0;
+
+        res.json({
+            totalAnnual: Math.round(totalAnnual * 100) / 100,
+            biMonthlyAmount: Math.round(biMonthlyAmount * 100) / 100,
+            availableNow: Math.round(availableNow * 100) / 100,
+            withdrawnCount,
+            maxWithdrawals: 24,
+            lastWithdrawalDate: lastWithdrawal,
+            nextWithdrawalDate,
+            canWithdraw,
+            daysSinceLastWithdrawal
+        });
+    } catch (error) {
+        console.error('Dashboard stats error:', error);
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Get available withdrawal amount
+// @route   GET /api/level-income/available
+// @access  Private
+const getAvailableWithdrawal = async (req, res) => {
+    try {
+        const userId = req.user.id || req.user._id;
+        const MonthlyTokenDistribution = require('../models/MonthlyTokenDistribution');
+        const User = require('../models/User');
+
+        // Get all monthly distributions
+        const distributions = await MonthlyTokenDistribution.find({
+            user_id: userId,
+            status: 'pending'
+        });
+
+        const monthlyAmounts = {};
+        distributions.forEach(dist => {
+            const key = `${dist.from_purchase_id}_${dist.level}`;
+            if (!monthlyAmounts[key]) {
+                monthlyAmounts[key] = dist.monthly_amount;
+            }
+        });
+
+        const totalAnnual = Object.values(monthlyAmounts).reduce((sum, amount) => sum + (amount * 12), 0);
+        const biMonthlyAmount = totalAnnual / 24;
+
+        // Check eligibility
+        const user = await User.findById(userId);
+        const lastWithdrawal = user.level_income_last_withdrawal;
+        const withdrawnCount = user.level_income_withdrawn_count || 0;
+
+        let canWithdraw = false;
+        if (!lastWithdrawal) {
+            canWithdraw = true;
+        } else {
+            const now = new Date();
+            const daysSince = Math.floor((now - lastWithdrawal) / (1000 * 60 * 60 * 24));
+            canWithdraw = daysSince >= 15 && withdrawnCount < 24;
+        }
+
+        const available = canWithdraw ? biMonthlyAmount : 0;
+
+        res.json({
+            available: Math.round(available * 100) / 100,
+            canWithdraw,
+            reason: !canWithdraw ? (withdrawnCount >= 24 ? 'Maximum withdrawals reached' : 'Must wait 15 days') : null
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 module.exports = {
     getMyLevelIncomes,
-    getAllLevelIncomes
+    getAllLevelIncomes,
+    getDashboardStats,
+    getAvailableWithdrawal
 };

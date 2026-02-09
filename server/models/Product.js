@@ -18,6 +18,14 @@ const productSchema = new mongoose.Schema({
         type: String,
         default: 'Standard'
     },
+    product_id: {
+        type: Number,
+        min: 1,
+        max: 4 // 1: Milkish Herbal, 2: Petro, 3: Smart Home, 4: Shagun EV
+    },
+    token_value: {
+        type: Number // 10000 for products 1-3, 20000 for product 4
+    },
     amount: {
         type: Number,
         required: true

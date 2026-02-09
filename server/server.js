@@ -68,6 +68,8 @@ app.use('/api/migrations', require('./routes/migrationRoutes'));
 app.use('/api/level-income', require('./routes/levelIncomeRoutes'));
 app.use('/api/contract-queue', require('./routes/contractUpdateQueueRoutes'));
 app.use('/api/commissions', require('./routes/commissionRoutes'));
+app.use('/api/monthly-tokens', require('./routes/monthlyTokenRoutes'));
+
 
 const PORT = process.env.PORT || 5000;
 

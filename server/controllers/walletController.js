@@ -5,27 +5,56 @@ const Wallet = require('../models/Wallet');
 // @access  Private
 const addOrUpdateWallet = async (req, res) => {
     const { wallet_add } = req.body;
-    const user_id = req.user.id;
+    const user_id = req.user.id; // user_id here is the ObjectId string from authMiddleware
 
     if (!wallet_add) {
         return res.status(400).json({ message: 'Wallet address is required' });
     }
 
     try {
-        let wallet = await Wallet.findOne({ user_id });
+        // 1. Check if this user already has a wallet
+        let userWallet = await Wallet.findOne({ user_id });
 
-        if (wallet) {
-            wallet.wallet_add = wallet_add;
-            // wallet.approve = 2; // Optional: Reset approval on change? Keeping it simple for now, user didn't specify.
-            await wallet.save();
+        if (userWallet) {
+            // If user already has a wallet, they can ONLY re-submit the SAME address
+            // We compare case-insensitively usually for crypto addresses, or strict? 
+            // Let's do strict for now or case-insensitive if appropriate. 
+            // Usually EVM addresses are checksummed but it's safer to compare lowercase or exact.
+            // Let's assume exact match requirement for simplicity but if they send different case it might fail? 
+            // Let's normalize to lowercase for comparison if it's EVM/similar, or just strict string equality.
+            // Requirement: "wo dobara koi dusra wallet connect nahi kar sakta... waha pe check kare ki jo dusra wallet hai wo same hai"
+
+            if (userWallet.wallet_add !== wallet_add) {
+                return res.status(400).json({ message: 'You cannot change your connected wallet address. Please contact admin if you need to change it.' });
+            }
+
+            // If same, update logic (maybe just re-save or do nothing? User might be retrying to trigger something?)
+            // We can just return the existing wallet or update timestamp
+            userWallet.wallet_add = wallet_add;
+            // userWallet.approve = 2; // Don't reset approval if it's the same wallet? Or should we?
+            // If it's the exact same wallet, maybe we don't need to do anything or just update it.
+            // Let's save just in case.
+            await userWallet.save();
         } else {
-            wallet = await Wallet.create({
+            // 2. Check if this wallet address is already used by ANOTHER user
+            // We search for any wallet with this address
+            const existingWallet = await Wallet.findOne({ wallet_add });
+
+            if (existingWallet) {
+                // It exists, and since we are in the 'else' block of userWallet, 
+                // it implies it belongs to someone else (or data inconsistency where user_id mismatch).
+                // Safe to say it's taken.
+                return res.status(400).json({ message: 'This wallet address is already linked to another account.' });
+            }
+
+            // Create new wallet
+            userWallet = await Wallet.create({
                 user_id,
                 wallet_add,
-                approve: 2
+                approve: 2 // Pending
             });
         }
-        res.status(200).json(wallet);
+        res.status(200).json(userWallet);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

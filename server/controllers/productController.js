@@ -1,68 +1,50 @@
 const Product = require('../models/Product');
 const User = require('../models/User');
-const Package = require('../models/Package');
 const Transaction = require('../models/Transaction');
-const { distributeLevelIncome } = require('../utils/commission');
+const Setting = require('../models/Setting');
+const { PRODUCT_DEFINITIONS } = require('../utils/levelIncome25');
 
 // @desc    Purchase a product (Create Product Investment)
 // @route   POST /api/products
 // @access  Private
 const createProduct = async (req, res) => {
     let {
-        amount,
-        transactionId,
-        walletAddress,
+        product_id,
         quantity,
-        packag_type // Frontend should send package type name or ID
+        transactionId,
+        walletAddress
     } = req.body;
 
     try {
         console.log("DEBUG: createProduct called with:", req.body);
-        // 1. Find Package Details to calculate Business Volume, ROI, etc.
-        // We match based on amount or packag_type if provided
-        let pkg = await Package.findOne({
-            status: 'active',
-            minInvestment: { $lte: Number(amount) },
-            $or: [
-                { maxInvestment: { $gte: Number(amount) } },
-                { maxInvestment: 0 }
-            ]
-        });
-        console.log("DEBUG: Package found details:", pkg ? pkg.name : "None");
 
-        // Default logic if no package found
-        let businessVolume = Number(amount); // Default 100% BV
-        let dailyReturn = 0;
-        let duration = 365;
-        let tokenAmount = 0; // Logic for token amount? 
-
-        if (pkg) {
-            businessVolume = (Number(amount) * (pkg.businessVolume || 100)) / 100;
-            dailyReturn = pkg.dailyReturn || 0;
-            duration = parseInt(pkg.duration) || 365;
-            // Assuming token calculation logic exists or is fixed
-            tokenAmount = (Number(amount) * 0.1); // Example: 10% token logic? Or passed from frontend?
+        // Validate product_id
+        if (!product_id || !PRODUCT_DEFINITIONS[product_id]) {
+            return res.status(400).json({ message: 'Invalid product_id. Must be 1-4.' });
         }
 
-        // If frontend passes token amount or other specific logic, use it.
-        // For now, we will save what we have.
-
-        const startDate = new Date();
-        const endDate = new Date(startDate);
-        endDate.setDate(startDate.getDate() + duration);
-
+        const productDef = PRODUCT_DEFINITIONS[product_id];
         const qty = Number(quantity) || 1;
-        const totalAmount = Number(amount) * qty;
 
-        // 2. Create Product Record
-        console.log("DEBUG: Creating Product...");
+        // Get token rate from settings
+        const tokenRateSetting = await Setting.findOne({ key: 'rexTokenPrice' });
+        const tokenRate = tokenRateSetting ? Number(tokenRateSetting.value) : 1;
+
+        // Calculate token amount: (token_value × quantity) ÷ token_rate
+        const tokenAmount = (productDef.tokenValue * qty) / tokenRate;
+
+        console.log(`Product: ${productDef.name}, Qty: ${qty}, Token Value: ${productDef.tokenValue}, Token Rate: ${tokenRate}, Tokens: ${tokenAmount}`);
+
+        // Create Product Record
         const newProduct = await Product.create({
             user_id: req.user.id || req.user._id,
             transcation_id: transactionId || `TXN${Date.now()}`,
             w2_transaction_id: "",
-            packag_type: pkg ? pkg.name : (packag_type || "Standard"),
-            amount: Number(amount),
-            token_amount: tokenAmount * qty,
+            packag_type: productDef.name,
+            product_id: product_id,
+            token_value: productDef.tokenValue,
+            amount: productDef.price,
+            token_amount: tokenAmount,
             wallet_address: walletAddress || "",
             approvel: 0,
             approve: 0,
@@ -70,24 +52,23 @@ const createProduct = async (req, res) => {
             cycle_count: 0,
             total_cycles: 24,
             next_commission_date: null,
-
-            business_volume: businessVolume * qty,
-            daily_return: dailyReturn,
-            daily_return_amount: (Number(amount) * dailyReturn) / 100,
-            start_date: startDate,
-            end_date: endDate,
-
+            business_volume: productDef.price * qty,
+            daily_return: 0,
+            daily_return_amount: 0,
+            start_date: new Date(),
+            end_date: null,
             cereate_at: new Date(),
             update_at: new Date()
         });
+
         console.log("DEBUG: Product Created:", newProduct._id);
 
-        // 3. Create Transaction Record
+        // Create Transaction Record
         await Transaction.create({
             user: req.user.id,
             type: 'investment',
-            amount: totalAmount,
-            description: `Purchase of ${qty} x ${newProduct.packag_type} (Pending)`,
+            amount: productDef.price * qty,
+            description: `Purchase of ${qty} x ${productDef.name} (Pending Approval)`,
             status: 'pending',
             hash: transactionId || `TXN${Date.now()}`
         });
@@ -172,8 +153,7 @@ const getAllProducts = async (req, res) => {
 const updateProductStatus = async (req, res) => {
     try {
         const { status } = req.body; // 1 for Approve, 0 for Reject/Pending?
-        // JSON uses 'approve' and 'approvel'.
-        // Let's assume input 'status' maps to 'approve' field = 1 (active/approved).
+        const { distributeLevelIncome25, distributeReferralIncome } = require('../utils/levelIncome25');
 
         const product = await Product.findById(req.params.id);
 
@@ -182,24 +162,34 @@ const updateProductStatus = async (req, res) => {
 
             // Update fields
             product.approve = status;
-            // product.approvel = status; // Maybe logic differs? JSON has approvel=0 approve=0, or approvel=0 approve=1. 
-            // We will set 'approve' as the main active status.
-
             product.update_at = Date.now();
             await product.save();
 
             if (oldStatus != 1 && status == 1) { // Just Approved
-                // Commission Distribution Logic
-                await distributeLevelIncome(product.user_id, product.business_volume, product.transcation_id);
+                console.log(`Approving product ${product._id} - Product ID: ${product.product_id}, Qty: ${product.quantity}`);
+
+                // 1. Distribute Referral Income (8% of product amount)
+                const totalProductAmount = product.amount * product.quantity;
+                await distributeReferralIncome(product.user_id, totalProductAmount);
+
+                // 2. Distribute 25-Level Income (monthly payouts)
+                await distributeLevelIncome25(
+                    product.user_id,
+                    product.token_value,
+                    product.quantity,
+                    product._id
+                );
 
                 // Update Transaction
                 const transaction = await Transaction.findOne({ hash: product.transcation_id });
                 if (transaction) {
                     transaction.status = 'completed';
-                    transaction.description = transaction.description.replace('(Pending)', '(Approved)');
+                    transaction.description = transaction.description.replace('(Pending Approval)', '(Approved)');
                     await transaction.save();
                 }
-            } else if (status == 2) { // Rejected? Or 0?
+
+                console.log(`Product ${product._id} approved successfully`);
+            } else if (status == 2 || status == 0) { // Rejected
                 // Logic for rejection
                 const transaction = await Transaction.findOne({ hash: product.transcation_id });
                 if (transaction) {
@@ -213,6 +203,7 @@ const updateProductStatus = async (req, res) => {
             res.status(404).json({ message: 'Product not found' });
         }
     } catch (error) {
+        console.error('Update Product Status Error:', error);
         res.status(500).json({ message: error.message });
     }
 };

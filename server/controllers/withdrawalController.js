@@ -12,6 +12,73 @@ const createWithdrawal = async (req, res) => {
     }
 
     try {
+        // Special validation for level_income withdrawals
+        if (withdraw_type === 'level_income') {
+            const MonthlyTokenDistribution = require('../models/MonthlyTokenDistribution');
+
+            // Get user's monthly distributions
+            const distributions = await MonthlyTokenDistribution.find({
+                user_id: req.user.id,
+                status: 'pending'
+            });
+
+            // Calculate total annual and bi-monthly amount
+            const monthlyAmounts = {};
+            distributions.forEach(dist => {
+                const key = `${dist.from_purchase_id}_${dist.level}`;
+                if (!monthlyAmounts[key]) {
+                    monthlyAmounts[key] = dist.monthly_amount;
+                }
+            });
+
+            const totalAnnual = Object.values(monthlyAmounts).reduce((sum, amt) => sum + (amt * 12), 0);
+            const biMonthlyAmount = totalAnnual / 24;
+
+            // Get user's withdrawal history
+            const user = await User.findById(req.user.id);
+            const lastWithdrawal = user.level_income_last_withdrawal;
+            const withdrawnCount = user.level_income_withdrawn_count || 0;
+
+            // Check 15-day waiting period
+            if (lastWithdrawal) {
+                const daysSince = Math.floor((new Date() - lastWithdrawal) / (1000 * 60 * 60 * 24));
+                if (daysSince < 15) {
+                    return res.status(400).json({
+                        message: `You must wait 15 days between withdrawals. ${15 - daysSince} days remaining.`
+                    });
+                }
+            }
+
+            // Check max withdrawals
+            if (withdrawnCount >= 24) {
+                return res.status(400).json({
+                    message: 'Maximum 24 withdrawals per year reached.'
+                });
+            }
+
+            // Check amount
+            if (amount > biMonthlyAmount) {
+                return res.status(400).json({
+                    message: `Maximum withdrawal amount is ${Math.round(biMonthlyAmount * 100) / 100} tokens.`
+                });
+            }
+
+            // Check if user has enough level_income balance
+            if (user.level_income < amount) {
+                return res.status(400).json({
+                    message: `Insufficient level income balance. Available: ${user.level_income}`
+                });
+            }
+
+            // Deduct amount from level_income
+            user.level_income = (user.level_income || 0) - amount;
+
+            // Update user's withdrawal tracking
+            user.level_income_last_withdrawal = new Date();
+            user.level_income_withdrawn_count = withdrawnCount + 1;
+            await user.save();
+        }
+
         const withdrawal = await Withdrawal.create({
             user_id: req.user.id,
             amount,
