@@ -1,0 +1,4 @@
+Eligible Sponsor: testuser1@test.com ID: undefined user_id: undefined sponsor_id: null
+Eligible Sponsor: testuser2@test.com ID: undefined user_id: undefined sponsor_id: 69872236672b0da037daf8df
+Eligible Sponsor: testuser3@test.com ID: undefined user_id: undefined sponsor_id: 69872236672b0da037daf8e2
+Eligible Sponsor: testuser4@test.com ID: undefined user_id: undefined sponsor_id: 69872236672b0da037daf8e8

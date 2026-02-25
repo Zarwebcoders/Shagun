@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const User = require('../models/User');
 const Product = require('../models/Product');
 const MonthlyTokenDistribution = require('../models/MonthlyTokenDistribution');
@@ -49,16 +50,30 @@ const LEVEL_PERCENTAGES = [
  */
 const isUserEligible = async (userId) => {
     try {
+        const user = await User.findById(userId);
+        if (!user) return false;
+
         // Check if user has any approved product purchase
         const hasPurchase = await Product.findOne({
-            user_id: userId,
-            approve: 1
+            $and: [
+                {
+                    $or: [
+                        { user_id: userId },
+                        { user_id: String(userId) },
+                        { user_id: user.user_id },
+                        { user_id: user.id },
+                        { user_id: user.referral_id }
+                    ]
+                },
+                {
+                    $or: [{ approve: 1 }, { approve: '1' }]
+                }
+            ]
         });
 
         if (hasPurchase) return true;
 
         // Check if user has loyalty/shopping tokens
-        const user = await User.findById(userId);
         if (user && (user.shopping_tokens > 0 || user.airdrop_tokens > 0)) {
             return true;
         }
@@ -80,7 +95,9 @@ const isUserEligible = async (userId) => {
 const distributeLevelIncome25 = async (buyerUserId, tokenValue, quantity, productId) => {
     try {
         const baseAmount = tokenValue * quantity;
+        console.log("distributeLevelIncome: Base amounts calculated:", baseAmount);
         let currentUser = await User.findById(buyerUserId);
+        console.log("distributeLevelIncome: Current User Found:", currentUser ? currentUser.email : "NO");
 
         if (!currentUser) {
             console.error(`Buyer user not found: ${buyerUserId}`);
@@ -88,9 +105,14 @@ const distributeLevelIncome25 = async (buyerUserId, tokenValue, quantity, produc
         }
 
         // Get token rate from settings
-        const Setting = require('../models/Setting');
-        const tokenRateSetting = await Setting.findOne({ key: 'rexTokenPrice' });
-        const tokenRate = tokenRateSetting ? Number(tokenRateSetting.value) : 1;
+        let tokenRate = 1;
+        try {
+            const Setting = require('../models/Setting');
+            const tokenRateSetting = await Setting.findOne({ key: 'rexTokenPrice' });
+            if (tokenRateSetting) tokenRate = Number(tokenRateSetting.value);
+        } catch (setErr) {
+            console.error('Error fetching token rate, using 1:', setErr.message);
+        }
 
         console.log(`Starting 25-level distribution for product ${productId}, base amount: ₹${baseAmount}, token rate: ₹${tokenRate}`);
 
@@ -102,10 +124,22 @@ const distributeLevelIncome25 = async (buyerUserId, tokenValue, quantity, produc
                 break;
             }
 
-            const uplineUser = await User.findById(currentUser.sponsor_id);
+            let uplineUser;
+            if (mongoose.Types.ObjectId.isValid(currentUser.sponsor_id) && String(new mongoose.Types.ObjectId(currentUser.sponsor_id)) === currentUser.sponsor_id) {
+                uplineUser = await User.findById(currentUser.sponsor_id);
+            } else {
+                // Must be a legacy string (e.g. "SGN9000" or just a number)
+                uplineUser = await User.findOne({
+                    $or: [
+                        { referral_id: currentUser.sponsor_id },
+                        { user_id: currentUser.sponsor_id },
+                        { id: currentUser.sponsor_id }
+                    ]
+                });
+            }
 
             if (!uplineUser) {
-                console.warn(`Upline user not found: ${currentUser.sponsor_id}`);
+                console.warn(`Upline user not found for ID: ${currentUser.sponsor_id}`);
                 break;
             }
 
@@ -129,16 +163,20 @@ const distributeLevelIncome25 = async (buyerUserId, tokenValue, quantity, produc
                     const scheduledDate = new Date(now);
                     scheduledDate.setMonth(scheduledDate.getMonth() + month);
 
-                    await MonthlyTokenDistribution.create({
-                        user_id: uplineUser._id,
-                        from_purchase_id: productId,
-                        from_user_id: buyerUserId,
-                        level: level + 1,
-                        monthly_amount: monthlyTokenAmount, // Now storing tokens
-                        month_number: month,
-                        status: 'pending',
-                        scheduled_date: scheduledDate
-                    });
+                    try {
+                        await MonthlyTokenDistribution.create({
+                            user_id: uplineUser._id,
+                            from_purchase_id: productId,
+                            from_user_id: buyerUserId,
+                            level: level + 1,
+                            monthly_amount: monthlyTokenAmount, // Now storing tokens
+                            month_number: month,
+                            status: 'pending',
+                            scheduled_date: scheduledDate
+                        });
+                    } catch (err) {
+                        console.error('Failed to save MonthlyTokenDistribution for user', uplineUser.email, 'error:', err.message);
+                    }
                 }
 
                 console.log(`Created 12 monthly records for ${uplineUser.email} at level ${level + 1} (${monthlyTokenAmount} tokens/month)`);
@@ -153,6 +191,7 @@ const distributeLevelIncome25 = async (buyerUserId, tokenValue, quantity, produc
         console.log('25-level distribution completed');
     } catch (error) {
         console.error('Error in distributeLevelIncome25:', error);
+        require('fs').writeFileSync('dist_error.txt', error.stack);
     }
 };
 
