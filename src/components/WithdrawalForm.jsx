@@ -137,7 +137,7 @@ export default function WithdrawalForm({ onSubmit, userData, kycData, savedWalle
                                     </svg>
                                 </div>
                                 <span className="text-white text-[10px] md:text-xs font-medium">Level Income</span>
-                                <span className="text-gray-400 text-[10px] mt-1">₹{(userData.withdrawableLevelIncome || 0).toLocaleString()}</span>
+                                <span className="text-gray-400 text-[10px] mt-1">SGN {(userData.withdrawableLevelIncome || 0).toLocaleString()}</span>
                             </div>
                         </button>
                         <button

@@ -181,7 +181,7 @@ export default function Withdrawal() {
                         </div>
                     </div>
                     <div className="mb-2">
-                        <span className="text-2xl md:text-3xl font-bold text-white">₹{userData.levelIncomeROI.toLocaleString()}</span>
+                        <span className="text-2xl md:text-3xl font-bold text-white">SGN {userData.levelIncomeROI.toLocaleString()}</span>
                     </div>
                     <div className="w-full bg-[#444]/50 rounded-full h-1.5 md:h-2">
                         <div className="bg-gradient-to-r from-[#00b894] to-[#00cec9] h-1.5 md:h-2 rounded-full" style={{ width: "60%" }}></div>

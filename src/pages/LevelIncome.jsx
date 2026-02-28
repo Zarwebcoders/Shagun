@@ -91,7 +91,7 @@ export default function LevelIncome() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                 <div className="bg-gradient-to-br from-[#040408] to-[#1f1f1f] p-4 md:p-6 rounded-lg border border-[#444]">
                     <h3 className="text-[#b0b0b0] text-xs md:text-sm mb-2">Total Level Income</h3>
-                    <p className="text-2xl md:text-3xl font-bold text-teal-400">₹{totalLevelIncome.toLocaleString()}</p>
+                    <p className="text-2xl md:text-3xl font-bold text-teal-400">SGN {totalLevelIncome.toLocaleString()}</p>
                 </div>
                 <div className="bg-gradient-to-br from-[#040408] to-[#1f1f1f] p-4 md:p-6 rounded-lg border border-[#444]">
                     <h3 className="text-[#b0b0b0] text-xs md:text-sm mb-2">Total Network Members</h3>
@@ -132,7 +132,7 @@ export default function LevelIncome() {
                                     </div>
                                     <div className="flex items-center gap-4 mt-2 sm:mt-0">
                                         <span className="text-teal-400 font-bold text-lg">
-                                            ₹{item.income.toLocaleString()}
+                                            SGN {item.income.toLocaleString()}
                                         </span>
                                         <span className="text-[#b0b0b0]">
                                             {expandedLevel === item.level ? '▲' : '▼'}
@@ -162,7 +162,7 @@ export default function LevelIncome() {
                                                             {detail.email}
                                                         </td>
                                                         <td className="px-4 py-3 text-teal-400">
-                                                            ₹{detail.income}
+                                                            SGN {detail.income}
                                                         </td>
                                                         <td className="px-4 py-3 text-gray-400">
                                                             {detail.date}
