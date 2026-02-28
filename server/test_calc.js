@@ -4,47 +4,25 @@ dotenv.config({ path: __dirname + '/.env' });
 
 mongoose.connect(process.env.MONGO_URI)
     .then(async () => {
-        const MonthlyTokenDistribution = require('./models/MonthlyTokenDistribution');
         const User = require('./models/User');
+        const LevelIncome = require('./models/LevelIncome');
+        const getSum = async (query) => {
+            const list = await LevelIncome.find(query);
+            return list.reduce((s, x) => s + x.amount, 0);
+        };
 
-        const geetaId = '699edb91092b0b5232819eb9'; // SGN017
+        const geetaId = '699edb91092b0b5232819eb9'; // SGN017 (Ripalkumar)
         const user = await User.findById(geetaId);
 
-        const distributions = await MonthlyTokenDistribution.find({
-            user_id: user._id,
-            status: 'pending'
-        });
+        const uidStr = user.id || user.user_id;
 
-        const monthlyAmounts = {};
-        distributions.forEach(dist => {
-            const key = `${dist.from_purchase_id}_${dist.level}`;
-            if (!monthlyAmounts[key]) {
-                monthlyAmounts[key] = dist.monthly_amount;
-            }
-        });
+        const sumAll = await getSum({ user_id: uidStr });
+        const sumGt0 = await getSum({ user_id: uidStr, level: { $gt: 0 } });
 
-        const totalAnnual = Object.values(monthlyAmounts).reduce((sum, amount) => sum + (amount * 12), 0);
-        const biMonthlyAmount = totalAnnual / 24;
-
-        console.log(`totalAnnual: ${totalAnnual}`);
-        console.log(`biMonthlyAmount: ${biMonthlyAmount}`);
-
-        const lastWithdrawal = user.level_income_last_withdrawal;
-        const withdrawnCount = user.level_income_withdrawn_count || 0;
-
-        let canWithdraw = false;
-        if (!lastWithdrawal) {
-            canWithdraw = true;
-        } else {
-            const now = new Date();
-            const daysSince = Math.floor((now - lastWithdrawal) / (1000 * 60 * 60 * 24));
-            canWithdraw = daysSince >= 15 && withdrawnCount < 24;
-            console.log(`Days since last withdrawal: ${daysSince}`);
-        }
-
-        const available = canWithdraw ? biMonthlyAmount : 0;
-        console.log(`canWithdraw: ${canWithdraw}`);
-        console.log(`Available: Math.round = ${Math.round(available * 100) / 100}`);
+        console.log(`User.level_income in DB: ${user.level_income}`);
+        console.log(`Sum of all LevelIncomes (annual): ${sumAll}`);
+        console.log(`Sum of LevelIncomes > 0 (annual): ${sumGt0}`);
+        console.log(`Monthly for Level > 0 (Level Income Breakdown total): ${sumGt0 / 12}`);
 
         process.exit(0);
     })

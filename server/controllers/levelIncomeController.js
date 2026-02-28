@@ -212,10 +212,14 @@ const getAvailableWithdrawal = async (req, res) => {
         });
 
         const monthlyAmounts = {};
+        let monthlyNetworkIncome = 0;
         distributions.forEach(dist => {
             const key = `${dist.from_purchase_id}_${dist.level}`;
             if (!monthlyAmounts[key]) {
                 monthlyAmounts[key] = dist.monthly_amount;
+                if (dist.level > 0) {
+                    monthlyNetworkIncome += dist.monthly_amount;
+                }
             }
         });
 
@@ -240,6 +244,7 @@ const getAvailableWithdrawal = async (req, res) => {
 
         res.json({
             available: Math.round(available * 100) / 100,
+            monthlyNetworkIncome: Math.round(monthlyNetworkIncome * 100) / 100,
             canWithdraw,
             reason: !canWithdraw ? (withdrawnCount >= 24 ? 'Maximum withdrawals reached' : 'Must wait 15 days') : null
         });

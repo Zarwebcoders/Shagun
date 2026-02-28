@@ -40,10 +40,11 @@ export default function Withdrawal() {
 
                 const user = userRes.data;
                 const levelAvailable = levelAvailRes.data?.available || 0;
+                const monthlyNetwork = levelAvailRes.data?.monthlyNetworkIncome || 0;
                 setUserData({
                     name: user.full_name,
                     monthlyROI: user.mining_bonus || 0,
-                    levelIncomeROI: user.level_income || 0,
+                    levelIncomeROI: monthlyNetwork > 0 ? monthlyNetwork : (user.level_income || 0),
                     withdrawableLevelIncome: levelAvailable > 0 ? levelAvailable : 0,
                     normalWithdrawal: user.normalWithdrawal || 0,
                     sosWithdrawal: user.shopping_tokens || 0,
