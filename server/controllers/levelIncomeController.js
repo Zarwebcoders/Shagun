@@ -143,7 +143,9 @@ const getDashboardStats = async (req, res) => {
         distributions.forEach(dist => {
             const key = `${dist.from_purchase_id}_${dist.level}`;
             if (!monthlyAmounts[key]) {
-                monthlyAmounts[key] = dist.monthly_amount;
+                if (dist.level > 0) {
+                    monthlyAmounts[key] = dist.monthly_amount;
+                }
             }
         });
 
@@ -216,8 +218,8 @@ const getAvailableWithdrawal = async (req, res) => {
         distributions.forEach(dist => {
             const key = `${dist.from_purchase_id}_${dist.level}`;
             if (!monthlyAmounts[key]) {
-                monthlyAmounts[key] = dist.monthly_amount;
                 if (dist.level > 0) {
+                    monthlyAmounts[key] = dist.monthly_amount;
                     monthlyNetworkIncome += dist.monthly_amount;
                 }
             }
