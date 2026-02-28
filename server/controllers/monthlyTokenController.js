@@ -60,11 +60,9 @@ const processMonthlyDistributions = async (req, res) => {
                 const user = await User.findById(dist.user_id);
 
                 if (user) {
-                    // Add tokens to user's level_income (for bi-monthly withdrawals)
-                    user.level_income = (user.level_income || 0) + dist.monthly_amount;
-                    // Also update total_income for tracking
-                    user.total_income = (user.total_income || 0) + dist.monthly_amount;
-                    await user.save();
+                    // Tokens are now added upfront during distribution creation in levelIncome25.js
+                    // But we still need to track what is actually unlocked to withdraw
+                    user.withdrawable_level_income = (user.withdrawable_level_income || 0) + dist.monthly_amount;
 
                     // Mark as paid
                     dist.status = 'paid';

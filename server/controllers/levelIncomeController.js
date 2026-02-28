@@ -15,11 +15,12 @@ const getMyLevelIncomes = async (req, res) => {
         const queryId = user.id || user.user_id; // "827"
 
         // 2. Find Level Incomes for this user
-        const incomes = await LevelIncome.find({ user_id: queryId })
+        // PROBLEM 2 FIX: Filter out Level 0 (Self-ROI disguised as Level Income)
+        const incomes = await LevelIncome.find({ user_id: queryId, level: { $gt: 0 } })
             .sort({ created_at: -1 })
             .lean();
 
-        // 3. Collect from_user_ids to fetch names
+        // 3. Collect from_user_ids to fetch names for income-generating users
         const fromIds = [...new Set(incomes.map(inc => inc.from_user_id).filter(id => id))];
 
         // 4. Fetch details for these users (matching 'id' field)
@@ -31,11 +32,12 @@ const getMyLevelIncomes = async (req, res) => {
         const userMap = {};
         fromUsers.forEach(u => { userMap[u.id] = u; });
 
-        // 6. Attach details
+        // 6. Attach details (and divide income by 12)
         const incomesWithDetails = incomes.map(inc => {
             const fromUser = userMap[inc.from_user_id];
             return {
                 ...inc,
+                amount: inc.amount / 12,
                 from_user_id: fromUser ? {
                     name: fromUser.full_name,
                     email: fromUser.email,
@@ -44,7 +46,63 @@ const getMyLevelIncomes = async (req, res) => {
             };
         });
 
-        res.json(incomesWithDetails);
+        // 7. PROBLEM 1 FIX: Fetch full 25-level downline to "show all 25 levels of users if available"
+        let networkMap = {};
+        try {
+            // GraphLookup to find all network downlines up to 25 levels (maxDepth 24 is level 25)
+            const downlineData = await require('../models/User').aggregate([
+                { $match: { _id: user._id } },
+                {
+                    $graphLookup: {
+                        from: "users",
+                        startWith: "$id",
+                        connectFromField: "id",
+                        connectToField: "sponsor_id",
+                        as: "network",
+                        maxDepth: 24,
+                        depthField: "level_depth" // 0-based index means 0 is level 1, 1 is level 2
+                    }
+                },
+                {
+                    $project: { "network.id": 1, "network.full_name": 1, "network.email": 1, "network.level_depth": 1, "network._id": 1 }
+                }
+            ]);
+
+            if (downlineData.length > 0 && downlineData[0].network) {
+                downlineData[0].network.forEach(netUser => {
+                    // Store them by their custom ID so we can quickly append them if they ain't in income list
+                    networkMap[netUser.id] = netUser;
+                });
+            }
+        } catch (err) {
+            console.error("Error fetching downline in getMyLevelIncomes:", err.message);
+        }
+
+        // Map to quickly check which users already have an income record
+        const incomeUserIds = new Set(incomesWithDetails.map(inc => inc.from_user_id._id?.toString() || inc.from_user_id));
+
+        // Add users who haven't generated income but are in the network
+        const finalIncomesList = [...incomesWithDetails];
+
+        Object.values(networkMap).forEach(netUser => {
+            // If this network user is not already in the incomes list, add a 0 income row
+            if (!incomeUserIds.has(String(netUser._id))) {
+                finalIncomesList.push({
+                    _id: `empty_${netUser._id}`, // Generate fake ID for React key
+                    user_id: queryId,
+                    from_user_id: {
+                        name: netUser.full_name,
+                        email: netUser.email,
+                        _id: netUser._id
+                    },
+                    level: netUser.level_depth + 1, // level_depth 0 = level 1
+                    amount: 0,
+                    created_at: new Date(), // Just current time for empty row
+                });
+            }
+        });
+
+        res.json(finalIncomesList);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

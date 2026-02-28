@@ -75,6 +75,10 @@ const userSchema = new mongoose.Schema({
         type: Number,
         default: 0,
     },
+    withdrawable_level_income: {
+        type: Number,
+        default: 0,
+    },
     level_income_last_withdrawal: {
         type: Date,
         default: null

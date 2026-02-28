@@ -1,4 +1,11 @@
-ReferenceError: mongoose is not defined
-    at distributeLevelIncome25 (C:\Users\User\Desktop\VS.CODE\WEB3\Shagun\server\utils\levelIncome25.js:113:13)
+ValidationError: User validation failed: email: Please add a valid email
+    at Document.invalidate (C:\Users\User\Desktop\VS.CODE\WEB3\Shagun\server\node_modules\mongoose\lib\document.js:3370:32)
+    at validatePath (C:\Users\User\Desktop\VS.CODE\WEB3\Shagun\server\node_modules\mongoose\lib\document.js:3145:13)
     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
-    at async testSingle (C:\Users\User\Desktop\VS.CODE\WEB3\Shagun\server\scripts\test_single_migration.js:47:9)
+    at async Promise.all (index 0)
+    at async model.$__validate (C:\Users\User\Desktop\VS.CODE\WEB3\Shagun\server\node_modules\mongoose\lib\document.js:3086:3)
+    at async model.validate (C:\Users\User\Desktop\VS.CODE\WEB3\Shagun\server\node_modules\mongoose\lib\document.js:2663:5)
+    at async model.validateBeforeSave (C:\Users\User\Desktop\VS.CODE\WEB3\Shagun\server\node_modules\mongoose\lib\plugins\validateBeforeSave.js:34:7)
+    at async Kareem.execPre (C:\Users\User\Desktop\VS.CODE\WEB3\Shagun\server\node_modules\kareem\index.js:65:24)
+    at async model.$__save (C:\Users\User\Desktop\VS.CODE\WEB3\Shagun\server\node_modules\mongoose\lib\model.js:369:5)
+    at async model.save (C:\Users\User\Desktop\VS.CODE\WEB3\Shagun\server\node_modules\mongoose\lib\model.js:609:5)

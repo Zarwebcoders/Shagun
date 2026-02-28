@@ -32,9 +32,9 @@ export default function Withdrawal() {
             try {
                 const [userRes, withdrawRes, kycRes, walletRes] = await Promise.all([
                     client.get('/auth/me'),
-                    client.get('/api/withdrawals/me'), // Fetch from new API
+                    client.get('/withdrawals/me'), // Fixed path
                     client.get('/kyc/me').catch(() => ({ data: null })),
-                    client.get('/api/wallet/me').catch(() => ({ data: null }))
+                    client.get('/wallet/me').catch(() => ({ data: null }))
                 ]);
 
                 const user = userRes.data;
@@ -42,6 +42,7 @@ export default function Withdrawal() {
                     name: user.full_name,
                     monthlyROI: user.mining_bonus || 0,
                     levelIncomeROI: user.level_income || 0,
+                    withdrawableLevelIncome: user.withdrawable_level_income || 0,
                     normalWithdrawal: user.normalWithdrawal || 0,
                     sosWithdrawal: user.shopping_tokens || 0,
                     totalWithdrawal: user.totalWithdrawal || 0,
@@ -88,14 +89,14 @@ export default function Withdrawal() {
 
     const handleWithdraw = async (data) => {
         try {
-            await client.post('/api/withdrawals', {
+            await client.post('/withdrawals', {
                 amount: data.amount,
                 withdraw_type: data.method // Mapping method to withdraw_type
             });
             toast.success("Withdrawal request submitted successfully!");
 
             // Refresh history
-            const { data: withdrawData } = await client.get('/api/withdrawals/me');
+            const { data: withdrawData } = await client.get('/withdrawals/me');
             const withdrawals = withdrawData.map(tx => ({
                 id: tx._id,
                 amount: tx.amount,

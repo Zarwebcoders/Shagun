@@ -19,7 +19,7 @@ const monthlyTokenDistributionSchema = new mongoose.Schema({
     level: {
         type: Number,
         required: true,
-        min: 1,
+        min: 0,
         max: 25
     },
     monthly_amount: {

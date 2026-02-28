@@ -55,7 +55,7 @@ export default function WithdrawalForm({ onSubmit, userData, kycData, savedWalle
 
     const getMaxAmount = () => {
         switch (formData.source) {
-            case "level": return userData.levelIncomeROI || 0;
+            case "level": return userData.withdrawableLevelIncome || 0;
             case "mining": return userData.monthlyROI || 0;
             case "annual": return userData.anualBonus || 0;
             default: return 0;
@@ -137,7 +137,7 @@ export default function WithdrawalForm({ onSubmit, userData, kycData, savedWalle
                                     </svg>
                                 </div>
                                 <span className="text-white text-[10px] md:text-xs font-medium">Level Income</span>
-                                <span className="text-gray-400 text-[10px] mt-1">₹{(userData.levelIncomeROI || 0).toLocaleString()}</span>
+                                <span className="text-gray-400 text-[10px] mt-1">₹{(userData.withdrawableLevelIncome || 0).toLocaleString()}</span>
                             </div>
                         </button>
                         <button

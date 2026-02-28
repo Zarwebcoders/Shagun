@@ -39,8 +39,12 @@ const productSchema = new mongoose.Schema({
         default: ""
     },
     approvel: { // Matches JSON spelling
-        type: Number,
-        default: 0
+        type: String,
+        default: '0'
+    },
+    approve: { // Actual DB property used
+        type: String,
+        default: '0'
     },
     cereate_at: { // Matches JSON spelling
         type: Date,

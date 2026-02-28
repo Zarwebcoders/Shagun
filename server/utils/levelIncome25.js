@@ -53,21 +53,18 @@ const isUserEligible = async (userId) => {
         const user = await User.findById(userId);
         if (!user) return false;
 
-        // Check if user has any approved product purchase
-        const hasPurchase = await Product.findOne({
+        // Check if user has any approved product purchase using raw DB driver to bypass Mongoose cast bugs
+        const hasPurchase = await mongoose.connection.db.collection('products').findOne({
             $and: [
                 {
                     $or: [
-                        { user_id: userId },
-                        { user_id: String(userId) },
+                        { user_id: user._id },
                         { user_id: user.user_id },
                         { user_id: user.id },
-                        { user_id: user.referral_id }
+                        { user_id: String(user._id) }
                     ]
                 },
-                {
-                    $or: [{ approve: 1 }, { approve: '1' }]
-                }
+                { approve: '1' }
             ]
         });
 
@@ -104,19 +101,76 @@ const distributeLevelIncome25 = async (buyerUserId, tokenValue, quantity, produc
             return;
         }
 
-        // Get token rate from settings
-        let tokenRate = 1;
+        // Get token rate based on product purchase date
+        let tokenRate = 5.8; // Default to latest
+        let pDate = new Date(); // Fallback if no creation date
         try {
-            const Setting = require('../models/Setting');
-            const tokenRateSetting = await Setting.findOne({ key: 'rexTokenPrice' });
-            if (tokenRateSetting) tokenRate = Number(tokenRateSetting.value);
-        } catch (setErr) {
-            console.error('Error fetching token rate, using 1:', setErr.message);
+            const product = await Product.findById(productId);
+            if (product && product.cereate_at) {
+                pDate = new Date(product.cereate_at);
+                const d6 = new Date('2025-12-06T00:00:00+05:30');
+                const d27 = new Date('2025-12-27T00:00:00+05:30');
+                const j12 = new Date('2026-01-12T00:00:00+05:30');
+
+                if (pDate < d6) tokenRate = 4.0;
+                else if (pDate >= d6 && pDate < d27) tokenRate = 4.8;
+                else if (pDate >= d27 && pDate < j12) tokenRate = 5.8;
+                else tokenRate = 7.0;
+            }
+        } catch (err) {
+            console.error('Error fetching product date', err.message);
         }
 
-        console.log(`Starting 25-level distribution for product ${productId}, base amount: ₹${baseAmount}, token rate: ₹${tokenRate}`);
+        console.log(`Starting distribution for product ${productId}, base amount: ₹${baseAmount}, token rate: ₹${tokenRate}`);
 
-        // Traverse 25 levels
+        const totalBaseTokens = baseAmount / tokenRate;
+
+        // --- LEVEL 0: BUYER (SELF-ROI) ---
+        const buyerMonthlyTokens = totalBaseTokens / 12;
+        const baseScheduleDate = pDate;
+
+        console.log(`Level 0: ${currentUser.email} (Buyer) - 100% = ${totalBaseTokens} total tokens = ${buyerMonthlyTokens} tokens/month`);
+
+        const originalBuyerStrId = currentUser.id || currentUser.user_id;
+
+        // Inject 12-month tokens upfront to dashboard balance
+        currentUser.level_income = (currentUser.level_income || 0) + totalBaseTokens;
+        currentUser.total_income = (currentUser.total_income || 0) + totalBaseTokens;
+        await currentUser.save();
+
+        try {
+            const LevelIncome = require('../models/LevelIncome');
+            await LevelIncome.create({
+                user_id: originalBuyerStrId,
+                from_user_id: originalBuyerStrId,
+                level: 0,
+                amount: totalBaseTokens,
+                product_id: productId,
+                create_at: pDate,
+                created_at: pDate
+            });
+        } catch (err) { console.error('Error logging buyer passbook', err.message); }
+
+        for (let month = 1; month <= 12; month++) {
+            const scheduledDate = new Date(baseScheduleDate);
+            scheduledDate.setMonth(scheduledDate.getMonth() + month);
+            try {
+                await MonthlyTokenDistribution.create({
+                    user_id: currentUser._id,
+                    from_purchase_id: productId,
+                    from_user_id: buyerUserId,
+                    level: 0,
+                    monthly_amount: buyerMonthlyTokens,
+                    month_number: month,
+                    status: 'pending',
+                    scheduled_date: scheduledDate
+                });
+            } catch (err) {
+                console.error('Failed to save MonthlyTokenDistribution for buyer', err.message);
+            }
+        }
+
+        // --- Traverse 25 levels ---
         for (let level = 0; level < 25; level++) {
             // Find sponsor
             if (!currentUser.sponsor_id) {
@@ -149,18 +203,32 @@ const distributeLevelIncome25 = async (buyerUserId, tokenValue, quantity, produc
             if (eligible) {
                 const monthlyPercentage = LEVEL_PERCENTAGES[level];
 
-                // Calculate rupee amount first
-                const monthlyRupeeAmount = (baseAmount * monthlyPercentage) / 100;
+                const monthlyTokenAmount = (totalBaseTokens * monthlyPercentage) / 100;
+                const totalAnnualTokens = monthlyTokenAmount * 12;
 
-                // Convert to tokens: rupee_amount ÷ token_rate
-                const monthlyTokenAmount = monthlyRupeeAmount / tokenRate;
+                console.log(`Level ${level + 1}: ${uplineUser.email} - ${monthlyPercentage}% = ${monthlyTokenAmount} tokens/month`);
 
-                console.log(`Level ${level + 1}: ${uplineUser.email} - ${monthlyPercentage}% = ₹${monthlyRupeeAmount}/month = ${monthlyTokenAmount} tokens/month`);
+                // Inject full 12 month tokens upfront
+                uplineUser.level_income = (uplineUser.level_income || 0) + totalAnnualTokens;
+                uplineUser.total_income = (uplineUser.total_income || 0) + totalAnnualTokens;
+                await uplineUser.save();
+
+                try {
+                    const uplineStrId = uplineUser.id || uplineUser.user_id;
+                    const LevelIncome = require('../models/LevelIncome');
+                    await LevelIncome.create({
+                        user_id: uplineStrId,
+                        from_user_id: originalBuyerStrId,
+                        level: level + 1,
+                        amount: totalAnnualTokens,
+                        product_id: productId,
+                        create_at: pDate
+                    });
+                } catch (err) { console.error('Error logging passbook', err.message); }
 
                 // Create 12 monthly distribution records
-                const now = new Date();
                 for (let month = 1; month <= 12; month++) {
-                    const scheduledDate = new Date(now);
+                    const scheduledDate = new Date(baseScheduleDate);
                     scheduledDate.setMonth(scheduledDate.getMonth() + month);
 
                     try {
