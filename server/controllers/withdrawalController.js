@@ -5,7 +5,7 @@ const User = require('../models/User');
 // @route   POST /api/withdrawals
 // @access  Private
 const createWithdrawal = async (req, res) => {
-    const { amount, withdraw_type } = req.body;
+    const { amount, withdraw_type, method, source, bankDetails } = req.body;
 
     if (!amount || !withdraw_type) {
         return res.status(400).json({ message: 'Please provide amount and withdrawal type' });
@@ -18,7 +18,7 @@ const createWithdrawal = async (req, res) => {
 
             // Get user's monthly distributions
             const distributions = await MonthlyTokenDistribution.find({
-                user_id: req.user.id,
+                user_id: req.user._id, // Fix CastError, use ObjectId
                 status: 'pending'
             });
 
@@ -83,6 +83,9 @@ const createWithdrawal = async (req, res) => {
             user_id: req.user.id,
             amount,
             withdraw_type,
+            method,
+            source,
+            bankDetails,
             approve: 2 // Default to pending
         });
 

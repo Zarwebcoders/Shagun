@@ -201,7 +201,7 @@ const getDashboardStats = async (req, res) => {
 // @access  Private
 const getAvailableWithdrawal = async (req, res) => {
     try {
-        const userId = req.user.id || req.user._id;
+        const userId = req.user._id; // Ensure we use ObjectId for reference lookup
         const MonthlyTokenDistribution = require('../models/MonthlyTokenDistribution');
         const User = require('../models/User');
 

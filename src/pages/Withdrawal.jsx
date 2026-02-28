@@ -30,19 +30,21 @@ export default function Withdrawal() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [userRes, withdrawRes, kycRes, walletRes] = await Promise.all([
+                const [userRes, withdrawRes, kycRes, walletRes, levelAvailRes] = await Promise.all([
                     client.get('/auth/me'),
                     client.get('/withdrawals/me'), // Fixed path
                     client.get('/kyc/me').catch(() => ({ data: null })),
-                    client.get('/wallet/me').catch(() => ({ data: null }))
+                    client.get('/wallet/me').catch(() => ({ data: null })),
+                    client.get('/level-income/available').catch(() => ({ data: { available: 0 } }))
                 ]);
 
                 const user = userRes.data;
+                const levelAvailable = levelAvailRes.data?.available || 0;
                 setUserData({
                     name: user.full_name,
                     monthlyROI: user.mining_bonus || 0,
                     levelIncomeROI: user.level_income || 0,
-                    withdrawableLevelIncome: user.withdrawable_level_income || 0,
+                    withdrawableLevelIncome: levelAvailable > 0 ? levelAvailable : 0,
                     normalWithdrawal: user.normalWithdrawal || 0,
                     sosWithdrawal: user.shopping_tokens || 0,
                     totalWithdrawal: user.totalWithdrawal || 0,
@@ -58,8 +60,8 @@ export default function Withdrawal() {
                     amount: tx.amount,
                     date: new Date(tx.create_at).toISOString().split('T')[0],
                     status: tx.approve === 1 ? 'Completed' : tx.approve === 0 ? 'Rejected' : 'Pending',
-                    method: tx.withdraw_type,
-                    source: "Wallet Balance" // Default source since schema doesn't have it, or we can add it later if needed
+                    method: tx.method || tx.withdraw_type || "Unknown",
+                    source: tx.source || (tx.withdraw_type === 'level_income' ? "Level Income" : "Wallet Balance")
                 }));
                 setWithdrawalHistory(withdrawals);
 
@@ -91,7 +93,10 @@ export default function Withdrawal() {
         try {
             await client.post('/withdrawals', {
                 amount: data.amount,
-                withdraw_type: data.method // Mapping method to withdraw_type
+                withdraw_type: data.source === "Level Income" ? "level_income" : data.source === "Mining Bonus" ? "mining_bonus" : "annual_bonus",
+                method: data.method,
+                source: data.source,
+                bankDetails: data.bankDetails
             });
             toast.success("Withdrawal request submitted successfully!");
 
@@ -102,8 +107,8 @@ export default function Withdrawal() {
                 amount: tx.amount,
                 date: new Date(tx.create_at).toISOString().split('T')[0],
                 status: tx.approve === 1 ? 'Completed' : tx.approve === 0 ? 'Rejected' : 'Pending',
-                method: tx.withdraw_type,
-                source: "Wallet Balance"
+                method: tx.method || tx.withdraw_type || "Unknown",
+                source: tx.source || (tx.withdraw_type === 'level_income' ? "Level Income" : "Wallet Balance")
             }));
             setWithdrawalHistory(withdrawals);
 
