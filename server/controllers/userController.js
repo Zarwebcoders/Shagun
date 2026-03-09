@@ -167,11 +167,11 @@ const getDownline = async (req, res) => {
             {
                 $graphLookup: {
                     from: "users",
-                    startWith: "$_id",
-                    connectFromField: "_id",
+                    startWith: "$referral_id",
+                    connectFromField: "referral_id",
                     connectToField: "sponsor_id",
                     as: "network",
-                    maxDepth: 4,
+                    maxDepth: 9, // up to 10 levels
                     depthField: "level"
                 }
             },

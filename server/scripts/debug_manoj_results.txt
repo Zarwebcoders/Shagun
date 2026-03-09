@@ -1,0 +1,14 @@
+Connected to DB
+Manoj Info: Name=MANOJ KUMAR CHOURE , ID=47, user_id=SGN047, _id=699edb91092b0b5232819ecf, sponsor_id=SGN9017
+Manoj's Direct Sponsor: Ripalkumar Doshi  (ripaldoshi48@gmail.com), ID=17, user_id=SGN017, sponsor_id=SGN9008
+Manoj's Grand Sponsor (Level 2 recipient): DILIPKUMAR DAHYABHAI GANDHI (dilipgandhi25@gmail.com), ID=8
+Found 9 income records from Manoj:
+- Recipient: MANOJ KUMAR CHOURE  (choure.manoj69@gmail.com), Level: 0, Amount: 25000
+- Recipient: MANOJ KUMAR CHOURE  (choure.manoj69@gmail.com), Level: 0, Amount: 62500
+- Recipient: Ripalkumar Doshi  (ripaldoshi48@gmail.com), Level: 1, Amount: 27000
+- Recipient: DILIPKUMAR DAHYABHAI GANDHI (dilipgandhi25@gmail.com), Level: 2, Amount: 13500
+- Recipient: SURESHKUMAR HIRALAL PATEL (shpatel35@gmail.com), Level: 3, Amount: 9000
+- Recipient: MANOJ KUMAR CHOURE  (choure.manoj69@gmail.com), Level: 0, Amount: 17241.37931034483
+- Recipient: Ripalkumar Doshi  (ripaldoshi48@gmail.com), Level: 1, Amount: 7448.275862068967
+- Recipient: DILIPKUMAR DAHYABHAI GANDHI (dilipgandhi25@gmail.com), Level: 2, Amount: 3724.1379310344837
+- Recipient: SURESHKUMAR HIRALAL PATEL (shpatel35@gmail.com), Level: 3, Amount: 2482.7586206896553

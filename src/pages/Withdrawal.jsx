@@ -30,22 +30,27 @@ export default function Withdrawal() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [userRes, withdrawRes, kycRes, walletRes, levelAvailRes] = await Promise.all([
+                const [userRes, withdrawRes, kycRes, walletRes, levelAvailRes, levelRecordsRes] = await Promise.all([
                     client.get('/auth/me'),
                     client.get('/withdrawals/me'), // Fixed path
                     client.get('/kyc/me').catch(() => ({ data: null })),
                     client.get('/wallet/me').catch(() => ({ data: null })),
-                    client.get('/level-income/available').catch(() => ({ data: { available: 0 } }))
+                    client.get('/level-income/available').catch(() => ({ data: { available: 0 } })),
+                    client.get('/level-income').catch(() => ({ data: [] }))
                 ]);
 
                 const user = userRes.data;
                 const levelAvailable = levelAvailRes.data?.available || 0;
-                const monthlyNetwork = levelAvailRes.data?.monthlyNetworkIncome || 0;
+
+                // Calculate Exact Total Level Income to match the Level Income Page
+                const levelRecords = levelRecordsRes.data || [];
+                const exactTotalLevelIncome = levelRecords.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+
                 setUserData({
                     name: user.full_name,
                     monthlyROI: user.mining_bonus || 0,
-                    levelIncomeROI: monthlyNetwork > 0 ? monthlyNetwork : (user.level_income || 0),
-                    withdrawableLevelIncome: levelAvailable > 0 ? levelAvailable : 0,
+                    levelIncomeROI: exactTotalLevelIncome, // Show the overall total in the top box
+                    withdrawableLevelIncome: levelAvailable > 0 ? levelAvailable : 0, // Show the 15-day available amount in the modal
                     normalWithdrawal: user.normalWithdrawal || 0,
                     sosWithdrawal: user.shopping_tokens || 0,
                     totalWithdrawal: user.totalWithdrawal || 0,

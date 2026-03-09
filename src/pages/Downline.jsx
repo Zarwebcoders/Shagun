@@ -23,7 +23,7 @@ export default function Downline() {
                 const [userRes, downlineRes, incomeRes] = await Promise.all([
                     client.get('/auth/me'),
                     client.get('/users/downline'),
-                    client.get('/income/level-income').catch(() => ({ data: [] }))
+                    client.get('/level-income').catch(() => ({ data: [] }))
                 ]);
 
                 const userData = userRes.data;

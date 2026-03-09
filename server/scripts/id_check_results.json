@@ -1,0 +1,33 @@
+{
+  "17": [
+    {
+      "name": "Ripalkumar Doshi ",
+      "email": "ripaldoshi48@gmail.com",
+      "id": "17",
+      "user_id": "SGN017",
+      "referral_id": "SGN9017",
+      "sponsor_id": "SGN9008"
+    }
+  ],
+  "9017": [],
+  "SGN017": [
+    {
+      "name": "Ripalkumar Doshi ",
+      "email": "ripaldoshi48@gmail.com",
+      "id": "17",
+      "user_id": "SGN017",
+      "referral_id": "SGN9017",
+      "sponsor_id": "SGN9008"
+    }
+  ],
+  "SGN9017": [
+    {
+      "name": "Ripalkumar Doshi ",
+      "email": "ripaldoshi48@gmail.com",
+      "id": "17",
+      "user_id": "SGN017",
+      "referral_id": "SGN9017",
+      "sponsor_id": "SGN9008"
+    }
+  ]
+}
