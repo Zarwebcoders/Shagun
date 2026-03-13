@@ -153,7 +153,7 @@ const distributeLevelIncome25 = async (buyerUserId, tokenValue, quantity, produc
 
         for (let inst = 1; inst <= 24; inst++) {
             const scheduledDate = new Date(baseScheduleDate);
-            scheduledDate.setDate(scheduledDate.getDate() + (inst * 15)); // 15-day intervals
+            scheduledDate.setDate(scheduledDate.getDate() + ((inst - 1) * 15)); // 15-day intervals, 1st one immediate
             try {
                 await MonthlyTokenDistribution.create({
                     user_id: currentUser._id,
@@ -229,7 +229,7 @@ const distributeLevelIncome25 = async (buyerUserId, tokenValue, quantity, produc
                 // Create 24 installment distribution records
                 for (let inst = 1; inst <= 24; inst++) {
                     const scheduledDate = new Date(baseScheduleDate);
-                    scheduledDate.setDate(scheduledDate.getDate() + (inst * 15));
+                    scheduledDate.setDate(scheduledDate.getDate() + ((inst - 1) * 15)); // 1st installment immediate
 
                     try {
                         await MonthlyTokenDistribution.create({

@@ -41,9 +41,9 @@ export default function WithdrawalRequests() {
 
     const filteredRequests = requests.filter(req => {
         if (filter === 'all') return true;
-        if (filter === 'pending') return req.approve === 2;
-        if (filter === 'approved') return req.approve === 1;
-        if (filter === 'rejected') return req.approve === 0;
+        if (filter === 'pending') return req.approve == 2;
+        if (filter === 'approved') return req.approve == 1;
+        if (filter === 'rejected') return req.approve == 0;
         return true;
     });
 
@@ -141,13 +141,13 @@ export default function WithdrawalRequests() {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${req.approve === 1
+                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${req.approve == 1
                                                 ? 'bg-green-500/10 text-green-500 border-green-500/20'
-                                                : req.approve === 0
+                                                : req.approve == 0
                                                     ? 'bg-red-500/10 text-red-500 border-red-500/20'
                                                     : 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
                                                 }`}>
-                                                {req.approve === 1 ? 'Approved' : req.approve === 0 ? 'Rejected' : 'Pending'}
+                                                {req.approve == 1 ? 'Approved' : req.approve == 0 ? 'Rejected' : 'Pending'}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-right">

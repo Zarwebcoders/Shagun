@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Withdrawal = require('../models/Withdrawal');
 const User = require('../models/User');
 
@@ -13,11 +14,12 @@ const createWithdrawal = async (req, res) => {
 
     try {
         // Find user with robust ID lookup
+        const userId = req.user._id || req.user.id;
         const user = await User.findOne({
             $or: [
-                { _id: mongoose.Types.ObjectId.isValid(req.user.id) ? req.user.id : null },
-                { id: req.user.id },
-                { user_id: req.user.id }
+                { _id: mongoose.Types.ObjectId.isValid(userId) ? userId : null },
+                { id: userId },
+                { user_id: userId }
             ].filter(q => q._id || q.id || q.user_id)
         });
 
@@ -124,11 +126,12 @@ const getAllWithdrawals = async (req, res) => {
         // Get unique user_ids from withdrawals
         const userIds = [...new Set(withdrawals.map(w => w.user_id))];
 
-        // Find users with these custom user_ids (search in both user_id and id fields)
+        // Find users with these custom user_ids
         const users = await User.find({
             $or: [
                 { user_id: { $in: userIds } },
-                { id: { $in: userIds } }
+                { id: { $in: userIds } },
+                { _id: { $in: userIds.filter(id => mongoose.Types.ObjectId.isValid(id)) } }
             ]
         })
             .select('user_id id full_name email mobile')
@@ -139,6 +142,7 @@ const getAllWithdrawals = async (req, res) => {
         users.forEach(user => {
             if (user.user_id) userMap[user.user_id] = user;
             if (user.id) userMap[user.id] = user;
+            userMap[user._id.toString()] = user;
         });
 
         // Attach user details to withdrawals
@@ -195,35 +199,6 @@ const updateWithdrawalStatus = async (req, res) => {
             }
 
             await user.save();
-
-            // 2. Mark Distribution Records as Paid for ROI/Level
-            if (type === 'level_income' || type === 'mining_bonus') {
-                const MonthlyTokenDistribution = require('../models/MonthlyTokenDistribution');
-                const now = new Date();
-                
-                // Get matured distributions
-                const distributions = await MonthlyTokenDistribution.find({
-                    user_id: user._id,
-                    status: 'pending',
-                    scheduled_date: { $lte: now },
-                    level: type === 'level_income' ? { $gt: 0 } : 0
-                }).sort({ scheduled_date: 1 });
-
-                let remainingToMark = amount;
-                for (const dist of distributions) {
-                    if (remainingToMark <= 0) break;
-                    
-                    const markAmount = Math.min(dist.monthly_amount, remainingToMark);
-                    // If full amount is marked, set to paid. If partial? 
-                    // Usually we mark the whole record if covered. 
-                    // The distribution logic usually creates records per installment.
-                    await MonthlyTokenDistribution.findByIdAndUpdate(dist._id, { 
-                        status: 'paid', 
-                        paid_date: new Date() 
-                    });
-                    remainingToMark -= dist.monthly_amount;
-                }
-            }
 
             console.log(`Withdrawal ${withdrawal._id} approved and deducted from ${user.email}`);
         }

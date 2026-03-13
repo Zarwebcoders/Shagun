@@ -43,6 +43,9 @@ export default function Withdrawal() {
 
                 const user = userRes.data;
                 const levelAvailable = levelAvailRes.data?.available || 0;
+                // Calculate Exact Total Level Income to match the Level Income Page
+                const levelRecords = levelRecordsRes.data || [];
+                const exactTotalLevelIncome = levelRecords.reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
                 // Calculate withdrawal statistics
                 const completedWithdrawals = withdrawRes.data.filter(tx => tx.approve === 1 || tx.approve === "1");

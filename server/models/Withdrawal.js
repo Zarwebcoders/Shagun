@@ -2,10 +2,8 @@ const mongoose = require('mongoose');
 
 const withdrawalSchema = new mongoose.Schema({
     user_id: {
-        user_id: {
-            type: String,
-            required: true
-        },
+        type: String,
+        required: true
     },
     amount: {
         type: Number,

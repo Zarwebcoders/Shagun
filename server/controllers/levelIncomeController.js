@@ -179,42 +179,45 @@ const getDashboardStats = async (req, res) => {
         const MonthlyTokenDistribution = require('../models/MonthlyTokenDistribution');
         const User = require('../models/User');
 
-        // Get all monthly distributions for this user
-        const distributions = await MonthlyTokenDistribution.find({
-            user_id: userId,
-            status: 'pending' // Only count pending (future) distributions
+        // Fetch all approved withdrawals for accurate net calculation
+        const Withdrawal = require('../models/Withdrawal');
+        const approvedWithdrawals = await Withdrawal.find({
+            user_id: { $in: [userId.toString(), req.user.user_id, req.user.id].filter(id => id) },
+            approve: "1"
         });
 
-        // Calculate total annual income (sum of all pending installments)
-        const totalPending = distributions.reduce((sum, dist) => {
-            if (dist.level > 0) return sum + dist.monthly_amount;
-            return sum;
-        }, 0);
+        const withdrawnLevel = approvedWithdrawals
+            .filter(w => w.withdraw_type === 'level_income')
+            .reduce((sum, w) => sum + w.amount, 0);
+        
+        const withdrawnMining = approvedWithdrawals
+            .filter(w => w.withdraw_type === 'mining_bonus')
+            .reduce((sum, w) => sum + w.amount, 0);
 
-        // Sum up matured installments (scheduled_date <= now)
+        // Sum up ALL matured installments (status doesn't matter anymore, we subtract total withdrawn)
         const now = new Date();
-        const availableNow = distributions.reduce((sum, dist) => {
-            if (dist.status === 'pending' && dist.scheduled_date <= now && dist.level > 0) {
-                return sum + dist.monthly_amount;
-            }
+        const totalMaturedLevel = distributions.reduce((sum, dist) => {
+            if (dist.scheduled_date <= now && dist.level > 0) return sum + dist.monthly_amount;
             return sum;
         }, 0);
 
-        const availableROI = distributions.reduce((sum, dist) => {
-            if (dist.status === 'pending' && dist.scheduled_date <= now && dist.level === 0) {
-                return sum + dist.monthly_amount;
-            }
+        const totalMaturedMining = distributions.reduce((sum, dist) => {
+            if (dist.scheduled_date <= now && dist.level === 0) return sum + dist.monthly_amount;
             return sum;
         }, 0);
+
+        const user = await User.findById(userId);
+        const withdrawnCount = user?.level_income_withdrawn_count || 0;
+        const lastWithdrawal = user?.level_income_last_withdrawal || null;
 
         res.json({
             totalAnnual: totalPending,
-            availableNow: Math.round(availableNow * 100) / 100,
-            availableROI: Math.round(availableROI * 100) / 100,
+            availableNow: Math.round(Math.max(0, totalMaturedLevel - withdrawnLevel) * 100) / 100,
+            availableROI: Math.round(Math.max(0, totalMaturedMining - withdrawnMining) * 100) / 100,
             withdrawnCount,
             maxWithdrawals: 24,
             lastWithdrawalDate: lastWithdrawal,
-            canWithdraw: (availableNow + availableROI) >= 100,
+            canWithdraw: (totalMaturedLevel - withdrawnLevel + totalMaturedMining - withdrawnMining) >= 100,
         });
     } catch (error) {
         console.error('Dashboard stats error:', error);
@@ -231,27 +234,36 @@ const getAvailableWithdrawal = async (req, res) => {
         const MonthlyTokenDistribution = require('../models/MonthlyTokenDistribution');
         const User = require('../models/User');
 
-        // Get all monthly distributions
-        const distributions = await MonthlyTokenDistribution.find({
-            user_id: userId,
-            status: 'pending'
+        // Get ALL monthly distributions
+        const distributions = await MonthlyTokenDistribution.find({ user_id: userId });
+
+        const Withdrawal = require('../models/Withdrawal');
+        const approvedWithdrawals = await Withdrawal.find({
+            user_id: { $in: [userId.toString(), req.user.user_id, req.user.id].filter(id => id) },
+            approve: "1"
         });
 
+        const withdrawnLevel = approvedWithdrawals
+            .filter(w => w.withdraw_type === 'level_income')
+            .reduce((sum, w) => sum + w.amount, 0);
+        
+        const withdrawnMining = approvedWithdrawals
+            .filter(w => w.withdraw_type === 'mining_bonus')
+            .reduce((sum, w) => sum + w.amount, 0);
+
         const now = new Date();
-        const available = distributions.reduce((sum, dist) => {
-            if (dist.status === 'pending' && dist.scheduled_date <= now && dist.level > 0) {
-                return sum + dist.monthly_amount;
-            }
+        const totalMaturedLevel = distributions.reduce((sum, dist) => {
+            if (dist.scheduled_date <= now && dist.level > 0) return sum + dist.monthly_amount;
             return sum;
         }, 0);
 
-        const availableROI = distributions.reduce((sum, dist) => {
-            if (dist.status === 'pending' && dist.scheduled_date <= now && dist.level === 0) {
-                return sum + dist.monthly_amount;
-            }
+        const totalMaturedMining = distributions.reduce((sum, dist) => {
+            if (dist.scheduled_date <= now && dist.level === 0) return sum + dist.monthly_amount;
             return sum;
         }, 0);
 
+        const available = Math.max(0, totalMaturedLevel - withdrawnLevel);
+        const availableROI = Math.max(0, totalMaturedMining - withdrawnMining);
         const canWithdraw = (available + availableROI) >= 100;
 
         res.json({
