@@ -8,8 +8,10 @@ import WithdrawalForm from "../components/WithdrawalForm"
 export default function Withdrawal() {
     const [userData, setUserData] = useState({
         name: "",
-        monthlyROI: 0,
+        totalMiningBonus: 0,
         levelIncomeROI: 0,
+        withdrawableLevelIncome: 0,
+        withdrawableROI: 0,
         normalWithdrawal: 0,
         sosWithdrawal: 0,
         totalWithdrawal: 0,
@@ -48,9 +50,10 @@ export default function Withdrawal() {
 
                 setUserData({
                     name: user.full_name,
-                    monthlyROI: user.mining_bonus || 0,
+                    totalMiningBonus: user.mining_bonus || 0, // Show total annual ROI in top box
                     levelIncomeROI: exactTotalLevelIncome, // Show the overall total in the top box
-                    withdrawableLevelIncome: levelAvailable > 0 ? levelAvailable : 0, // Show the 15-day available amount in the modal
+                    withdrawableLevelIncome: levelAvailable > 0 ? levelAvailable : 0, 
+                    withdrawableROI: levelAvailRes.data?.availableROI || 0,
                     normalWithdrawal: user.normalWithdrawal || 0,
                     sosWithdrawal: user.shopping_tokens || 0,
                     totalWithdrawal: user.totalWithdrawal || 0,
@@ -165,7 +168,7 @@ export default function Withdrawal() {
                         </div>
                     </div>
                     <div className="mb-2">
-                        <span className="text-2xl md:text-3xl font-bold text-white">₹{userData.monthlyROI.toLocaleString()}</span>
+                        <span className="text-2xl md:text-3xl font-bold text-white">₹{userData.totalMiningBonus.toLocaleString()}</span>
                     </div>
                     <div className="w-full bg-[#444]/50 rounded-full h-1.5 md:h-2">
                         <div className="bg-gradient-brand h-1.5 md:h-2 rounded-full" style={{ width: "75%" }}></div>

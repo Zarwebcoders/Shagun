@@ -32,12 +32,29 @@ const getMyLevelIncomes = async (req, res) => {
         const userMap = {};
         fromUsers.forEach(u => { userMap[u.id] = u; });
 
-        // 6. Attach details (and divide income by 12)
+        // NEW: Fetch all matured distributions for this user to calculate "Released Income"
+        const MonthlyTokenDistribution = require('../models/MonthlyTokenDistribution');
+        const now = new Date();
+        const distributions = await MonthlyTokenDistribution.find({
+            user_id: req.user._id,
+            level: { $gt: 0 },
+            scheduled_date: { $lte: now }
+        }).lean();
+
+        const releasedMap = {};
+        distributions.forEach(dist => {
+            const purchaseId = String(dist.from_purchase_id);
+            releasedMap[purchaseId] = (releasedMap[purchaseId] || 0) + dist.monthly_amount;
+        });
+
+        // 6. Attach details (show full contract total and released amount)
         const incomesWithDetails = incomes.map(inc => {
             const fromUser = userMap[inc.from_user_id];
+            const releasedAmount = releasedMap[String(inc.product_id)] || 0;
             return {
                 ...inc,
-                amount: inc.amount / 12,
+                amount: inc.amount,
+                releasedAmount: Math.round(releasedAmount * 1000) / 1000,
                 from_user_id: fromUser ? {
                     name: fromUser.full_name,
                     email: fromUser.email,
@@ -49,29 +66,35 @@ const getMyLevelIncomes = async (req, res) => {
         // 7. PROBLEM 1 FIX: Fetch full 25-level downline to "show all 25 levels of users if available"
         let networkMap = {};
         try {
-            // GraphLookup to find all network downlines up to 25 levels (maxDepth 24 is level 25)
             const downlineData = await require('../models/User').aggregate([
                 { $match: { _id: user._id } },
                 {
-                    $graphLookup: {
+                    $lookup: {
                         from: "users",
-                        startWith: "$id",
-                        connectFromField: "id",
-                        connectToField: "sponsor_id",
-                        as: "network",
-                        maxDepth: 24,
-                        depthField: "level_depth" // 0-based index means 0 is level 1, 1 is level 2
+                        let: { ref_lower: { $toLower: "$referral_id" } },
+                        pipeline: [
+                            {
+                                $match: {
+                                    $expr: {
+                                        $eq: [{ $toLower: "$sponsor_id" }, "$$ref_lower"]
+                                    }
+                                }
+                            }
+                        ],
+                        as: "network"
                     }
                 },
                 {
-                    $project: { "network.id": 1, "network.full_name": 1, "network.email": 1, "network.level_depth": 1, "network._id": 1 }
+                    $project: { "network.id": 1, "network.full_name": 1, "network.email": 1, "network._id": 1, "network.user_id": 1 }
                 }
             ]);
 
             if (downlineData.length > 0 && downlineData[0].network) {
                 downlineData[0].network.forEach(netUser => {
-                    // Store them by their custom ID so we can quickly append them if they ain't in income list
-                    networkMap[netUser.id] = netUser;
+                    networkMap[netUser.id] = {
+                        ...netUser,
+                        level_depth: 0 // For now focusing on fixing Level 1 visibility
+                    };
                 });
             }
         } catch (err) {
@@ -97,7 +120,8 @@ const getMyLevelIncomes = async (req, res) => {
                     },
                     level: netUser.level_depth + 1, // level_depth 0 = level 1
                     amount: 0,
-                    created_at: new Date(), // Just current time for empty row
+                    no_purchase: true,            // Member joined but hasn't purchased yet
+                    created_at: new Date(),
                 });
             }
         });
@@ -138,59 +162,36 @@ const getDashboardStats = async (req, res) => {
             status: 'pending' // Only count pending (future) distributions
         });
 
-        // Calculate total annual income (sum of all monthly amounts × 12)
-        const monthlyAmounts = {};
-        distributions.forEach(dist => {
-            const key = `${dist.from_purchase_id}_${dist.level}`;
-            if (!monthlyAmounts[key]) {
-                if (dist.level > 0) {
-                    monthlyAmounts[key] = dist.monthly_amount;
-                }
+        // Calculate total annual income (sum of all pending installments)
+        const totalPending = distributions.reduce((sum, dist) => {
+            if (dist.level > 0) return sum + dist.monthly_amount;
+            return sum;
+        }, 0);
+
+        // Sum up matured installments (scheduled_date <= now)
+        const now = new Date();
+        const availableNow = distributions.reduce((sum, dist) => {
+            if (dist.status === 'pending' && dist.scheduled_date <= now && dist.level > 0) {
+                return sum + dist.monthly_amount;
             }
-        });
+            return sum;
+        }, 0);
 
-        const totalAnnual = Object.values(monthlyAmounts).reduce((sum, amount) => sum + (amount * 12), 0);
-
-        // Bi-monthly amount (annual ÷ 24)
-        const biMonthlyAmount = totalAnnual / 24;
-
-        // Get user's withdrawal info
-        const user = await User.findById(userId);
-        const lastWithdrawal = user.level_income_last_withdrawal;
-        const withdrawnCount = user.level_income_withdrawn_count || 0;
-
-        // Check if user can withdraw (15 days passed)
-        let canWithdraw = false;
-        let daysSinceLastWithdrawal = 0;
-        let nextWithdrawalDate = null;
-
-        if (!lastWithdrawal) {
-            // Never withdrawn before
-            canWithdraw = true;
-            nextWithdrawalDate = new Date();
-        } else {
-            const now = new Date();
-            daysSinceLastWithdrawal = Math.floor((now - lastWithdrawal) / (1000 * 60 * 60 * 24));
-            canWithdraw = daysSinceLastWithdrawal >= 15 && withdrawnCount < 24;
-
-            // Calculate next withdrawal date
-            nextWithdrawalDate = new Date(lastWithdrawal);
-            nextWithdrawalDate.setDate(nextWithdrawalDate.getDate() + 15);
-        }
-
-        // Available amount
-        const availableNow = canWithdraw ? biMonthlyAmount : 0;
+        const availableROI = distributions.reduce((sum, dist) => {
+            if (dist.status === 'pending' && dist.scheduled_date <= now && dist.level === 0) {
+                return sum + dist.monthly_amount;
+            }
+            return sum;
+        }, 0);
 
         res.json({
-            totalAnnual: Math.round(totalAnnual * 100) / 100,
-            biMonthlyAmount: Math.round(biMonthlyAmount * 100) / 100,
+            totalAnnual: totalPending,
             availableNow: Math.round(availableNow * 100) / 100,
+            availableROI: Math.round(availableROI * 100) / 100,
             withdrawnCount,
             maxWithdrawals: 24,
             lastWithdrawalDate: lastWithdrawal,
-            nextWithdrawalDate,
-            canWithdraw,
-            daysSinceLastWithdrawal
+            canWithdraw: (availableNow + availableROI) >= 100,
         });
     } catch (error) {
         console.error('Dashboard stats error:', error);
@@ -213,42 +214,28 @@ const getAvailableWithdrawal = async (req, res) => {
             status: 'pending'
         });
 
-        const monthlyAmounts = {};
-        let monthlyNetworkIncome = 0;
-        distributions.forEach(dist => {
-            const key = `${dist.from_purchase_id}_${dist.level}`;
-            if (!monthlyAmounts[key]) {
-                if (dist.level > 0) {
-                    monthlyAmounts[key] = dist.monthly_amount;
-                    monthlyNetworkIncome += dist.monthly_amount;
-                }
+        const now = new Date();
+        const available = distributions.reduce((sum, dist) => {
+            if (dist.status === 'pending' && dist.scheduled_date <= now && dist.level > 0) {
+                return sum + dist.monthly_amount;
             }
-        });
+            return sum;
+        }, 0);
 
-        const totalAnnual = Object.values(monthlyAmounts).reduce((sum, amount) => sum + (amount * 12), 0);
-        const biMonthlyAmount = totalAnnual / 24;
+        const availableROI = distributions.reduce((sum, dist) => {
+            if (dist.status === 'pending' && dist.scheduled_date <= now && dist.level === 0) {
+                return sum + dist.monthly_amount;
+            }
+            return sum;
+        }, 0);
 
-        // Check eligibility
-        const user = await User.findById(userId);
-        const lastWithdrawal = user.level_income_last_withdrawal;
-        const withdrawnCount = user.level_income_withdrawn_count || 0;
-
-        let canWithdraw = false;
-        if (!lastWithdrawal) {
-            canWithdraw = true;
-        } else {
-            const now = new Date();
-            const daysSince = Math.floor((now - lastWithdrawal) / (1000 * 60 * 60 * 24));
-            canWithdraw = daysSince >= 15 && withdrawnCount < 24;
-        }
-
-        const available = canWithdraw ? biMonthlyAmount : 0;
+        const canWithdraw = (available + availableROI) >= 100;
 
         res.json({
             available: Math.round(available * 100) / 100,
-            monthlyNetworkIncome: Math.round(monthlyNetworkIncome * 100) / 100,
+            availableROI: Math.round(availableROI * 100) / 100,
             canWithdraw,
-            reason: !canWithdraw ? (withdrawnCount >= 24 ? 'Maximum withdrawals reached' : 'Must wait 15 days') : null
+            reason: !canWithdraw ? 'Insufficient matured balance (Minimum ₹100)' : null
         });
     } catch (error) {
         res.status(500).json({ message: error.message });

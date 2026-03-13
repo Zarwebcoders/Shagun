@@ -24,7 +24,7 @@ export default function Login({ setIsAuthenticated, setIsAdminAuthenticated }) {
                 // Store user data in localStorage
                 localStorage.setItem('user', JSON.stringify(data));
 
-                if (data.is_admin === 1) {
+                if (data.is_admin === 1 || data.is_admin === "1") {
                     setIsAdminAuthenticated(true)
                     navigate("/admin/dashboard")
                 } else {

@@ -56,7 +56,7 @@ export default function WithdrawalForm({ onSubmit, userData, kycData, savedWalle
     const getMaxAmount = () => {
         switch (formData.source) {
             case "level": return userData.withdrawableLevelIncome || 0;
-            case "mining": return userData.monthlyROI || 0;
+            case "mining": return userData.withdrawableROI || 0;
             case "annual": return userData.anualBonus || 0;
             default: return 0;
         }
@@ -154,7 +154,7 @@ export default function WithdrawalForm({ onSubmit, userData, kycData, savedWalle
                                     </svg>
                                 </div>
                                 <span className="text-white text-[10px] md:text-xs font-medium">Mining Bonus</span>
-                                <span className="text-gray-400 text-[10px] mt-1">₹{(userData.monthlyROI || 0).toLocaleString()}</span>
+                                <span className="text-gray-400 text-[10px] mt-1">₹{(userData.withdrawableROI || 0).toLocaleString()}</span>
                             </div>
                         </button>
                         <button
@@ -188,7 +188,7 @@ export default function WithdrawalForm({ onSubmit, userData, kycData, savedWalle
                             onClick={handleMaxClick}
                             className="text-xs px-2 md:px-3 py-1 bg-teal-500/20 text-teal-400 rounded hover:bg-teal-500/30 transition-colors"
                         >
-                            MAX: {getMaxAmount().toLocaleString()}
+                            MAX: {(formData.source === 'level' ? userData.withdrawableLevelIncome : formData.source === 'mining' ? userData.withdrawableROI : userData.anualBonus || 0).toLocaleString()}
                         </button>
                     </div>
                     <div className="relative">
@@ -209,7 +209,7 @@ export default function WithdrawalForm({ onSubmit, userData, kycData, savedWalle
                     </div>
                     <div className="flex justify-between mt-1 md:mt-2">
                         <span className="text-xs text-gray-400">Minimum: ₹100</span>
-                        <span className="text-xs text-gray-400">Available: {getMaxAmount().toLocaleString()}</span>
+                        <span className="text-xs text-gray-400">Available: {(formData.source === 'level' ? userData.withdrawableLevelIncome : formData.source === 'mining' ? userData.withdrawableROI : userData.anualBonus || 0).toLocaleString()}</span>
                     </div>
                 </div>
 

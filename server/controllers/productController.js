@@ -18,22 +18,27 @@ const createProduct = async (req, res) => {
     try {
         console.log("DEBUG: createProduct called with:", req.body);
 
-        // Validate product_id
-        if (!product_id || !PRODUCT_DEFINITIONS[product_id]) {
+        // Validate product_id (Backend IDs are numeric 1-4)
+        const numericPid = Number(product_id);
+        if (!product_id || !PRODUCT_DEFINITIONS[numericPid]) {
+            console.warn(`Create Product Failed: Invalid product_id "${product_id}"`);
             return res.status(400).json({ message: 'Invalid product_id. Must be 1-4.' });
         }
+
+        // Use the validated numeric ID
+        product_id = numericPid;
 
         const productDef = PRODUCT_DEFINITIONS[product_id];
         const qty = Number(quantity) || 1;
 
-        // Get token rate from settings
+        // Get token rate from settings (Always using rexTokenPrice for consistency)
         const tokenRateSetting = await Setting.findOne({ key: 'rexTokenPrice' });
-        const tokenRate = tokenRateSetting ? Number(tokenRateSetting.value) : 1;
+        const tokenRate = tokenRateSetting ? Number(tokenRateSetting.value) : 7.0;
 
         // Calculate token amount: (token_value × quantity) ÷ token_rate
         const tokenAmount = (productDef.tokenValue * qty) / tokenRate;
 
-        console.log(`Product: ${productDef.name}, Qty: ${qty}, Token Value: ${productDef.tokenValue}, Token Rate: ${tokenRate}, Tokens: ${tokenAmount}`);
+        console.log(`Product: ${productDef.name}, Qty: ${qty}, Token Value: ${productDef.tokenValue}, Configured Token Rate: ₹${tokenRate}, Calculated Tokens: ${tokenAmount}`);
 
         // Create Product Record
         const newProduct = await Product.create({
@@ -65,7 +70,7 @@ const createProduct = async (req, res) => {
 
         // Create Transaction Record
         await Transaction.create({
-            user: req.user.id,
+            user: req.user._id, // Use ObjectId instead of string ID
             type: 'investment',
             amount: productDef.price * qty,
             description: `Purchase of ${qty} x ${productDef.name} (Pending Approval)`,
@@ -90,9 +95,9 @@ const getProducts = async (req, res) => {
         const page = Number(req.query.page) || 1;
         const search = req.query.search || '';
 
-        // Build query
+        // Build query - check all possible user ID fields to ensure visibility
         const query = {
-            user_id: req.user.id
+            user_id: { $in: [req.user.id, req.user.user_id, req.user._id.toString()] }
         };
 
         // Add search condition if exists

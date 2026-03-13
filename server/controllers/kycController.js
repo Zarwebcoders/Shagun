@@ -60,7 +60,7 @@ const getMyKYC = async (req, res) => {
     try {
         const kyc = await KYC.findOne({ user_id: req.user.id });
         if (!kyc) {
-            return res.status(404).json({ message: 'KYC not found' });
+            return res.status(200).json(null);
         }
         res.json(kyc);
     } catch (error) {

@@ -403,14 +403,25 @@ export default function KYCApprovals() {
                                                     </span>
                                                 )}
                                             </td>
-                                            <td className="py-4">
-                                                <div className="flex -space-x-2 gap-5 overflow-hidden">
-                                                    {['aadharcard', 'pancard', 'agreement'].map((doc, i) => (
-                                                        item[doc] ? (
-                                                            <div key={i} className="inline-block h-8 w-8 rounded-full ring-2 ring-[#0f0f1a] bg-gray-800 overflow-hidden">
-                                                                <img src={item[doc]} alt="Doc" className="h-full w-full object-cover" />
+                                            <td className="py-2 px-1">
+                                                <div className="flex justify-center items-center gap-2">
+                                                    {[
+                                                        { key: 'aadharcard', label: 'AAD' },
+                                                        { key: 'pancard', label: 'PAN' },
+                                                        { key: 'agreement', label: 'AGR' }
+                                                    ].map((doc, i) => (
+                                                        item[doc.key] ? (
+                                                            <div key={i} className="group relative w-10 h-10 rounded-lg border border-white/10 overflow-hidden bg-[#0f0f1a] hover:border-teal-500/50 transition-all cursor-zoom-in">
+                                                                <KYCImage src={item[doc.key]} alt={doc.label} />
+                                                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                                    <span className="text-[8px] font-bold text-teal-400">{doc.label}</span>
+                                                                </div>
                                                             </div>
-                                                        ) : null
+                                                        ) : (
+                                                            <div key={i} className="w-10 h-10 rounded-lg border border-dashed border-white/5 flex items-center justify-center text-[8px] text-gray-700">
+                                                                N/A
+                                                            </div>
+                                                        )
                                                     ))}
                                                 </div>
                                             </td>

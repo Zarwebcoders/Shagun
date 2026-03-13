@@ -81,10 +81,10 @@ export const useWeb3 = () => {
         if (window.ethereum) {
             const handleAccountsChanged = async (accounts) => {
                 if (accounts.length > 0) {
-                    setAccount(accounts[0]);
-                    if (contract) {
-                        await fetchBalance(accounts[0], contract);
-                    }
+                    const newAddress = typeof accounts[0] === 'string' ? accounts[0] : accounts[0].address;
+                    setAccount(newAddress);
+                    // Avoid dependency loop by using the contract instance directly if possible, 
+                    // or just updating state and letting fetchBalance be called when needed.
                 } else {
                     setAccount(null);
                     setIsConnected(false);
@@ -98,7 +98,8 @@ export const useWeb3 = () => {
                 window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
             };
         }
-    }, [contract]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // Empty dependency array to run only on mount
 
     return { account, contract, provider, isConnected, connectWallet, error, balance, fetchBalance };
 };

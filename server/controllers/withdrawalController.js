@@ -12,70 +12,71 @@ const createWithdrawal = async (req, res) => {
     }
 
     try {
-        // Special validation for level_income withdrawals
-        if (withdraw_type === 'level_income') {
+        // Special validation for level_income and mining_bonus withdrawals
+        if (withdraw_type === 'level_income' || withdraw_type === 'mining_bonus') {
             const MonthlyTokenDistribution = require('../models/MonthlyTokenDistribution');
+            const now = new Date();
 
-            // Get user's monthly distributions
+            // Get user's distributions
             const distributions = await MonthlyTokenDistribution.find({
-                user_id: req.user._id, // Fix CastError, use ObjectId
+                user_id: req.user._id,
                 status: 'pending'
             });
 
-            // Calculate total annual and bi-monthly amount
-            const monthlyAmounts = {};
-            distributions.forEach(dist => {
-                const key = `${dist.from_purchase_id}_${dist.level}`;
-                if (!monthlyAmounts[key]) {
-                    monthlyAmounts[key] = dist.monthly_amount;
-                }
-            });
+            // Calculate matured balance based on type
+            let availableMatured = 0;
+            if (withdraw_type === 'level_income') {
+                availableMatured = distributions.reduce((sum, dist) => {
+                    if (dist.status === 'pending' && dist.scheduled_date <= now && dist.level > 0) {
+                        return sum + dist.monthly_amount;
+                    }
+                    return sum;
+                }, 0);
+            } else { // mining_bonus (level 0 ROI)
+                availableMatured = distributions.reduce((sum, dist) => {
+                    if (dist.status === 'pending' && dist.scheduled_date <= now && dist.level === 0) {
+                        return sum + dist.monthly_amount;
+                    }
+                    return sum;
+                }, 0);
+            }
 
-            const totalAnnual = Object.values(monthlyAmounts).reduce((sum, amt) => sum + (amt * 12), 0);
-            const biMonthlyAmount = totalAnnual / 24;
-
-            // Get user's withdrawal history
+            // Get user details
             const user = await User.findById(req.user.id);
-            const lastWithdrawal = user.level_income_last_withdrawal;
-            const withdrawnCount = user.level_income_withdrawn_count || 0;
 
-            // Check 15-day waiting period
-            if (lastWithdrawal) {
-                const daysSince = Math.floor((new Date() - lastWithdrawal) / (1000 * 60 * 60 * 24));
-                if (daysSince < 15) {
-                    return res.status(400).json({
-                        message: `You must wait 15 days between withdrawals. ${15 - daysSince} days remaining.`
-                    });
-                }
-            }
-
-            // Check max withdrawals
-            if (withdrawnCount >= 24) {
+            // Check amount against matured balance
+            if (amount > availableMatured) {
                 return res.status(400).json({
-                    message: 'Maximum 24 withdrawals per year reached.'
+                    message: `Insufficient matured balance. Available: ${Math.round(availableMatured * 100) / 100}`
                 });
             }
 
-            // Check amount
-            if (amount > biMonthlyAmount) {
-                return res.status(400).json({
-                    message: `Maximum withdrawal amount is ${Math.round(biMonthlyAmount * 100) / 100} tokens.`
+            // Mark matured distributions as paid (starting from oldest)
+            let remainingToMark = amount;
+            const targetLevelFilter = withdraw_type === 'level_income' ? { $gt: 0 } : 0;
+            const sortedDistributions = distributions
+                .filter(d => d.status === 'pending' && d.scheduled_date <= now && 
+                            (withdraw_type === 'level_income' ? d.level > 0 : d.level === 0))
+                .sort((a, b) => a.scheduled_date - b.scheduled_date);
+
+            for (const dist of sortedDistributions) {
+                if (remainingToMark <= 0) break;
+                await MonthlyTokenDistribution.findByIdAndUpdate(dist._id, { 
+                    status: 'paid', 
+                    paid_date: new Date() 
                 });
+                remainingToMark -= dist.monthly_amount;
             }
 
-            // Check if user has enough level_income balance
-            if (user.level_income < amount) {
-                return res.status(400).json({
-                    message: `Insufficient level income balance. Available: ${user.level_income}`
-                });
+            // Deduct from user account
+            if (withdraw_type === 'level_income') {
+                user.level_income = (user.level_income || 0) - amount;
+                user.level_income_last_withdrawal = new Date();
+                user.level_income_withdrawn_count = (user.level_income_withdrawn_count || 0) + 1;
+            } else { // mining_bonus
+                user.mining_bonus = (user.mining_bonus || 0) - amount;
             }
-
-            // Deduct amount from level_income
-            user.level_income = (user.level_income || 0) - amount;
-
-            // Update user's withdrawal tracking
-            user.level_income_last_withdrawal = new Date();
-            user.level_income_withdrawn_count = withdrawnCount + 1;
+            
             await user.save();
         }
 

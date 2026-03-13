@@ -41,9 +41,12 @@ export default function Packages() {
         quantity: 1 // Default quantity
     });
 
+    const [paymentPreview, setPaymentPreview] = useState(null);
+
     const PRODUCTS = [
         {
             id: "milkish",
+            db_id: 1,
             name: "Milkish Herbal Animal Feed",
             image: "/products/milkish-feed.jpg",
             minAmount: 11000,
@@ -51,6 +54,7 @@ export default function Packages() {
         },
         {
             id: "petro",
+            db_id: 2,
             name: "Petro",
             image: "/products/petro.jpg",
             minAmount: 12500,
@@ -58,6 +62,7 @@ export default function Packages() {
         },
         {
             id: "smarthome",
+            db_id: 3,
             name: "Smart Home Automation",
             image: "/products/smart-home.jpg",
             minAmount: 20000,
@@ -65,6 +70,7 @@ export default function Packages() {
         },
         {
             id: "shagunev",
+            db_id: 4,
             name: "Shagun EV",
             image: "/products/shagun-ev.jpg",
             minAmount: 85000,
@@ -133,10 +139,22 @@ export default function Packages() {
     // handle input
     const handleChange = (e) => {
         const { name, value, files } = e.target;
-        setFormData({
-            ...formData,
-            [name]: files ? files[0] : value
-        });
+        if (files && files[0]) {
+            const file = files[0];
+            setFormData({ ...formData, [name]: file });
+
+            // Create preview
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setPaymentPreview(reader.result);
+            };
+            reader.readAsDataURL(file);
+        } else {
+            setFormData({
+                ...formData,
+                [name]: value
+            });
+        }
     };
 
     // Convert file to base64
@@ -181,6 +199,7 @@ export default function Packages() {
                 sponsorId: userSponsorId,
                 paymentSlip: paymentSlipBase64,
                 product: formData.product,
+                product_id: selectedProduct?.db_id, // Send the numeric ID matching backend definitions
                 quantity: formData.quantity,
                 walletAddress: account || "" // Connect with contract/wallet
             });
@@ -204,6 +223,7 @@ export default function Packages() {
                 product: PRODUCTS[0].name,
                 quantity: 1
             });
+            setPaymentPreview(null);
 
         } catch (error) {
             console.error("Error creating product:", error);
@@ -493,15 +513,28 @@ export default function Packages() {
                                     />
                                     <label
                                         htmlFor="paymentSlip"
-                                        className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-teal-500/30 rounded-xl cursor-pointer hover:bg-teal-500/5 hover:border-teal-500/60 transition-all group bg-[#0f0f1a]"
+                                        className="flex flex-col items-center justify-center w-full min-h-[8rem] border-2 border-dashed border-teal-500/30 rounded-xl cursor-pointer hover:bg-teal-500/5 hover:border-teal-500/60 transition-all group bg-[#0f0f1a] overflow-hidden"
                                     >
-                                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                            <CloudArrowUpIcon className="w-8 h-8 text-gray-500 group-hover:text-teal-400 transition-colors mb-2" />
-                                            <p className="text-sm text-gray-400"><span className="font-semibold text-teal-400">Click to upload</span> or drag and drop</p>
-                                            <p className="text-xs text-gray-500 mt-1">
-                                                {formData.paymentSlip ? formData.paymentSlip.name : "SVG, PNG, JPG (MAX. 2MB)"}
-                                            </p>
-                                        </div>
+                                        {paymentPreview ? (
+                                            <div className="relative w-full h-full p-2">
+                                                <img
+                                                    src={paymentPreview}
+                                                    alt="Payment Proof Preview"
+                                                    className="w-full h-48 object-contain rounded-lg border border-teal-500/30"
+                                                />
+                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                    <span className="bg-teal-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">Change Image</span>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                                <CloudArrowUpIcon className="w-8 h-8 text-gray-500 group-hover:text-teal-400 transition-colors mb-2" />
+                                                <p className="text-sm text-gray-400"><span className="font-semibold text-teal-400">Click to upload</span> or drag and drop</p>
+                                                <p className="text-xs text-gray-500 mt-1">
+                                                    SVG, PNG, JPG (MAX. 2MB)
+                                                </p>
+                                            </div>
+                                        )}
                                     </label>
                                 </div>
                             </div>

@@ -63,7 +63,7 @@ export default function App() {
     const user = localStorage.getItem("user")
     if (user) {
       const userData = JSON.parse(user)
-      if (userData.is_admin === 1) {
+      if (userData.is_admin === 1 || userData.is_admin === "1") {
         setIsAdminAuthenticated(true)
       } else {
         setIsAuthenticated(true)

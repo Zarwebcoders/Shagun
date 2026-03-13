@@ -17,16 +17,17 @@ export default function LevelIncome() {
                 // Process level income data
                 const processed = data.map(income => ({
                     level: income.level,
-                    members: 1, // Each income record represents one member
-                    totalInvestment: 0, // Not directly available in new flat structure unless populated
+                    members: 1,
+                    totalInvestment: 0,
                     income: Number(income.amount),
+                    releasedAmount: Number(income.releasedAmount || 0),
+                    noPurchase: income.no_purchase === true,
                     fromUser: income.from_user_id?.name || "Unknown User",
                     email: income.from_user_id?.email || "N/A",
-                    // Format date and time
                     date: new Date(income.created_at).toLocaleDateString(),
                     time: new Date(income.created_at).toLocaleTimeString(),
-                    originalDate: new Date(income.created_at), // For sorting if needed
-                    id: income._id // Unique ID for key
+                    originalDate: new Date(income.created_at),
+                    id: income._id
                 }));
 
                 setLevelData(processed);
@@ -147,7 +148,8 @@ export default function LevelIncome() {
                                                 <tr className="text-center">
                                                     <th className="px-4 py-3">From User</th>
                                                     <th className="px-4 py-3">Email</th>
-                                                    <th className="px-4 py-3">Income</th>
+                                                    <th className="px-4 py-3">Total Income</th>
+                                                    <th className="px-4 py-3 text-teal-400">Released Income</th>
                                                     <th className="px-4 py-3">Date</th>
                                                     <th className="px-4 py-3">Time</th>
                                                 </tr>
@@ -161,8 +163,23 @@ export default function LevelIncome() {
                                                         <td className="px-4 py-3 text-gray-300">
                                                             {detail.email}
                                                         </td>
-                                                        <td className="px-4 py-3 text-teal-400">
-                                                            SGN {detail.income}
+                                                        <td className="px-4 py-3">
+                                                            {detail.noPurchase ? (
+                                                                <span className="text-amber-400 text-xs font-medium px-2 py-1 rounded bg-amber-400/10 border border-amber-400/30">
+                                                                    No Purchase Yet
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-gray-300">
+                                                                    SGN {detail.income.toLocaleString(undefined, { maximumFractionDigits: 3 })}
+                                                                </span>
+                                                            )}
+                                                        </td>
+                                                        <td className="px-4 py-3">
+                                                            {!detail.noPurchase && (
+                                                                <span className="text-teal-400 font-bold">
+                                                                    SGN {detail.releasedAmount.toLocaleString(undefined, { maximumFractionDigits: 3 })}
+                                                                </span>
+                                                            )}
                                                         </td>
                                                         <td className="px-4 py-3 text-gray-400">
                                                             {detail.date}

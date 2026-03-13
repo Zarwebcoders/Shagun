@@ -64,7 +64,12 @@ const isUserEligible = async (userId) => {
                         { user_id: String(user._id) }
                     ]
                 },
-                { approve: '1' }
+                {
+                    $or: [
+                        { approve: '1' },
+                        { approve: 1 }
+                    ]
+                }
             ]
         });
 
@@ -101,35 +106,30 @@ const distributeLevelIncome25 = async (buyerUserId, tokenValue, quantity, produc
             return;
         }
 
-        // Get token rate based on product purchase date
-        let tokenRate = 5.8; // Default to latest
-        let pDate = new Date(); // Fallback if no creation date
+        // Fetch current token rate from settings
+        let tokenRate = 7.0; // Default fallback
         try {
-            const product = await Product.findById(productId);
-            if (product && product.cereate_at) {
-                pDate = new Date(product.cereate_at);
-                const d6 = new Date('2025-12-06T00:00:00+05:30');
-                const d27 = new Date('2025-12-27T00:00:00+05:30');
-                const j12 = new Date('2026-01-12T00:00:00+05:30');
-
-                if (pDate < d6) tokenRate = 4.0;
-                else if (pDate >= d6 && pDate < d27) tokenRate = 4.8;
-                else if (pDate >= d27 && pDate < j12) tokenRate = 5.8;
-                else tokenRate = 7.0;
+            const Setting = require('../models/Setting');
+            const rateSetting = await Setting.findOne({ key: 'rexTokenPrice' });
+            if (rateSetting) {
+                tokenRate = Number(rateSetting.value);
+                console.log(`Using dynamic token rate from settings: ₹${tokenRate}`);
+            } else {
+                console.warn('rexTokenPrice setting not found, using default ₹7.0');
             }
         } catch (err) {
-            console.error('Error fetching product date', err.message);
+            console.error('Error fetching dynamic token rate:', err.message);
         }
 
-        console.log(`Starting distribution for product ${productId}, base amount: ₹${baseAmount}, token rate: ₹${tokenRate}`);
-
-        const totalBaseTokens = baseAmount / tokenRate;
+        console.log(`Starting 24-installment distribution for product ${productId}, base amount: ₹${baseAmount}, token rate: ₹${tokenRate}`);
 
         // --- LEVEL 0: BUYER (SELF-ROI) ---
-        const buyerMonthlyTokens = totalBaseTokens / 12;
+        const totalBaseTokens = baseAmount / tokenRate;
+        const buyerInstallmentTokens = totalBaseTokens / 24;
+        const pDate = new Date(); // Use current date for new purchases
         const baseScheduleDate = pDate;
 
-        console.log(`Level 0: ${currentUser.email} (Buyer) - 100% = ${totalBaseTokens} total tokens = ${buyerMonthlyTokens} tokens/month`);
+        console.log(`Level 0: ${currentUser.email} (Buyer) - 100% = ${totalBaseTokens} total tokens = ${buyerInstallmentTokens} tokens/installment`);
 
         const originalBuyerStrId = currentUser.id || currentUser.user_id;
 
@@ -151,17 +151,17 @@ const distributeLevelIncome25 = async (buyerUserId, tokenValue, quantity, produc
             });
         } catch (err) { console.error('Error logging buyer passbook', err.message); }
 
-        for (let month = 1; month <= 12; month++) {
+        for (let inst = 1; inst <= 24; inst++) {
             const scheduledDate = new Date(baseScheduleDate);
-            scheduledDate.setMonth(scheduledDate.getMonth() + month);
+            scheduledDate.setDate(scheduledDate.getDate() + (inst * 15)); // 15-day intervals
             try {
                 await MonthlyTokenDistribution.create({
                     user_id: currentUser._id,
                     from_purchase_id: productId,
                     from_user_id: buyerUserId,
                     level: 0,
-                    monthly_amount: buyerMonthlyTokens,
-                    month_number: month,
+                    monthly_amount: buyerInstallmentTokens,
+                    month_number: inst,
                     status: 'pending',
                     scheduled_date: scheduledDate
                 });
@@ -185,8 +185,8 @@ const distributeLevelIncome25 = async (buyerUserId, tokenValue, quantity, produc
                 // Must be a legacy string (e.g. "SGN9000" or just a number)
                 uplineUser = await User.findOne({
                     $or: [
-                        { referral_id: currentUser.sponsor_id },
-                        { user_id: currentUser.sponsor_id },
+                        { referral_id: { $regex: new RegExp(`^${currentUser.sponsor_id}$`, 'i') } },
+                        { user_id: { $regex: new RegExp(`^${currentUser.sponsor_id}$`, 'i') } },
                         { id: currentUser.sponsor_id }
                     ]
                 });
@@ -201,14 +201,14 @@ const distributeLevelIncome25 = async (buyerUserId, tokenValue, quantity, produc
             const eligible = await isUserEligible(uplineUser._id);
 
             if (eligible) {
-                const monthlyPercentage = LEVEL_PERCENTAGES[level];
+                const installmentPercentage = LEVEL_PERCENTAGES[level];
 
-                const monthlyTokenAmount = (totalBaseTokens * monthlyPercentage) / 100;
-                const totalAnnualTokens = monthlyTokenAmount * 12;
+                const installmentTokenAmount = (totalBaseTokens * installmentPercentage) / 100;
+                const totalAnnualTokens = installmentTokenAmount * 24; // Actually "Total Contract Duration"
 
-                console.log(`Level ${level + 1}: ${uplineUser.email} - ${monthlyPercentage}% = ${monthlyTokenAmount} tokens/month`);
+                console.log(`Level ${level + 1}: ${uplineUser.email} - ${installmentPercentage}% per installment = ${installmentTokenAmount} tokens/inst`);
 
-                // Inject full 12 month tokens upfront
+                // Inject full 24 installment tokens upfront
                 uplineUser.level_income = (uplineUser.level_income || 0) + totalAnnualTokens;
                 uplineUser.total_income = (uplineUser.total_income || 0) + totalAnnualTokens;
                 await uplineUser.save();
@@ -226,10 +226,10 @@ const distributeLevelIncome25 = async (buyerUserId, tokenValue, quantity, produc
                     });
                 } catch (err) { console.error('Error logging passbook', err.message); }
 
-                // Create 12 monthly distribution records
-                for (let month = 1; month <= 12; month++) {
+                // Create 24 installment distribution records
+                for (let inst = 1; inst <= 24; inst++) {
                     const scheduledDate = new Date(baseScheduleDate);
-                    scheduledDate.setMonth(scheduledDate.getMonth() + month);
+                    scheduledDate.setDate(scheduledDate.getDate() + (inst * 15));
 
                     try {
                         await MonthlyTokenDistribution.create({
@@ -237,8 +237,8 @@ const distributeLevelIncome25 = async (buyerUserId, tokenValue, quantity, produc
                             from_purchase_id: productId,
                             from_user_id: buyerUserId,
                             level: level + 1,
-                            monthly_amount: monthlyTokenAmount, // Now storing tokens
-                            month_number: month,
+                            monthly_amount: installmentTokenAmount,
+                            month_number: inst,
                             status: 'pending',
                             scheduled_date: scheduledDate
                         });
@@ -247,7 +247,7 @@ const distributeLevelIncome25 = async (buyerUserId, tokenValue, quantity, produc
                     }
                 }
 
-                console.log(`Created 12 monthly records for ${uplineUser.email} at level ${level + 1} (${monthlyTokenAmount} tokens/month)`);
+                console.log(`Created 24 installment records for ${uplineUser.email} at level ${level + 1} (${installmentTokenAmount} tokens/inst)`);
             } else {
                 console.log(`Level ${level + 1}: ${uplineUser.email} - NOT ELIGIBLE (no purchases)`);
             }
