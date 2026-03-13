@@ -14,21 +14,30 @@ const getMyReferrals = async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        // Query using the numeric id (e.g., "827") instead of user_id ("SGN824")
-        const queryId = user.id || user.user_id;
+        // Query using all possible user identifiers
+        const queryIds = [user.id, user.user_id, user._id.toString()].filter(id => id);
 
-        const incomes = await ReferralIncomes.find({ earner_user_id: queryId }).sort({ create_at: -1 }).lean();
+        const incomes = await ReferralIncomes.find({ earner_user_id: { $in: queryIds } }).sort({ create_at: -1 }).lean();
 
         // Collect all referred_user_ids to fetch names
-        const referredIds = incomes.map(inc => inc.referred_user_id);
+        const referredIds = [...new Set(incomes.map(inc => inc.referred_user_id).filter(id => id))];
 
-        // Find users with these numeric IDs
-        const users = await User.find({ id: { $in: referredIds } }).select('id full_name user_id').lean();
+        // Find users with these IDs (could be id, user_id, or stringified _id)
+        const mongoose = require('mongoose');
+        const users = await User.find({ 
+            $or: [
+                { id: { $in: referredIds } },
+                { user_id: { $in: referredIds } },
+                { _id: { $in: referredIds.filter(id => mongoose.Types.ObjectId.isValid(id)) } }
+            ]
+        }).select('id full_name user_id').lean();
 
-        // Create a map for quick lookup: { "4": { full_name: "John", user_id: "SGN004" } }
+        // Create a map for quick lookup
         const userMap = {};
         users.forEach(u => {
-            userMap[u.id] = u;
+            if (u.id) userMap[u.id] = u;
+            if (u.user_id) userMap[u.user_id] = u;
+            userMap[u._id.toString()] = u;
         });
 
         // Attach user details to incomes

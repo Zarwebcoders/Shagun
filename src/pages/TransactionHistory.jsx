@@ -26,7 +26,13 @@ export default function TransactionHistory() {
 
     // Filter transactions
     const filteredTransactions = transactions.filter((tx) => {
-        const matchesFilter = filter === "All" || tx.type.toLowerCase() === filter.toLowerCase();
+        let matchesFilter = filter === "All" || tx.type.toLowerCase() === filter.toLowerCase();
+        
+        // Group referral-related incomes under "Referral" tab
+        if (filter === "Referral") {
+            matchesFilter = tx.type === 'referral' || tx.type === 'referral_income' || tx.type === 'level_income';
+        }
+
         const matchesSearch =
             (tx.description && tx.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
             (tx.hash && tx.hash.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -46,7 +52,7 @@ export default function TransactionHistory() {
             {/* Filters and Search */}
             <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-[#1a1a2e] border border-teal-500/30 p-4 rounded-xl">
                 <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
-                    {["All", "Deposit", "Withdrawal", "Investment", "Bonus"].map((item) => (
+                    {["All", "Deposit", "Withdrawal", "Investment", "Referral", "Bonus"].map((item) => (
                         <button
                             key={item}
                             onClick={() => setFilter(item)}
@@ -107,9 +113,11 @@ export default function TransactionHistory() {
                                     >
                                         <td className="p-4">
                                             <div className="flex items-center gap-2">
-                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${tx.type === 'deposit' ? 'bg-green-500/20 text-green-500' :
+                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                                                    tx.type === 'deposit' ? 'bg-green-500/20 text-green-500' :
                                                     tx.type === 'withdrawal' ? 'bg-red-500/20 text-red-500' :
-                                                        'bg-blue-500/20 text-blue-500'
+                                                    tx.type === 'referral' || tx.type === 'referral_income' ? 'bg-purple-500/20 text-purple-400' :
+                                                    'bg-blue-500/20 text-blue-500'
                                                     }`}>
                                                     {tx.type === 'deposit' && (
                                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -121,29 +129,37 @@ export default function TransactionHistory() {
                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
                                                         </svg>
                                                     )}
-                                                    {tx.type !== 'deposit' && tx.type !== 'withdrawal' && (
+                                                    {(tx.type === 'referral' || tx.type === 'referral_income') && (
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                                                        </svg>
+                                                    )}
+                                                    {tx.type !== 'deposit' && tx.type !== 'withdrawal' && tx.type !== 'referral' && tx.type !== 'referral_income' && (
                                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                                                         </svg>
                                                     )}
                                                 </div>
-                                                <span className="text-white capitalize">{tx.type}</span>
+                                                <span className="text-white capitalize">{tx.type.replace('_', ' ')}</span>
                                             </div>
                                         </td>
                                         <td className="p-4 text-gray-300 text-sm">{tx.description}</td>
                                         <td className="p-4">
-                                            <span className={`font-bold ${tx.type === 'deposit' || tx.type === 'bonus' ? 'text-green-500' : 'text-red-500'
+                                            <span className={`font-bold ${
+                                                tx.type === 'deposit' || tx.type === 'bonus' || tx.type === 'referral' || tx.type === 'referral_income' || tx.type === 'level_income' 
+                                                ? 'text-green-500' 
+                                                : 'text-red-500'
                                                 }`}>
-                                                {tx.type === 'deposit' || tx.type === 'bonus' ? '+' : '-'}${tx.amount}
+                                                {tx.type === 'deposit' || tx.type === 'bonus' || tx.type === 'referral' || tx.type === 'referral_income' || tx.type === 'level_income' ? '+' : '-'}${tx.amount}
                                             </span>
                                         </td>
                                         <td className="p-4 text-gray-400 text-sm">{new Date(tx.createdAt).toLocaleDateString()}</td>
                                         <td className="p-4">
                                             <span className={`px-3 py-1 rounded-full text-xs font-medium ${tx.status === 'completed' ? 'bg-green-500/20 text-green-500' :
-                                                tx.status === 'pending' ? 'bg-yellow-500/20 text-yellow-500' :
+                                                tx.status === 'pending' || tx.status === 'pending_approval' ? 'bg-yellow-500/20 text-yellow-500' :
                                                     'bg-red-500/20 text-red-500'
                                                 }`}>
-                                                {tx.status}
+                                                {(tx.status === 'pending' || tx.status === 'pending_approval') ? 'Pending' : tx.status}
                                             </span>
                                         </td>
                                         <td className="p-4">

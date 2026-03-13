@@ -22,6 +22,7 @@ export default function LevelIncome() {
                     income: Number(income.amount),
                     releasedAmount: Number(income.releasedAmount || 0),
                     noPurchase: income.no_purchase === true,
+                    pending: income.pending === true,
                     fromUser: income.from_user_id?.name || "Unknown User",
                     email: income.from_user_id?.email || "N/A",
                     date: new Date(income.created_at).toLocaleDateString(),
@@ -164,7 +165,11 @@ export default function LevelIncome() {
                                                             {detail.email}
                                                         </td>
                                                         <td className="px-4 py-3">
-                                                            {detail.noPurchase ? (
+                                                            {detail.pending ? (
+                                                                <span className="text-blue-400 text-xs font-medium px-2 py-1 rounded bg-blue-400/10 border border-blue-400/30">
+                                                                    Pending Approval
+                                                                </span>
+                                                            ) : detail.noPurchase ? (
                                                                 <span className="text-amber-400 text-xs font-medium px-2 py-1 rounded bg-amber-400/10 border border-amber-400/30">
                                                                     No Purchase Yet
                                                                 </span>

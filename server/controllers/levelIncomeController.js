@@ -12,25 +12,35 @@ const getMyLevelIncomes = async (req, res) => {
         const user = await require('../models/User').findById(req.user._id).lean();
         if (!user) return res.status(404).json({ message: 'User not found' });
 
-        const queryId = user.id || user.user_id; // "827"
+        const queryIds = [user.id, user.user_id, user._id.toString()].filter(id => id);
 
         // 2. Find Level Incomes for this user
         // PROBLEM 2 FIX: Filter out Level 0 (Self-ROI disguised as Level Income)
-        const incomes = await LevelIncome.find({ user_id: queryId, level: { $gt: 0 } })
+        const incomes = await LevelIncome.find({ user_id: { $in: queryIds }, level: { $gt: 0 } })
             .sort({ created_at: -1 })
             .lean();
 
         // 3. Collect from_user_ids to fetch names for income-generating users
         const fromIds = [...new Set(incomes.map(inc => inc.from_user_id).filter(id => id))];
 
-        // 4. Fetch details for these users (matching 'id' field)
-        const fromUsers = await require('../models/User').find({ id: { $in: fromIds } })
+        // 4. Fetch details for these users (matching 'id', 'user_id', or '_id' field)
+        const fromUsers = await require('../models/User').find({ 
+            $or: [
+                { id: { $in: fromIds } },
+                { user_id: { $in: fromIds } },
+                { _id: { $in: fromIds.filter(id => require('mongoose').Types.ObjectId.isValid(id)) } }
+            ]
+        })
             .select('id full_name email user_id')
             .lean();
 
         // 5. Create Map
         const userMap = {};
-        fromUsers.forEach(u => { userMap[u.id] = u; });
+        fromUsers.forEach(u => { 
+            if (u.id) userMap[u.id] = u;
+            if (u.user_id) userMap[u.user_id] = u;
+            userMap[u._id.toString()] = u;
+        });
 
         // NEW: Fetch all matured distributions for this user to calculate "Released Income"
         const MonthlyTokenDistribution = require('../models/MonthlyTokenDistribution');
@@ -71,12 +81,12 @@ const getMyLevelIncomes = async (req, res) => {
                 {
                     $lookup: {
                         from: "users",
-                        let: { ref_lower: { $toLower: "$referral_id" } },
+                        let: { user_str_id: { $toString: "$_id" } },
                         pipeline: [
                             {
                                 $match: {
                                     $expr: {
-                                        $eq: [{ $toLower: "$sponsor_id" }, "$$ref_lower"]
+                                        $eq: ["$sponsor_id", "$$user_str_id"]
                                     }
                                 }
                             }
@@ -91,7 +101,7 @@ const getMyLevelIncomes = async (req, res) => {
 
             if (downlineData.length > 0 && downlineData[0].network) {
                 downlineData[0].network.forEach(netUser => {
-                    networkMap[netUser.id] = {
+                    networkMap[netUser._id.toString()] = {
                         ...netUser,
                         level_depth: 0 // For now focusing on fixing Level 1 visibility
                     };
@@ -107,12 +117,24 @@ const getMyLevelIncomes = async (req, res) => {
         // Add users who haven't generated income but are in the network
         const finalIncomesList = [...incomesWithDetails];
 
+        // NEW: Fetch all pending products for these network members
+        const networkUserIds = Object.keys(networkMap);
+        const Product = require('../models/Product');
+        const pendingProducts = await Product.find({
+            user_id: { $in: networkUserIds },
+            approve: 0
+        }).lean();
+
+        const pendingMap = {};
+        pendingProducts.forEach(p => { pendingMap[p.user_id] = true; });
+
         Object.values(networkMap).forEach(netUser => {
+            const netUserIdStr = netUser._id.toString();
             // If this network user is not already in the incomes list, add a 0 income row
-            if (!incomeUserIds.has(String(netUser._id))) {
+            if (!incomeUserIds.has(netUserIdStr)) {
                 finalIncomesList.push({
-                    _id: `empty_${netUser._id}`, // Generate fake ID for React key
-                    user_id: queryId,
+                    _id: `empty_${netUserIdStr}`, // Generate fake ID for React key
+                    user_id: user._id.toString(),
                     from_user_id: {
                         name: netUser.full_name,
                         email: netUser.email,
@@ -120,7 +142,8 @@ const getMyLevelIncomes = async (req, res) => {
                     },
                     level: netUser.level_depth + 1, // level_depth 0 = level 1
                     amount: 0,
-                    no_purchase: true,            // Member joined but hasn't purchased yet
+                    no_purchase: !pendingMap[netUserIdStr], // Only "No Purchase" if no pending ones either
+                    pending: !!pendingMap[netUserIdStr],
                     created_at: new Date(),
                 });
             }
@@ -152,7 +175,7 @@ const getAllLevelIncomes = async (req, res) => {
 // @access  Private
 const getDashboardStats = async (req, res) => {
     try {
-        const userId = req.user.id || req.user._id;
+        const userId = req.user._id;
         const MonthlyTokenDistribution = require('../models/MonthlyTokenDistribution');
         const User = require('../models/User');
 

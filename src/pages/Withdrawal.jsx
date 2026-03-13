@@ -44,42 +44,45 @@ export default function Withdrawal() {
                 const user = userRes.data;
                 const levelAvailable = levelAvailRes.data?.available || 0;
 
-                // Calculate Exact Total Level Income to match the Level Income Page
-                const levelRecords = levelRecordsRes.data || [];
-                const exactTotalLevelIncome = levelRecords.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+                // Calculate withdrawal statistics
+                const completedWithdrawals = withdrawRes.data.filter(tx => tx.approve === 1 || tx.approve === "1");
+                const pendingWithdrawals = withdrawRes.data.filter(tx => tx.approve === 2 || tx.approve === "2");
+
+                const totalWithdrawn = completedWithdrawals.reduce((sum, tx) => sum + tx.amount, 0);
+                const pendingAmount = pendingWithdrawals.reduce((sum, tx) => sum + tx.amount, 0);
+
+                // Group pending by type to subtract from available display
+                const pendingBySource = {
+                    level_income: pendingWithdrawals.filter(w => w.withdraw_type === 'level_income').reduce((s, w) => s + w.amount, 0),
+                    mining_bonus: pendingWithdrawals.filter(w => w.withdraw_type === 'mining_bonus').reduce((s, w) => s + w.amount, 0),
+                    annual_bonus: pendingWithdrawals.filter(w => w.withdraw_type === 'annual_bonus' || w.withdraw_type === 'annual_bonus').reduce((s, w) => s + w.amount, 0)
+                };
 
                 setUserData({
                     name: user.full_name,
-                    totalMiningBonus: user.mining_bonus || 0, // Show total annual ROI in top box
-                    levelIncomeROI: exactTotalLevelIncome, // Show the overall total in the top box
-                    withdrawableLevelIncome: levelAvailable > 0 ? levelAvailable : 0, 
-                    withdrawableROI: levelAvailRes.data?.availableROI || 0,
+                    totalMiningBonus: user.mining_bonus || 0,
+                    levelIncomeROI: exactTotalLevelIncome, 
+                    withdrawableLevelIncome: Math.max(0, levelAvailable - pendingBySource.level_income), 
+                    withdrawableROI: Math.max(0, (levelAvailRes.data?.availableROI || 0) - pendingBySource.mining_bonus),
                     normalWithdrawal: user.normalWithdrawal || 0,
                     sosWithdrawal: user.shopping_tokens || 0,
                     totalWithdrawal: user.totalWithdrawal || 0,
                     totalIncome: user.total_income || 0,
                     stakeROI: user.stakeROI || 0,
                     stakeToken: user.stakeToken || 0,
-                    anualBonus: user.anual_bonus || 0
+                    anualBonus: Math.max(0, (user.anual_bonus || 0) - (pendingBySource.annual_bonus || 0))
                 });
 
                 // Map withdrawals from new schema
-                const withdrawals = withdrawRes.data.map(tx => ({
+                const withdrawalsList = withdrawRes.data.map(tx => ({
                     id: tx._id,
                     amount: tx.amount,
                     date: new Date(tx.create_at).toISOString().split('T')[0],
-                    status: tx.approve === 1 ? 'Completed' : tx.approve === 0 ? 'Rejected' : 'Pending',
+                    status: (tx.approve === 1 || tx.approve === "1") ? 'Completed' : (tx.approve === 0 || tx.approve === "0") ? 'Rejected' : 'Pending',
                     method: tx.method || tx.withdraw_type || "Unknown",
                     source: tx.source || (tx.withdraw_type === 'level_income' ? "Level Income" : "Wallet Balance")
                 }));
-                setWithdrawalHistory(withdrawals);
-
-                // Calculate withdrawal statistics
-                const completedWithdrawals = withdrawRes.data.filter(tx => tx.approve === 1);
-                const pendingWithdrawals = withdrawRes.data.filter(tx => tx.approve === 2);
-
-                const totalWithdrawn = completedWithdrawals.reduce((sum, tx) => sum + tx.amount, 0);
-                const pendingAmount = pendingWithdrawals.reduce((sum, tx) => sum + tx.amount, 0);
+                setWithdrawalHistory(withdrawalsList);
 
                 setWithdrawalStats({
                     totalWithdrawn,

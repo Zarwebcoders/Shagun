@@ -131,7 +131,7 @@ const distributeLevelIncome25 = async (buyerUserId, tokenValue, quantity, produc
 
         console.log(`Level 0: ${currentUser.email} (Buyer) - 100% = ${totalBaseTokens} total tokens = ${buyerInstallmentTokens} tokens/installment`);
 
-        const originalBuyerStrId = currentUser.id || currentUser.user_id;
+        const originalBuyerStrId = currentUser.id || currentUser.user_id || currentUser._id.toString();
 
         // Inject 12-month tokens upfront to dashboard balance
         currentUser.level_income = (currentUser.level_income || 0) + totalBaseTokens;
@@ -214,7 +214,7 @@ const distributeLevelIncome25 = async (buyerUserId, tokenValue, quantity, produc
                 await uplineUser.save();
 
                 try {
-                    const uplineStrId = uplineUser.id || uplineUser.user_id;
+                    const uplineStrId = uplineUser.id || uplineUser.user_id || uplineUser._id.toString();
                     const LevelIncome = require('../models/LevelIncome');
                     await LevelIncome.create({
                         user_id: uplineStrId,
@@ -270,19 +270,56 @@ const distributeLevelIncome25 = async (buyerUserId, tokenValue, quantity, produc
  */
 const distributeReferralIncome = async (buyerUserId, productAmount) => {
     try {
-        const buyer = await User.findById(buyerUserId);
+        console.log(`distributeReferralIncome: Starting for Buyer: ${buyerUserId}, Amount: ${productAmount}`);
+        
+        // 1. Find Buyer Robustly
+        let buyer;
+        if (mongoose.Types.ObjectId.isValid(buyerUserId)) {
+            buyer = await User.findById(buyerUserId);
+        }
+        if (!buyer) {
+            buyer = await User.findOne({
+                $or: [
+                    { id: buyerUserId },
+                    { user_id: buyerUserId },
+                    { referral_id: buyerUserId }
+                ]
+            });
+        }
 
-        if (!buyer || !buyer.sponsor_id) {
-            console.log('No sponsor found for referral income');
+        if (!buyer) {
+            console.error(`Referral Error: Buyer not found for ID: ${buyerUserId}`);
             return;
         }
 
-        const sponsor = await User.findById(buyer.sponsor_id);
+        if (!buyer.sponsor_id) {
+            console.log(`distributeReferralIncome: No sponsor found for buyer ${buyer.email}`);
+            return;
+        }
+
+        console.log(`distributeReferralIncome: Buyer ${buyer.email} has sponsor ID: ${buyer.sponsor_id}`);
+
+        // 2. Find Sponsor Robustly
+        let sponsor;
+        if (mongoose.Types.ObjectId.isValid(buyer.sponsor_id)) {
+            sponsor = await User.findById(buyer.sponsor_id);
+        }
+        if (!sponsor) {
+            sponsor = await User.findOne({
+                $or: [
+                    { id: buyer.sponsor_id },
+                    { user_id: buyer.sponsor_id },
+                    { referral_id: { $regex: new RegExp(`^${buyer.sponsor_id}$`, 'i') } }
+                ]
+            });
+        }
 
         if (!sponsor) {
-            console.warn(`Sponsor not found: ${buyer.sponsor_id}`);
+            console.warn(`distributeReferralIncome: Sponsor document not found for sponsor_id: ${buyer.sponsor_id}`);
             return;
         }
+
+        console.log(`distributeReferralIncome: Crediting sponsor ${sponsor.email}`);
 
         const referralIncome = (productAmount * 8) / 100;
 
@@ -303,6 +340,22 @@ const distributeReferralIncome = async (buyerUserId, productAmount) => {
             description: `Referral Income (8%) from product purchase`,
             status: 'completed',
             hash: `REF${Date.now()}`
+        });
+
+        // NEW: Create ReferralIncomes record for history table
+        const ReferralIncomes = require('../models/ReferralIncomes');
+        const earnerId = sponsor.id || sponsor.user_id || sponsor._id.toString();
+        const referredId = buyer.id || buyer.user_id || buyer._id.toString();
+        
+        await ReferralIncomes.create({
+            earner_user_id: earnerId,
+            referred_user_id: referredId,
+            product_id: null,
+            product_transcation_id: `REF${Date.now()}`,
+            amount: productAmount,
+            percentage: 8.00,
+            referral_amount: referralIncome,
+            status: 'credited'
         });
 
     } catch (error) {

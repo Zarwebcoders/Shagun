@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Product = require('../models/Product');
 const User = require('../models/User');
 const Transaction = require('../models/Transaction');
@@ -136,7 +137,14 @@ const getAllProducts = async (req, res) => {
 
         // Enrich with User details
         const enrichedProducts = await Promise.all(products.map(async (product) => {
-            const user = await User.findOne({ id: product.user_id }).select('full_name email');
+            const user = await User.findOne({ 
+                $or: [
+                    { id: product.user_id },
+                    { user_id: product.user_id },
+                    { _id: mongoose.Types.ObjectId.isValid(product.user_id) ? product.user_id : null }
+                ].filter(q => q._id !== null || q.id || q.user_id)
+            }).select('full_name email');
+            
             return {
                 ...product,
                 user: user ? {
@@ -170,30 +178,67 @@ const updateProductStatus = async (req, res) => {
             product.update_at = Date.now();
             await product.save();
 
-            if (oldStatus != 1 && status == 1) { // Just Approved
-                console.log(`Approving product ${product._id} - Product ID: ${product.product_id}, Qty: ${product.quantity}`);
+            if (status == 1) { // Approved
+                console.log(`Checking/Approving product ${product._id} - Product ID: ${product.product_id}`);
 
-                // 1. Distribute Referral Income (8% of product amount)
-                const totalProductAmount = product.amount * product.quantity;
-                await distributeReferralIncome(product.user_id, totalProductAmount);
+                const LevelIncome = require('../models/LevelIncome');
+                const ReferralIncomes = require('../models/ReferralIncomes');
+                
+                const hasLevelIncome = await LevelIncome.findOne({ product_id: product._id });
+                const hasReferralIncome = await ReferralIncomes.findOne({ 
+                    $or: [
+                        { product_id: product._id },
+                        { product_transcation_id: product.transcation_id }
+                    ]
+                });
 
-                // 2. Distribute 25-Level Income (monthly payouts)
-                await distributeLevelIncome25(
-                    product.user_id,
-                    product.token_value,
-                    product.quantity,
-                    product._id
-                );
-
-                // Update Transaction
-                const transaction = await Transaction.findOne({ hash: product.transcation_id });
-                if (transaction) {
-                    transaction.status = 'completed';
-                    transaction.description = transaction.description.replace('(Pending Approval)', '(Approved)');
-                    await transaction.save();
+                // 1. Fill Referral Income if missing
+                if (oldStatus != 1 || !hasReferralIncome) {
+                    console.log(`Distributing Referral Income for ${product._id}...`);
+                    const totalProductAmount = product.amount * product.quantity;
+                    await distributeReferralIncome(product.user_id, totalProductAmount);
                 }
 
-                console.log(`Product ${product._id} approved successfully`);
+                // 2. Fill Level Income if missing
+                if (oldStatus != 1 || !hasLevelIncome) {
+                    console.log(`Distributing Level Income for ${product._id}...`);
+                    await distributeLevelIncome25(
+                        product.user_id,
+                        product.token_value,
+                        product.quantity,
+                        product._id
+                    );
+                }
+
+                // 3. Always ensure Transaction is marked completed and description is updated
+                const Transaction = require('../models/Transaction');
+                
+                // Find user to get their proper ObjectId for the transaction lookup
+                const buyer = await User.findOne({
+                    $or: [
+                        { id: product.user_id },
+                        { user_id: product.user_id },
+                        { _id: mongoose.Types.ObjectId.isValid(product.user_id) ? product.user_id : null }
+                    ].filter(q => q._id || q.id || q.user_id)
+                });
+
+                const transaction = await Transaction.findOne({ 
+                    hash: product.transcation_id,
+                    user: buyer ? buyer._id : product.user_id // Try specific user match to avoid hash collisions
+                });
+
+                if (transaction) {
+                    transaction.status = 'completed';
+                    if (transaction.description) {
+                        transaction.description = transaction.description.replace(/\(Pending Approval\)/gi, '(Approved)');
+                    } else {
+                        transaction.description = `Purchase of ${product.name} (Approved)`;
+                    }
+                    await transaction.save();
+                    console.log(`Transaction ${transaction._id} marked as completed for ${buyer?.email}.`);
+                }
+                
+                console.log(`Product ${product._id} processing finished.`);
             } else if (status == 2 || status == 0) { // Rejected
                 // Logic for rejection
                 const transaction = await Transaction.findOne({ hash: product.transcation_id });

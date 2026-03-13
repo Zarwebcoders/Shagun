@@ -38,29 +38,21 @@ const productSchema = new mongoose.Schema({
         type: String,
         default: ""
     },
-    approvel: { // Matches JSON spelling
-        type: String,
-        default: '0'
+    approve: { 
+        type: Number,
+        default: 0
     },
-    approve: { // Actual DB property used
-        type: String,
-        default: '0'
-    },
-    cereate_at: { // Matches JSON spelling
+    cereate_at: {
         type: Date,
         default: Date.now
     },
-    update_at: { // Matches JSON spelling
+    update_at: {
         type: Date,
         default: Date.now
     },
     quantity: {
         type: Number,
         default: 1
-    },
-    approve: { // Matches JSON spelling (seems duplicate of approvel but present in data)
-        type: Number,
-        default: 0
     },
     next_commission_date: {
         type: Date,

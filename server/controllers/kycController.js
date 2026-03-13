@@ -14,14 +14,14 @@ const submitKYC = async (req, res) => {
     } = req.body;
 
     try {
-        const kycExists = await KYC.findOne({ user_id: req.user.id });
+        const kycExists = await KYC.findOne({ user_id: req.user._id });
 
         if (kycExists) {
             return res.status(400).json({ message: 'KYC already submitted' });
         }
 
         const kyc = await KYC.create({
-            user_id: req.user.id,
+            user_id: req.user._id,
             aadhar: aadharNumber,
             pan: panNumber,
             aadharcard: documents.aadharFront, // Mapping to schema field
@@ -31,8 +31,8 @@ const submitKYC = async (req, res) => {
             approval: 2 // Pending
         });
 
-        // Update user status
-        await User.findByIdAndUpdate(req.user.id, { kycStatus: 'pending' });
+        // Update user status - using _id for reliable lookup
+        await User.findByIdAndUpdate(req.user._id, { kycStatus: 'pending' });
 
         res.status(201).json(kyc);
     } catch (error) {
@@ -58,7 +58,7 @@ const getPendingKYC = async (req, res) => {
 // @access  Private
 const getMyKYC = async (req, res) => {
     try {
-        const kyc = await KYC.findOne({ user_id: req.user.id });
+        const kyc = await KYC.findOne({ user_id: req.user._id });
         if (!kyc) {
             return res.status(200).json(null);
         }

@@ -46,7 +46,20 @@ const getTransactions = async (req, res) => {
             });
 
         } else {
-            transactions = await Transaction.find({ user: req.user.id })
+            // Robust ID lookup for user's own transactions
+            const mongoose = require('mongoose');
+            const user = await User.findById(req.user._id).lean();
+            if (!user) return res.status(404).json({ message: 'User not found' });
+
+            const queryIds = [user._id, user.id, user.user_id].filter(id => id);
+            const validObjectIds = queryIds.filter(id => mongoose.Types.ObjectId.isValid(id));
+
+            transactions = await Transaction.find({ 
+                $or: [
+                    { user: { $in: validObjectIds } },
+                    { user: { $in: queryIds.map(id => String(id)) } }
+                ]
+            })
                 .populate('relatedUser', 'full_name')
                 .sort({ createdAt: -1 });
         }
