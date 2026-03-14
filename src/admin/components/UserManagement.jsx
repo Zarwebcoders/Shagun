@@ -94,6 +94,12 @@ export default function UserManagement() {
     }
 
     const handleEditUser = () => {
+        setEditFormData({
+            full_name: selectedUser.full_name,
+            email: selectedUser.email,
+            mobile: selectedUser.mobile,
+            password: "" // Allow setting new password
+        });
         setIsEditing(true);
     }
 
@@ -242,14 +248,13 @@ export default function UserManagement() {
                                             </div>
                                         </td>
 
-                                        {/* Password */}
                                         <td className="px-6 py-4 text-sm">
                                             <div className="group relative">
                                                 <span className="text-gray-400 text-xs font-mono cursor-pointer hover:text-white transition-colors">
-                                                    {user.password ? '••••••' : 'No Password'}
+                                                    {(user.plain_password || user.password) ? '••••••' : 'No Password'}
                                                 </span>
                                                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-black text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
-                                                    {user.password || 'N/A'}
+                                                    {user.plain_password || user.password || 'N/A'}
                                                 </div>
                                             </div>
                                         </td>
@@ -326,7 +331,7 @@ export default function UserManagement() {
                                                     <div className="relative inline-block w-8 h-4 align-middle select-none">
                                                         <input
                                                             type="checkbox"
-                                                            checked={user.is_admin === 1}
+                                                            checked={user.is_admin == 1}
                                                             onChange={async (e) => {
                                                                 try {
                                                                     const newVal = e.target.checked ? 1 : 0;
@@ -339,8 +344,8 @@ export default function UserManagement() {
                                                             }}
                                                             className="sr-only"
                                                         />
-                                                        <div className={`block w-8 h-4 rounded-full transition-colors ${user.is_admin === 1 ? 'bg-teal-500' : 'bg-gray-600'}`}></div>
-                                                        <div className={`absolute left-0 bottom-0 top-0 w-4 h-4 rounded-full bg-white transition-transform transform ${user.is_admin === 1 ? 'translate-x-4' : 'translate-x-0'}`}></div>
+                                                        <div className={`block w-8 h-4 rounded-full transition-colors ${user.is_admin == 1 ? 'bg-teal-500' : 'bg-gray-600'}`}></div>
+                                                        <div className={`absolute left-0 bottom-0 top-0 w-4 h-4 rounded-full bg-white transition-transform transform ${user.is_admin == 1 ? 'translate-x-4' : 'translate-x-0'}`}></div>
                                                     </div>
                                                 </label>
                                                 <label className="flex items-center justify-between gap-2 cursor-pointer">
@@ -391,7 +396,10 @@ export default function UserManagement() {
                                                     onClick={() => {
                                                         setSelectedUser(user);
                                                         setEditFormData({
-                                                            // Removed edited fields
+                                                            full_name: user.full_name,
+                                                            email: user.email,
+                                                            mobile: user.mobile,
+                                                            password: ""
                                                         });
                                                         setShowUserModal(true);
                                                         setIsEditing(true);
@@ -445,8 +453,29 @@ export default function UserManagement() {
                                         {selectedUser.full_name ? selectedUser.full_name.charAt(0) : '?'}
                                     </div>
                                     <div>
-                                        <h4 className="text-2xl font-bold text-white">{selectedUser.full_name}</h4>
-                                        <p className="text-gray-400">{selectedUser.email}</p>
+                                        {isEditing ? (
+                                            <div className="space-y-2">
+                                                <input
+                                                    type="text"
+                                                    value={editFormData.full_name}
+                                                    onChange={(e) => setEditFormData({ ...editFormData, full_name: e.target.value })}
+                                                    className="bg-[#1a1a2e] text-white px-3 py-1 rounded border border-teal-500/30 w-full"
+                                                    placeholder="Full Name"
+                                                />
+                                                <input
+                                                    type="email"
+                                                    value={editFormData.email}
+                                                    onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                                                    className="bg-[#1a1a2e] text-white px-3 py-1 rounded border border-teal-500/30 w-full"
+                                                    placeholder="Email"
+                                                />
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <h4 className="text-2xl font-bold text-white">{selectedUser.full_name}</h4>
+                                                <p className="text-gray-400">{selectedUser.email}</p>
+                                            </>
+                                        )}
                                         <p className="text-teal-500 text-sm font-mono mt-1">{selectedUser.user_id}</p>
                                     </div>
                                 </div>
@@ -455,11 +484,30 @@ export default function UserManagement() {
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div className="bg-[#1a1a2e] p-4 rounded-lg">
                                         <p className="text-gray-400 text-sm mb-1">Mobile</p>
-                                        <p className="text-white font-semibold">{selectedUser.mobile || 'Not provided'}</p>
+                                        {isEditing ? (
+                                            <input
+                                                type="text"
+                                                value={editFormData.mobile}
+                                                onChange={(e) => setEditFormData({ ...editFormData, mobile: e.target.value })}
+                                                className="bg-[#0f0f1a] text-white px-3 py-1 rounded border border-teal-500/30 w-full font-semibold"
+                                            />
+                                        ) : (
+                                            <p className="text-white font-semibold">{selectedUser.mobile || 'Not provided'}</p>
+                                        )}
                                     </div>
                                     <div className="bg-[#1a1a2e] p-4 rounded-lg">
-                                        <p className="text-gray-400 text-sm mb-1">Referral ID</p>
-                                        <p className="text-white font-semibold">{selectedUser.referral_id || 'N/A'}</p>
+                                        <p className="text-gray-400 text-sm mb-1">{isEditing ? 'New Password (Optional)' : 'Referral ID'}</p>
+                                        {isEditing ? (
+                                            <input
+                                                type="text"
+                                                value={editFormData.password}
+                                                onChange={(e) => setEditFormData({ ...editFormData, password: e.target.value })}
+                                                className="bg-[#0f0f1a] text-white px-3 py-1 rounded border border-teal-500/30 w-full font-semibold"
+                                                placeholder="Enter new password"
+                                            />
+                                        ) : (
+                                            <p className="text-white font-semibold">{selectedUser.referral_id || 'N/A'}</p>
+                                        )}
                                     </div>
                                     <div className="bg-[#1a1a2e] p-4 rounded-lg">
                                         <p className="text-gray-400 text-sm mb-1">Sponsor ID</p>

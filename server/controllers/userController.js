@@ -36,7 +36,7 @@ const getUsers = async (req, res) => {
         ]);
 
         const users = await User.find({ ...keyword })
-            .select('+password') // Show password for admin
+            .select('+password +plain_password') // Show passwords for admin
             .sort({ create_at: -1 })
             .limit(pageSize)
             .skip(pageSize * (page - 1));
@@ -84,7 +84,7 @@ const updateUser = async (req, res) => {
             // Check permissions: Admin or Self
             // is_admin: 1 is admin
             const requester = req.user;
-            const isAdmin = requester.is_admin === 1;
+            const isAdmin = requester.is_admin == 1;
 
             if (!isAdmin && requester._id.toString() !== user._id.toString()) {
                 return res.status(401).json({ message: 'Not authorized' });

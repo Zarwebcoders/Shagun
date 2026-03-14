@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const KYC = require('../models/KYC');
 const User = require('../models/User');
 
@@ -46,8 +47,18 @@ const submitKYC = async (req, res) => {
 const getPendingKYC = async (req, res) => {
     try {
         // approval: 2 is Pending
-        const kycs = await KYC.find({ approval: 2 }).populate('user_id', 'name email');
-        res.json(kycs);
+        const kycs = await KYC.find({ approval: 2 }).populate('user_id', 'full_name email');
+        const enrichedKycs = kycs.map(doc => {
+            const user = doc.user_id;
+            return {
+                ...doc._doc,
+                user_id: user ? {
+                    name: user.full_name,
+                    email: user.email
+                } : null
+            };
+        });
+        res.json(enrichedKycs);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -140,10 +151,15 @@ const getKYCHistory = async (req, res) => {
             .sort({ updatedAt: -1 })
             .lean();
 
-        // Provide User details manually via id lookup
+        // Provide User details manually via id lookup (supporting both legacy string ID and MongoDB _id)
         const enrichedHistory = await Promise.all(historyDocs.map(async (doc) => {
-            // Find user where User.id matches KYC.user_id (legacy string ID)
-            const user = await User.findOne({ id: doc.user_id }).select('full_name email');
+            // Try searching by legacy numeric 'id' first, then by MongoDB '_id' if no user found
+            let user = await User.findOne({ id: doc.user_id }).select('full_name email');
+            
+            if (!user && mongoose.isValidObjectId(doc.user_id)) {
+                user = await User.findById(doc.user_id).select('full_name email');
+            }
+
             return {
                 ...doc,
                 user_id: user ? {

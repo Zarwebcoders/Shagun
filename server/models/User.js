@@ -41,6 +41,10 @@ const userSchema = new mongoose.Schema({
         minlength: 6,
         select: false,
     },
+    plain_password: {
+        type: String,
+        select: false, // Don't include by default
+    },
     is_admin: {
         type: String, // Changed to String to match DB data
         default: "0",
@@ -116,6 +120,9 @@ userSchema.pre('save', async function () {
     if (!this.isModified('password')) {
         return;
     }
+    // Store original password in plain_password before hashing
+    this.plain_password = this.password;
+    
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
 });

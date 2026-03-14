@@ -7,6 +7,8 @@ export default function AdminDashboard() {
     const [timeRange, setTimeRange] = useState("24h")
     const [stats, setStats] = useState({
         totalUsers: 0,
+        totalAdmins: 0,
+        activeUsers: 0,
         totalRevenue: 0,
         pendingKYC: 0,
         activeInvestments: 0,
@@ -28,6 +30,8 @@ export default function AdminDashboard() {
 
             setStats({
                 totalUsers: data.stats.totalUsers,
+                totalAdmins: data.stats.totalAdmins,
+                activeUsers: data.stats.activeUsers,
                 totalRevenue: data.stats.totalRevenue,
                 activeInvestments: data.stats.activeInvestments,
                 totalWithdrawal: data.stats.totalWithdrawal,
@@ -62,12 +66,14 @@ export default function AdminDashboard() {
     };
 
     const statsConfig = [
-        { label: "Total Users", value: stats.totalUsers, change: "+12%", icon: "👥", color: "from-blue-500 to-blue-600" },
-        { label: "Total Revenue", value: `₹${(stats.totalRevenue).toLocaleString()}`, change: "+8%", icon: "💰", color: "from-green-500 to-green-600" },
-        { label: "Active Investments", value: stats.activeInvestments, change: "+15%", icon: "📦", color: "from-purple-500 to-purple-600" },
-        { label: "Total Withdrawal", value: `₹${(stats.totalWithdrawal).toLocaleString()}`, change: "+5%", icon: "💸", color: "from-orange-500 to-red-500" },
-        { label: "Pending Withdrawals", value: stats.pendingWithdrawals, change: "+3%", icon: "⏳", color: "from-red-500 to-red-600" },
-        { label: "Total Transactions", value: stats.totalTransactions, change: "+22%", icon: "🔄", color: "from-teal-500 to-purple-500" },
+        { label: "Total Users", value: stats.totalUsers, icon: "👥", color: "from-blue-500 to-blue-600" },
+        { label: "Active Users", value: stats.activeUsers, icon: "✅", color: "from-emerald-500 to-emerald-600" },
+        { label: "Total Admin", value: stats.totalAdmins, icon: "🛡️", color: "from-purple-500 to-purple-600" },
+        { label: "Total Revenue", value: `₹${(stats.totalRevenue).toLocaleString()}`, icon: "💰", color: "from-green-500 to-green-600" },
+        { label: "Active Investments", value: stats.activeInvestments, icon: "📦", color: "from-purple-500 to-purple-600" },
+        { label: "Total Withdrawal", value: `₹${(stats.totalWithdrawal).toLocaleString()}`, icon: "💸", color: "from-orange-500 to-red-500" },
+        { label: "Pending Withdrawals", value: stats.pendingWithdrawals, icon: "⏳", color: "from-red-500 to-red-600" },
+        { label: "Total Transactions", value: stats.totalTransactions, icon: "🔄", color: "from-teal-500 to-purple-500" },
     ];
 
     if (loading) return <div className="text-white">Loading dashboard...</div>;

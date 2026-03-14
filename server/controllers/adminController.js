@@ -12,7 +12,16 @@ const getDashboardStats = async (req, res) => {
     try {
         // 1. Counters
         // is_admin stored as String "0" in DB
-        const totalUsers = await User.countDocuments({ is_admin: "0" });
+        const totalUsers = await User.countDocuments({ is_admin: "0", is_deleted: 0 });
+        const totalAdmins = await User.countDocuments({ is_admin: "1" });
+
+        // Active Users: Users who have at least one 'active' investment
+        const activeUsersResult = await Investment.aggregate([
+            { $match: { status: 'active' } },
+            { $group: { _id: '$user' } },
+            { $count: 'activeUsers' }
+        ]);
+        const activeUsersCount = activeUsersResult[0]?.activeUsers || 0;
 
         // Total Revenue (Sum of all active/completed investments)
         // Investment amount is Number, so straightforward sum
@@ -23,7 +32,7 @@ const getDashboardStats = async (req, res) => {
         const totalRevenue = totalRevenueResult[0]?.total || 0;
 
         // Active Investments (Count)
-        const activeInvestments = await Investment.countDocuments({ status: 'active' });
+        const activeInvestmentsCount = await Investment.countDocuments({ status: 'active' });
 
         // Total Withdrawal (Sum of approved withdrawals)
         // Withdrawal amount is stored as String in DB ("300"), perform conversion
@@ -76,8 +85,10 @@ const getDashboardStats = async (req, res) => {
         res.json({
             stats: {
                 totalUsers,
+                totalAdmins,
+                activeUsers: activeUsersCount,
                 totalRevenue,
-                activeInvestments,
+                activeInvestments: activeInvestmentsCount,
                 totalWithdrawal,
                 pendingWithdrawals,
                 totalTransactions
