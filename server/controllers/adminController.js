@@ -4,6 +4,7 @@ const Package = require('../models/Package');
 const KYC = require('../models/KYC');
 const Investment = require('../models/Investment');
 const Withdrawal = require('../models/Withdrawal');
+const Product = require('../models/Product');
 
 // @desc    Get Admin Dashboard Stats
 // @route   GET /api/admin/stats
@@ -11,41 +12,70 @@ const Withdrawal = require('../models/Withdrawal');
 const getDashboardStats = async (req, res) => {
     try {
         // 1. Counters
-        // is_admin stored as String "0" in DB
-        const totalUsers = await User.countDocuments({ is_admin: "0", is_deleted: 0 });
-        const totalAdmins = await User.countDocuments({ is_admin: "1" });
+        // Total Users (Exclude Admins and hard-deleted users)
+        const totalUsers = await User.countDocuments({ 
+            is_admin: { $nin: ["1", 1] },
+            is_deleted: { $ne: 1 }
+        });
 
-        // Active Users: Users who have at least one 'active' investment
-        const activeUsersResult = await Investment.aggregate([
-            { $match: { status: 'active' } },
-            { $group: { _id: '$user' } },
-            { $count: 'activeUsers' }
-        ]);
-        const activeUsersCount = activeUsersResult[0]?.activeUsers || 0;
+        const totalAdmins = await User.countDocuments({ 
+            is_admin: { $in: ["1", 1] } 
+        });
 
-        // Total Revenue (Sum of all active/completed investments)
-        // Investment amount is Number, so straightforward sum
-        const totalRevenueResult = await Investment.aggregate([
-            { $match: { status: { $in: ['active', 'completed'] } } },
-            { $group: { _id: null, total: { $sum: '$amount' } } }
+        // 2. Integrated Metrics (Investment + Product)
+        
+        // Active Users: Unique users with active investments or approved products
+        const [activeInvUsers, approvedProdUsers] = await Promise.all([
+            Investment.aggregate([
+                { $match: { status: { $regex: /^active$/i } } },
+                { $group: { _id: '$user' } }
+            ]),
+            Product.aggregate([
+                { $match: { approve: 1 } },
+                { $group: { _id: '$user_id' } }
+            ])
         ]);
-        const totalRevenue = totalRevenueResult[0]?.total || 0;
+
+        const allActiveUserIds = new Set([
+            ...activeInvUsers.map(u => u._id.toString()),
+            ...approvedProdUsers.map(u => u._id.toString())
+        ]);
+        const activeUsersCount = allActiveUserIds.size;
+
+        // Total Revenue: Sum of active/completed investments + approved products
+        const [revInv, revProd] = await Promise.all([
+            Investment.aggregate([
+                { $match: { status: { $in: ['active', 'completed', 'Active', 'Completed'] } } },
+                { $group: { _id: null, total: { $sum: '$amount' } } }
+            ]),
+            Product.aggregate([
+                { $match: { approve: 1 } },
+                { $group: { _id: null, total: { $sum: { $multiply: ['$amount', '$quantity'] } } } }
+            ])
+        ]);
+
+        const totalRevenue = (revInv[0]?.total || 0) + (revProd[0]?.total || 0);
 
         // Active Investments (Count)
-        const activeInvestmentsCount = await Investment.countDocuments({ status: 'active' });
+        const [countInv, countProd] = await Promise.all([
+            Investment.countDocuments({ status: { $in: ['active', 'Active'] } }),
+            Product.countDocuments({ approve: 1 })
+        ]);
+        const activeInvestmentsCount = countInv + countProd;
 
         // Total Withdrawal (Sum of approved withdrawals)
-        // Withdrawal amount is stored as String in DB ("300"), perform conversion
-        // approve is String "1"
+        // approve: "1" or 1 means Approved
         const totalWithdrawalResult = await Withdrawal.aggregate([
-            { $match: { approve: "1" } },
+            { $match: { approve: { $in: ["1", 1] } } },
             { $group: { _id: null, total: { $sum: { $toDouble: '$amount' } } } }
         ]);
         const totalWithdrawal = totalWithdrawalResult[0]?.total || 0;
 
         // Pending Withdrawals (Count)
-        // approve is String "2"
-        const pendingWithdrawals = await Withdrawal.countDocuments({ approve: "2" });
+        // approve: "2" or 2 means Pending
+        const pendingWithdrawals = await Withdrawal.countDocuments({ 
+            approve: { $in: ["2", 2] } 
+        });
 
         // Total Transactions (Count)
         const totalTransactions = await Transaction.countDocuments({});

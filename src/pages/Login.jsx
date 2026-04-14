@@ -112,6 +112,15 @@ export default function Login({ setIsAuthenticated, setIsAdminAuthenticated }) {
                                     className="w-full pl-12 pr-4 py-3.5 bg-black/40 border border-white/10 rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-teal-500/50 focus:ring-2 focus:ring-teal-500/20 transition-all duration-300 hover:border-white/20"
                                 />
                             </div>
+                            <div className="flex justify-end p-1">
+                                <button
+                                    type="button"
+                                    onClick={() => navigate("/forgot-password")}
+                                    className="text-xs font-semibold text-teal-400 hover:text-purple-400 transition-colors duration-300"
+                                >
+                                    Forgot Password?
+                                </button>
+                            </div>
                         </div>
 
                         {/* Error Message */}

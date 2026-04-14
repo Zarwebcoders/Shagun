@@ -16,9 +16,8 @@ const protect = async (req, res, next) => {
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
             const mongoose = require('mongoose');
 
-            // Get user from the token
             if (mongoose.isValidObjectId(decoded.id)) {
-                req.user = await User.findById(decoded.id).select('-password').populate('sponsor_id', 'full_name email referral_id');
+                req.user = await User.findById(decoded.id).select('-password');
             } else {
                 // Handle legacy string IDs
                 req.user = await User.findOne({
@@ -26,7 +25,7 @@ const protect = async (req, res, next) => {
                         { user_id: decoded.id },
                         { id: decoded.id }
                     ]
-                }).select('-password').populate('sponsor_id', 'full_name email referral_id');
+                }).select('-password');
             }
 
             if (!req.user) {

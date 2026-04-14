@@ -165,15 +165,10 @@ const getDownline = async (req, res) => {
         const downline = await User.aggregate([
             { $match: { _id: new mongoose.Types.ObjectId(req.user._id) } },
             {
-                $addFields: {
-                    string_id: { $toString: "$_id" }
-                }
-            },
-            {
                 $graphLookup: {
                     from: "users",
-                    startWith: "$string_id",
-                    connectFromField: "string_id",
+                    startWith: "$referral_id",
+                    connectFromField: "referral_id",
                     connectToField: "sponsor_id",
                     as: "network",
                     maxDepth: 9, // up to 10 levels

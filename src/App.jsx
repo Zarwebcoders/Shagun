@@ -12,9 +12,9 @@ import KYC from "./pages/KYC"
 import Shopping from "./pages/Shopping"
 import Withdrawal from "./pages/Withdrawal"
 import BankAccountManagement from "./admin/components/BankAccountManagement"
-
-// ... existing imports
-
+import ForgotPassword from "./pages/ForgotPassword"
+import ResetPassword from "./pages/ResetPassword"
+import { Web3Provider } from "./context/Web3Context"
 
 import BankDetails from "./pages/BankDetails"
 import BankRequests from "./admin/components/BankRequests"
@@ -86,113 +86,115 @@ export default function App() {
   }
 
   return (
-    <Router>
-      <Toaster position="top-right" reverseOrder={false} />
-      <Routes>
-        {/* <Route path="/" element={<Home />} /> */}
-        <Route path="/" element={<Products />} />
+    <Web3Provider>
+      <Router>
+        <Toaster position="top-right" reverseOrder={false} />
+        <Routes>
+          <Route path="/" element={<Products />} />
 
-        {/* Single Login Route for both User and Admin */}
-        <Route path="/login" element={
-          isAuthenticated ? <Navigate to="/dashboard" /> :
-            isAdminAuthenticated ? <Navigate to="/admin/dashboard" /> :
-              <Login
-                setIsAuthenticated={setIsAuthenticated}
-                setIsAdminAuthenticated={setIsAdminAuthenticated}
-              />
-        } />
+          <Route path="/login" element={
+            isAuthenticated ? <Navigate to="/dashboard" /> :
+              isAdminAuthenticated ? <Navigate to="/admin/dashboard" /> :
+                <Login
+                  setIsAuthenticated={setIsAuthenticated}
+                  setIsAdminAuthenticated={setIsAdminAuthenticated}
+                />
+          } />
 
-        <Route path="/signup" element={
-          isAuthenticated ? <Navigate to="/dashboard" /> :
-            <Signup setIsAuthenticated={setIsAuthenticated} />
-        } />
+          <Route path="/signup" element={
+            isAuthenticated ? <Navigate to="/dashboard" /> :
+              <Signup setIsAuthenticated={setIsAuthenticated} />
+          } />
 
-        {/* User Protected Routes with Layout */}
-        <Route element={<ProtectedLayout />}>
-          <Route path="/dashboard" element={
-            isAuthenticated ? <Dashboard /> : <Navigate to="/login" />
-          } />
-          <Route path="/packages" element={
-            isAuthenticated ? <Packages /> : <Navigate to="/login" />
-          } />
-          <Route path="/kyc" element={
-            isAuthenticated ? <KYC /> : <Navigate to="/login" />
-          } />
-          <Route path="/withdrawal" element={
-            isAuthenticated ? <Withdrawal /> : <Navigate to="/login" />
-          } />
-          <Route path="/vendor-withdrawal" element={
-            isAuthenticated ? <VendorWithdrawal /> : <Navigate to="/login" />
-          } />
-          <Route path="/vendor-wallet" element={
-            isAuthenticated ? <VendorWallet /> : <Navigate to="/login" />
-          } />
-          <Route path="/vendor-kyc" element={
-            isAuthenticated ? <VendorKYC /> : <Navigate to="/login" />
-          } />
-          <Route path="/vendor-account" element={
-            isAuthenticated ? <VendorAccount /> : <Navigate to="/login" />
-          } />
-          <Route path="/vendor-profile" element={
-            isAuthenticated ? <VendorProfile /> : <Navigate to="/login" />
-          } />
-          <Route path="/downline" element={
-            isAuthenticated ? <Downline /> : <Navigate to="/login" />
-          } />
-          <Route path="/referral-income" element={
-            isAuthenticated ? <ReferralIncome /> : <Navigate to="/login" />
-          } />
-          <Route path="/bank-details" element={
-            isAuthenticated ? <BankDetails /> : <Navigate to="/login" />
-          } />
-          <Route path="/level-income" element={
-            isAuthenticated ? <LevelIncome /> : <Navigate to="/login" />
-          } />
-          <Route path="/mining-bonus" element={
-            isAuthenticated ? <MiningBonus /> : <Navigate to="/login" />
-          } />
-          <Route path="/profile" element={
-            isAuthenticated ? <Profile /> : <Navigate to="/login" />
-          } />
-          <Route path="/transactions" element={
-            isAuthenticated ? <TransactionHistory /> : <Navigate to="/login" />
-          } />
-        </Route>
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password/:token" element={<ResetPassword />} />
 
-        {/* Admin Protected Routes - Fixed Structure */}
-        <Route path="/admin" element={
-          isAdminAuthenticated ? <AdminLayout setIsAdminAuthenticated={setIsAdminAuthenticated} /> : <Navigate to="/login" />
-        }>
-          <Route index element={<Navigate to="dashboard" replace />} />
-          <Route path="dashboard" element={<AdminDashboard />} />
-          <Route path="users" element={<UserManagement />} />
-          <Route path="kyc-approvals" element={<KYCApprovals />} />
-          <Route path="withdrawals" element={<WithdrawalRequests />} />
-          <Route path="bank-accounts" element={<BankAccountManagement />} />
-          <Route path="manage-wallet" element={<ManageWallet />} />
-          <Route path="vendor-withdrawals" element={<VendorWithdrawalRequests />} />
-          <Route path="vendor-wallets" element={<VendorWallets />} />
-          <Route path="vendor-kyc" element={<VendorKYCRequests />} />
-          <Route path="level-income" element={<LevelIncome />} />
-          <Route path="commissions" element={<Commissions />} />
-          <Route path="mining-bonus" element={<MiningBonus />} />
-          <Route path="vendor-accounts" element={<VendorAccounts />} />
-          <Route path="vendors" element={<VendorList />} />
-          <Route path="token-rates" element={<TokenRateManagement />} />
-          <Route path="payments" element={<PaymentRequests />} />
-          <Route path="bank-requests" element={<BankRequests />} />
-          <Route path="packages" element={<PackageManagement />} />
-          <Route path="transactions" element={<TransactionMonitor />} />
-          <Route path="settings" element={<SystemSettings />} />
-          <Route path="migrations" element={<SystemMigrations />} />
-          <Route path="contract-queue" element={<ContractUpdateQueue />} />
-          <Route path="token-management" element={<TokenManagement />} />
-          <Route path="reports" element={<Reports />} />
-        </Route>
+          {/* User Protected Routes with Layout */}
+          <Route element={<ProtectedLayout />}>
+            <Route path="/dashboard" element={
+              isAuthenticated ? <Dashboard /> : <Navigate to="/login" />
+            } />
+            <Route path="/packages" element={
+              isAuthenticated ? <Packages /> : <Navigate to="/login" />
+            } />
+            <Route path="/kyc" element={
+              isAuthenticated ? <KYC /> : <Navigate to="/login" />
+            } />
+            <Route path="/withdrawal" element={
+              isAuthenticated ? <Withdrawal /> : <Navigate to="/login" />
+            } />
+            <Route path="/vendor-withdrawal" element={
+              isAuthenticated ? <VendorWithdrawal /> : <Navigate to="/login" />
+            } />
+            <Route path="/vendor-wallet" element={
+              isAuthenticated ? <VendorWallet /> : <Navigate to="/login" />
+            } />
+            <Route path="/vendor-kyc" element={
+              isAuthenticated ? <VendorKYC /> : <Navigate to="/login" />
+            } />
+            <Route path="/vendor-account" element={
+              isAuthenticated ? <VendorAccount /> : <Navigate to="/login" />
+            } />
+            <Route path="/vendor-profile" element={
+              isAuthenticated ? <VendorProfile /> : <Navigate to="/login" />
+            } />
+            <Route path="/downline" element={
+              isAuthenticated ? <Downline /> : <Navigate to="/login" />
+            } />
+            <Route path="/referral-income" element={
+              isAuthenticated ? <ReferralIncome /> : <Navigate to="/login" />
+            } />
+            <Route path="/bank-details" element={
+              isAuthenticated ? <BankDetails /> : <Navigate to="/login" />
+            } />
+            <Route path="/level-income" element={
+              isAuthenticated ? <LevelIncome /> : <Navigate to="/login" />
+            } />
+            <Route path="/mining-bonus" element={
+              isAuthenticated ? <MiningBonus /> : <Navigate to="/login" />
+            } />
+            <Route path="/profile" element={
+              isAuthenticated ? <Profile /> : <Navigate to="/login" />
+            } />
+            <Route path="/transactions" element={
+              isAuthenticated ? <TransactionHistory /> : <Navigate to="/login" />
+            } />
+          </Route>
 
-        {/* Catch all route */}
-        <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
-    </Router>
+          {/* Admin Protected Routes */}
+          <Route path="/admin" element={
+            isAdminAuthenticated ? <AdminLayout setIsAdminAuthenticated={setIsAdminAuthenticated} /> : <Navigate to="/login" />
+          }>
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<AdminDashboard />} />
+            <Route path="users" element={<UserManagement />} />
+            <Route path="kyc-approvals" element={<KYCApprovals />} />
+            <Route path="withdrawals" element={<WithdrawalRequests />} />
+            <Route path="bank-accounts" element={<BankAccountManagement />} />
+            <Route path="manage-wallet" element={<ManageWallet />} />
+            <Route path="vendor-withdrawals" element={<VendorWithdrawalRequests />} />
+            <Route path="vendor-wallets" element={<VendorWallets />} />
+            <Route path="vendor-kyc" element={<VendorKYCRequests />} />
+            <Route path="level-income" element={<LevelIncome />} />
+            <Route path="commissions" element={<Commissions />} />
+            <Route path="mining-bonus" element={<MiningBonus />} />
+            <Route path="vendor-accounts" element={<VendorAccounts />} />
+            <Route path="vendors" element={<VendorList />} />
+            <Route path="token-rates" element={<TokenRateManagement />} />
+            <Route path="payments" element={<PaymentRequests />} />
+            <Route path="bank-requests" element={<BankRequests />} />
+            <Route path="packages" element={<PackageManagement />} />
+            <Route path="transactions" element={<TransactionMonitor />} />
+            <Route path="settings" element={<SystemSettings />} />
+            <Route path="migrations" element={<SystemMigrations />} />
+            <Route path="contract-queue" element={<ContractUpdateQueue />} />
+            <Route path="token-management" element={<TokenManagement />} />
+            <Route path="reports" element={<Reports />} />
+          </Route>
+
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      </Router>
+    </Web3Provider>
   )
 }

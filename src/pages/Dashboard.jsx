@@ -18,12 +18,13 @@ import {
     BriefcaseIcon,
     CpuChipIcon,
     ClockIcon,
-    ShieldCheckIcon
+    ShieldCheckIcon,
+    UsersIcon
 } from '@heroicons/react/24/outline';
 import { WalletIcon } from "lucide-react"
 
 export default function Dashboard() {
-    const { connectWallet, isConnected, account, balance: onChainBalance } = useWeb3()
+    const { connectWallet, disconnectWallet, isConnected, account, balance: onChainBalance, stakedBalance } = useWeb3()
     const [walletBalance, setWalletBalance] = useState(0)
     const [userName, setUserName] = useState("")
     const [loading, setLoading] = useState(true)
@@ -71,45 +72,59 @@ export default function Dashboard() {
     useEffect(() => {
         const fetchUserData = async () => {
             try {
-                // Fetch user data and downline in parallel
-                const [userRes, downlineRes] = await Promise.all([
+                // Fetch basic user data and downline in parallel
+                const [userRes, downlineRes, referralRes] = await Promise.all([
                     client.get('/auth/me'),
-                    client.get('/users/downline')
+                    client.get('/users/downline'),
+                    client.get('/referral-incomes/my-referrals')
                 ]);
 
                 const userData = userRes.data;
                 const downlineData = downlineRes.data || [];
+                const referralData = referralRes.data || [];
+
+                // Calculate accurate referral income from transactions
+                const calculatedSponsorIncome = referralData.reduce((acc, curr) => acc + Number(curr.referral_amount || 0), 0);
 
                 setWalletBalance(0);
                 setUserName(userData.full_name || "User");
 
                 setTokenStats(prev => ({
                     ...prev,
-                    loyaltyToken: userData.loyaltyPoints || 0,
-                    rexToken: userData.real_tokens || 0,
-                    shoppingPoint: userData.shopping_tokens || 0,
+                    loyaltyToken: Number(userData.airdrop_tokons || 0),
+                    rexToken: Number(userData.real_tokens || 0),
+                    shoppingPoint: Number(userData.shopping_tokons || 0),
                 }));
 
                 // Calculate direct team size (Level 0 in downline response)
                 const directTeamCount = downlineData.filter(u => u.level === 0).length;
 
+                const sponsorDisplay = userData.sponsor_id && typeof userData.sponsor_id === 'object' 
+                    ? userData.sponsor_id.referral_id 
+                    : userData.sponsor_id || "None";
+
                 setReferralProgram(prev => ({
                     ...prev,
                     referralId: userData.referral_id || "---",
-                    sponsor: userData.sponsor_id ? userData.sponsor_id.full_name : "None",
+                    sponsor: sponsorDisplay,
                     totalDirectTeam: directTeamCount,
-                    levelIncomeEarned: userData.level_income || 0,
-                    sponsorIncomeEarned: userData.sponsor_income || 0,
-                    totalEarnedIncome: userData.total_income || 0,
+                    levelIncomeEarned: Number(userData.level_income || 0),
+                    sponsorIncomeEarned: calculatedSponsorIncome,
+                    totalEarnedIncome: Number(userData.total_income || 0),
                 }));
 
+                const totalCalculatedIncome = 
+                    calculatedSponsorIncome + 
+                    Number(userData.level_income || 0) + 
+                    Number(userData.anual_bonus || 0);
+
                 setIncomeBreakdown({
-                    miningBonus: userData.mining_bonus || 0,
-                    dailyMiningRewards: 0, // Not in user schema, maybe need calculation
-                    yearlyBonus: userData.anual_bonus || 0,
-                    sponsorIncome: userData.sponsor_income || 0,
-                    levelIncome: userData.level_income || 0,
-                    totalIncome: userData.total_income || 0,
+                    miningBonus: Number(userData.mining_bonus || 0),
+                    dailyMiningRewards: 0, 
+                    yearlyBonus: Number(userData.anual_bonus || 0),
+                    sponsorIncome: calculatedSponsorIncome,
+                    levelIncome: Number(userData.level_income || 0),
+                    totalIncome: totalCalculatedIncome,
                 });
 
             } catch (error) {
@@ -180,11 +195,19 @@ export default function Dashboard() {
                                     </button>
                                 )}
                                 {isConnected && (
-                                    <div className="flex items-center gap-3 px-6 py-3 bg-white/5 border border-white/10 rounded-xl backdrop-blur-md overflow-hidden max-w-[200px] md:max-w-xs transition-all hover:bg-white/10">
-                                        <WalletIcon className="w-5 h-5 text-green-400 flex-shrink-0" />
-                                        <span className="text-gray-300 font-mono text-sm truncate">
-                                            {account}
-                                        </span>
+                                    <div className="flex flex-col sm:flex-row items-center gap-3">
+                                        <div className="flex items-center gap-3 px-6 py-3 bg-white/5 border border-white/10 rounded-xl backdrop-blur-md overflow-hidden max-w-[200px] md:max-w-xs transition-all hover:bg-white/10">
+                                            <WalletIcon className="w-5 h-5 text-green-400 flex-shrink-0" />
+                                            <span className="text-gray-300 font-mono text-sm truncate">
+                                                {account}
+                                            </span>
+                                        </div>
+                                        <button
+                                            onClick={disconnectWallet}
+                                            className="px-6 py-2 bg-red-500/10 border border-red-500/50 text-red-400 rounded-xl text-sm font-bold hover:bg-red-500 hover:text-white transition-all duration-300"
+                                        >
+                                            Disconnect
+                                        </button>
                                     </div>
                                 )}
                             </div>
@@ -208,13 +231,20 @@ export default function Dashboard() {
                     <BoltIcon className="w-6 h-6 text-[#ffcc4d]" />
                     <h3 className="text-2xl font-bold text-white">Token Performance</h3>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
                     <StatsCard
                         title="Shagun"
                         amount={isConnected ? onChainBalance : tokenStats.rexToken.toString()}
                         color="#2DD4BF"
                         icon={CpuChipIcon}
                         subValue="Asset Balance"
+                    />
+                    <StatsCard
+                        title="Staked Tokens"
+                        amount={isConnected ? stakedBalance : "0"}
+                        color="#F59E0B"
+                        icon={BriefcaseIcon}
+                        subValue="Staking Reward"
                     />
                     <StatsCard
                         title="Loyalty Token"
@@ -262,22 +292,22 @@ export default function Dashboard() {
                     <div className="bg-[#1a1a2e]/40 backdrop-blur-xl border border-teal-500/20 rounded-3xl p-6">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <StatsCard
-                                title="Mining Commission"
-                                amount={`₹${incomeBreakdown.miningBonus.toFixed(2)}`}
+                                title="Level Income"
+                                amount={`₹${incomeBreakdown.levelIncome.toFixed(2)}`}
                                 color="#2196f3"
-                                icon={CurrencyDollarIcon}
+                                icon={ArrowTrendingUpIcon}
                             />
                             <StatsCard
                                 title="- Holding Commission"
-                                amount={`₹${incomeBreakdown.yearlyBonus.toFixed(2)}`}
+                                amount={`${incomeBreakdown.yearlyBonus.toFixed(2)} SGN`}
                                 color="#a855f7"
                                 icon={GiftIcon}
                             />
                             <StatsCard
-                                title="Referal income"
+                                title="Referral Income"
                                 amount={`₹${incomeBreakdown.sponsorIncome.toFixed(2)}`}
                                 color="#ff9800"
-                                icon={UserGroupIcon}
+                                icon={UsersIcon}
                             />
                             <StatsCard
                                 title="Total Income"
@@ -334,30 +364,10 @@ export default function Dashboard() {
 
                             <div className="flex justify-between items-center p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors">
                                 <div className="flex items-center gap-3">
-                                    <div className="p-2 rounded-lg bg-[#9c27b0]/10 text-[#9c27b0]"><ChartBarIcon className="w-5 h-5" /></div>
+                                    <div className="p-2 rounded-lg bg-[#ff9800]/10 text-[#ff9800]"><UsersIcon className="w-5 h-5" /></div>
                                     <div>
-                                        <p className="text-gray-400 text-xs">Level Income</p>
-                                        <p className="text-white font-bold">₹{referralProgram.levelIncomeEarned.toFixed(2)}</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="flex justify-between items-center p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 rounded-lg bg-[#ff9800]/10 text-[#ff9800]"><UserGroupIcon className="w-5 h-5" /></div>
-                                    <div>
-                                        <p className="text-gray-400 text-xs">Sponsor Income</p>
+                                        <p className="text-gray-400 text-xs">Referral Income</p>
                                         <p className="text-white font-bold">₹{referralProgram.sponsorIncomeEarned.toFixed(2)}</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="flex justify-between items-center p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 rounded-lg bg-[#e91e63]/10 text-[#e91e63]"><CurrencyDollarIcon className="w-5 h-5" /></div>
-                                    <div>
-                                        <p className="text-gray-400 text-xs">Total Earned</p>
-                                        <p className="text-white font-bold">₹{referralProgram.totalEarnedIncome.toFixed(2)}</p>
                                     </div>
                                 </div>
                             </div>

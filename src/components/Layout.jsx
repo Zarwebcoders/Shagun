@@ -24,7 +24,7 @@ export default function Layout({ children, setIsAuthenticated }) {
     const [sidebarOpen, setSidebarOpen] = useState(true)
     const location = useLocation()
     const navigate = useNavigate()
-    const { connectWallet, account, isConnected } = useWeb3();
+    const { connectWallet, disconnectWallet, account, isConnected } = useWeb3();
 
     const menuItems = [
         { label: "Dashboard", path: "/dashboard", icon: <HomeIcon className="w-6 h-6" /> },
@@ -130,16 +130,16 @@ export default function Layout({ children, setIsAuthenticated }) {
                                     </span>
                                 </div>
                                 <button
-                                    onClick={isConnected ? () => { } : connectWallet}
+                                    onClick={isConnected ? disconnectWallet : connectWallet}
                                     className={`w-full py-2.5 rounded-lg text-sm font-bold transition-all duration-300 flex items-center justify-center gap-2
                                         ${isConnected
-                                            ? "bg-teal-500/10 text-teal-400 border border-teal-500/50"
+                                            ? "bg-red-500/10 text-red-400 border border-red-500/50 hover:bg-red-500 hover:text-white"
                                             : "bg-gradient-brand text-white shadow-lg shadow-teal-500/20 hover:shadow-teal-500/40 hover:-translate-y-0.5"
                                         }`}
                                 >
                                     <WalletIcon className="w-4 h-4" />
                                     {isConnected
-                                        ? `${account.substring(0, 6)}...${account.substring(account.length - 4)}`
+                                        ? "Disconnect"
                                         : "Connect Wallet"}
                                 </button>
                             </div>
@@ -149,10 +149,10 @@ export default function Layout({ children, setIsAuthenticated }) {
                     {/* Mini Connect Button (Collapsed) */}
                     {!sidebarOpen && (
                         <button
-                            onClick={isConnected ? () => { } : connectWallet}
+                            onClick={isConnected ? disconnectWallet : connectWallet}
                             className={`w-full p-3 rounded-xl flex items-center justify-center transition-all duration-300
                                 ${isConnected
-                                    ? "bg-[#9131e7]/10 text-green-400 border border-green-500/30"
+                                    ? "bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500 hover:text-white"
                                     : "bg-gradient-to-r from-[#9131e7] to-[#e84495] text-white"
                                 }`}
                         >

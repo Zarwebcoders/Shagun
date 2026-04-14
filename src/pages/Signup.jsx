@@ -4,12 +4,13 @@ import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import client from "../api/client"
 import { motion } from "framer-motion"
-import { User, Mail, Lock, Hash, ArrowRight, Loader2 } from "lucide-react"
+import { User, Mail, Lock, Hash, ArrowRight, Loader2, Phone } from "lucide-react"
 
 export default function Signup({ setIsAuthenticated }) {
     const [formData, setFormData] = useState({
         full_name: "",
         email: "",
+        mobile: "",
         password: "",
         confirmPassword: "",
         referral_id: "",
@@ -29,10 +30,12 @@ export default function Signup({ setIsAuthenticated }) {
             setError("Passwords do not match")
             return
         }
-        if (formData.full_name && formData.email && formData.password) {
+        
+        // Validation for all required fields
+        if (formData.full_name && formData.email && formData.password && formData.mobile && formData.referral_id) {
             setIsLoading(true)
             try {
-                const { _id, confirmPassword, ...registerData } = formData; // Remove confirmPassword
+                const { confirmPassword, ...registerData } = formData; 
                 const { data } = await client.post('/auth/register', registerData);
 
                 // Store user data
@@ -46,7 +49,7 @@ export default function Signup({ setIsAuthenticated }) {
                 setIsLoading(false)
             }
         } else {
-            setError("Please fill all required fields")
+            setError("Please fill all required fields including Mobile and Sponsor Referral ID")
         }
     }
 
@@ -122,6 +125,27 @@ export default function Signup({ setIsAuthenticated }) {
                             </div>
                         </div>
 
+                        {/* Mobile Input */}
+                        <div className="space-y-2">
+                            <label htmlFor="mobile" className="text-xs font-semibold text-gray-400 uppercase tracking-wider ml-1">
+                                Mobile Number
+                            </label>
+                            <div className="relative group">
+                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none transition-colors group-focus-within:text-teal-400 text-gray-500">
+                                    <Phone className="w-5 h-5" />
+                                </div>
+                                <input
+                                    id="mobile"
+                                    type="tel"
+                                    name="mobile"
+                                    placeholder="1234567890"
+                                    value={formData.mobile}
+                                    onChange={handleChange}
+                                    className="w-full pl-12 pr-4 py-3.5 bg-black/40 border border-white/10 rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-teal-500/50 focus:ring-2 focus:ring-teal-500/20 transition-all duration-300 hover:border-white/20"
+                                />
+                            </div>
+                        </div>
+
                         {/* Password Input */}
                         <div className="space-y-2">
                             <label htmlFor="password" className="text-xs font-semibold text-gray-400 uppercase tracking-wider ml-1">
@@ -164,10 +188,10 @@ export default function Signup({ setIsAuthenticated }) {
                             </div>
                         </div>
 
-                        {/* Referral Code Input */}
+                        {/* Sponsor Referral ID Input */}
                         <div className="space-y-2">
                             <label htmlFor="referral_id" className="text-xs font-semibold text-gray-400 uppercase tracking-wider ml-1">
-                                Referral Code (Optional)
+                                Sponsor Referral ID
                             </label>
                             <div className="relative group">
                                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none transition-colors group-focus-within:text-teal-400 text-gray-500">
@@ -177,7 +201,7 @@ export default function Signup({ setIsAuthenticated }) {
                                     id="referral_id"
                                     type="text"
                                     name="referral_id"
-                                    placeholder="Enter referral code"
+                                    placeholder="Enter Sponsor Referral ID"
                                     value={formData.referral_id}
                                     onChange={handleChange}
                                     className="w-full pl-12 pr-4 py-3.5 bg-black/40 border border-white/10 rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-teal-500/50 focus:ring-2 focus:ring-teal-500/20 transition-all duration-300 hover:border-white/20"

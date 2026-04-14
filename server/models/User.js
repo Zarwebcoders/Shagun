@@ -51,29 +51,29 @@ const userSchema = new mongoose.Schema({
     },
 
 
-    airdrop_tokens: {
-        type: Number,
-        default: 0,
+    airdrop_tokons: {
+        type: String,
+        default: "0",
     },
-    real_tokens: { // Renamed from rexToken
-        type: Number,
-        default: 0,
+    real_tokens: { 
+        type: String,
+        default: "0",
     },
-    shopping_tokens: { // Renamed from shoppingPoints
-        type: Number,
-        default: 0,
+    shopping_tokons: { 
+        type: String,
+        default: "0",
     },
     mining_bonus: {
         type: Number,
         default: 0,
     },
     anual_bonus: {
-        type: Number,
-        default: 0,
+        type: String,
+        default: "0",
     },
     sponsor_income: {
-        type: Number,
-        default: 0,
+        type: String,
+        default: "0",
     },
     level_income: {
         type: Number,
@@ -99,8 +99,8 @@ const userSchema = new mongoose.Schema({
         type: Date,
     },
     mining_count_thismounth: {
-        type: Number,
-        default: 0,
+        type: String,
+        default: "0",
     },
 
 
@@ -108,9 +108,11 @@ const userSchema = new mongoose.Schema({
     // If we want strict db matching we might need timestamps: { createdAt: 'create_at', updatedAt: 'update_at' }
     // The image shows 'create_at' and 'update_at'.
     is_deleted: {
-        type: Number,
-        default: 0,
+        type: String,
+        default: "0",
     },
+    resetPasswordToken: String,
+    resetPasswordExpire: Date,
 }, {
     timestamps: { createdAt: 'create_at', updatedAt: 'update_at' },
 });
