@@ -5,12 +5,14 @@ const {
     getUserById,
     updateUser,
     deleteUser,
-    getDownline
+    getDownline,
+    mineTokens
 } = require('../controllers/userController');
 const { protect, admin } = require('../middleware/authMiddleware');
 
 router.get('/', protect, admin, getUsers);
 router.get('/downline', protect, getDownline);
+router.post('/mine', protect, mineTokens);
 router.get('/:id', protect, getUserById);
 router.put('/:id', protect, updateUser);
 router.delete('/:id', protect, admin, deleteUser);

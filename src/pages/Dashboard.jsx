@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useNavigate } from "react-router-dom"
 import { motion } from "framer-motion"
 import { toast } from "react-hot-toast"
 import client from "../api/client"
@@ -24,6 +25,7 @@ import {
 import { WalletIcon } from "lucide-react"
 
 export default function Dashboard() {
+    const navigate = useNavigate()
     const { connectWallet, disconnectWallet, isConnected, account, balance: onChainBalance, stakedBalance } = useWeb3()
     const [walletBalance, setWalletBalance] = useState(0)
     const [userName, setUserName] = useState("")
@@ -51,6 +53,8 @@ export default function Dashboard() {
         miningPower: "0 TH/s",
         uptime: "99.8%",
         earningsToday: 0,
+        lastMinedAt: null,
+        monthlyCount: 0
     })
 
     const [referralProgram, setReferralProgram] = useState({
@@ -127,6 +131,14 @@ export default function Dashboard() {
                     totalIncome: totalCalculatedIncome,
                 });
 
+                setMiningCenter({
+                    status: Number(userData.mining_bonus || 0) > 0 ? "Active" : "Pending",
+                    miningPower: userData.mining_count_thismounth ? `${Number(userData.mining_count_thismounth).toLocaleString()} TH/s` : "0 TH/s",
+                    earningsToday: Number(userData.mining_bonus || 0),
+                    lastMinedAt: userData.last_mining_data,
+                    monthlyCount: Number(userData.mining_count_thismounth || 0)
+                });
+
             } catch (error) {
                 console.error("Error fetching dashboard data:", error);
             } finally {
@@ -136,6 +148,37 @@ export default function Dashboard() {
 
         fetchUserData();
     }, []);
+
+    const handleMine = async () => {
+        try {
+            const { data } = await client.post('/users/mine');
+            toast.success(data.message || "Mining successful!");
+            
+            // Re-fetch data to show new mining time/bonus
+            const [userRes] = await Promise.all([
+                client.get('/auth/me')
+            ]);
+            
+            const userData = userRes.data;
+            setMiningCenter(prev => ({
+                ...prev,
+                lastMinedAt: userData.last_mining_data,
+                monthlyCount: Number(userData.mining_count_thismounth || 0),
+                earningsToday: Number(userData.mining_bonus || 0)
+            }));
+            
+            setIncomeBreakdown(prev => ({
+                ...prev,
+                miningBonus: Number(userData.mining_bonus || 0),
+                totalIncome: Number(userData.total_income || 0)
+            }));
+
+        } catch (error) {
+            console.error("Mining error:", error);
+            const msg = error.response?.data?.message || "Failed to start mining";
+            toast.error(msg);
+        }
+    }
 
     const containerVariants = {
         hidden: { opacity: 0 },
@@ -219,6 +262,9 @@ export default function Dashboard() {
                                 status={miningCenter.status}
                                 miningPower={miningCenter.miningPower}
                                 earningsToday={miningCenter.earningsToday}
+                                lastMinedAt={miningCenter.lastMinedAt}
+                                monthlyCount={miningCenter.monthlyCount}
+                                onMine={handleMine}
                             />
                         </div>
                     </div>
@@ -373,7 +419,11 @@ export default function Dashboard() {
                             </div>
                         </div>
 
-                        <button className="w-full mt-6 py-3 rounded-xl border border-teal-500/30 text-teal-300 font-bold hover:bg-teal-500/10 transition-colors">
+                        <button
+                            type="button"
+                            onClick={() => navigate('/downline')}
+                            className="w-full mt-6 py-3 rounded-xl border border-teal-500/30 text-teal-300 font-bold hover:bg-teal-500/10 transition-colors"
+                        >
                             View Full Network
                         </button>
                     </div>

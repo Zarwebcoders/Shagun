@@ -26,6 +26,10 @@ const userSchema = new mongoose.Schema({
         type: String,
         default: "",
     },
+    address: {
+        type: String,
+        default: "",
+    },
     referral_id: {
         type: String,
         unique: true,

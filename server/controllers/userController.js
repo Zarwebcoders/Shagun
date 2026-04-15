@@ -1,4 +1,7 @@
 const User = require('../models/User');
+const Investment = require('../models/Investment');
+const MiningBonus = require('../models/MiningBonus');
+const Transaction = require('../models/Transaction');
 
 // @desc    Get all users (Admin)
 // @route   GET /api/users
@@ -93,6 +96,7 @@ const updateUser = async (req, res) => {
             user.full_name = req.body.full_name || user.full_name;
             user.email = req.body.email || user.email;
             user.mobile = req.body.mobile || user.mobile;
+            user.address = req.body.address || user.address;
             if (req.body.password) {
                 user.password = req.body.password;
             }
@@ -110,6 +114,7 @@ const updateUser = async (req, res) => {
                 full_name: updatedUser.full_name,
                 email: updatedUser.email,
                 mobile: updatedUser.mobile,
+                address: updatedUser.address,
                 is_admin: updatedUser.is_admin,
                 is_deleted: updatedUser.is_deleted,
 
@@ -223,10 +228,88 @@ const getDownline = async (req, res) => {
     }
 };
 
+// @desc    Mine tokens (Daily Claim)
+// @route   POST /api/users/mine
+// @access  Private
+const mineTokens = async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id);
+        
+        // 24h Cooldown check
+        if (user.last_mining_data) {
+            const lastMined = new Date(user.last_mining_data);
+            const now = new Date();
+            const hoursPassed = (now - lastMined) / (1000 * 60 * 60);
+            if (hoursPassed < 24) {
+                return res.status(400).json({ 
+                    message: "Mining session still active. Come back later!", 
+                    nextAvailable: new Date(lastMined.getTime() + 24 * 60 * 60 * 1000)
+                });
+            }
+        }
+
+        // Check for active investments
+        const activeInvestments = await Investment.find({ 
+            user: req.user._id, 
+            status: { $regex: /^active$/i } 
+        });
+
+        if (activeInvestments.length === 0) {
+            return res.status(403).json({ message: "No active investments found. Buy a package to start mining!" });
+        }
+
+        // Calculate total daily return based on active investments
+        let totalReward = 0;
+        activeInvestments.forEach(inv => {
+            const dailyReturn = inv.dailyReturn || 0;
+            totalReward += (inv.amount * dailyReturn) / 100;
+        });
+
+        if (totalReward <= 0) {
+            return res.status(400).json({ message: "No mining rewards available from current packages." });
+        }
+
+        // Update User stats
+        user.last_mining_data = new Date();
+        user.mining_count_thismounth = String(Number(user.mining_count_thismounth || 0) + 1);
+        user.mining_bonus = (user.mining_bonus || 0) + totalReward;
+        user.total_income = (user.total_income || 0) + totalReward;
+        await user.save();
+
+        // Record Mining Bonus entry
+        await MiningBonus.create({
+            user_id: user._id,
+            amount: totalReward,
+            created_at: new Date()
+        });
+
+        // Record Transaction
+        await Transaction.create({
+            user: user._id,
+            type: 'mining_bonus',
+            amount: totalReward,
+            description: `Daily Mining Reward Claimed`,
+            status: 'completed'
+        });
+
+        res.json({
+            message: "Mining successful!",
+            reward: totalReward,
+            last_mining_data: user.last_mining_data,
+            mining_count_thismounth: user.mining_count_thismounth
+        });
+
+    } catch (error) {
+        console.error("Mining Error:", error);
+        res.status(500).json({ message: error.message });
+    }
+};
+
 module.exports = {
     getUsers,
     getUserById,
     updateUser,
     deleteUser,
     getDownline,
+    mineTokens
 };

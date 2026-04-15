@@ -1,17 +1,19 @@
 const mongoose = require('mongoose');
 const KYC = require('../models/KYC');
 const User = require('../models/User');
+const MyAccount = require('../models/MyAccount');
 
 // @desc    Submit KYC
 // @route   POST /api/kyc
 // @access  Private
 const submitKYC = async (req, res) => {
     // Expecting flat structure or mapped from frontend
-    // Frontend sends: aadharNumber, panNumber, documents: { aadharFront, aadharBack, panCard, agreement }
+    // Frontend sends: aadharNumber, panNumber, documents: { aadharFront, aadharBack, panCard, agreement, profilePhoto }, bankDetails: { ... }
     const {
         aadharNumber,
         panNumber,
-        documents
+        documents,
+        bankDetails
     } = req.body;
 
     try {
@@ -29,14 +31,40 @@ const submitKYC = async (req, res) => {
             aadhar_back: documents.aadharBack, // Mapping to schema field
             pancard: documents.panCard,       // Mapping to schema field
             agreement: documents.agreement,    // Mapping to schema field
+            profile_photo: documents.profilePhoto, // Mapping to schema field
+            bank_name: bankDetails?.bankName,
+            acc_name: bankDetails?.accountName,
+            branch: bankDetails?.branch,
+            ifsc_code: bankDetails?.ifscCode,
+            acc_num: bankDetails?.accountNumber,
             approval: 2 // Pending
         });
 
         // Update user status - using _id for reliable lookup
         await User.findByIdAndUpdate(req.user._id, { kycStatus: 'pending' });
 
+        // SYNC WITH MYACCOUNT
+        if (bankDetails) {
+            const myAccData = {
+                user_id: req.user.id || req.user.user_id || req.user._id.toString(),
+                back_name: bankDetails.bankName,
+                acc_name: bankDetails.accountName,
+                branch: bankDetails.branch,
+                back_code: bankDetails.ifscCode,
+                acc_num: bankDetails.accountNumber,
+                approve: 2 // Pending
+            };
+
+            await MyAccount.findOneAndUpdate(
+                { user_id: myAccData.user_id },
+                myAccData,
+                { upsert: true, new: true }
+            );
+        }
+
         res.status(201).json(kyc);
     } catch (error) {
+        console.error("Submit KYC Error:", error);
         res.status(500).json({ message: error.message });
     }
 };

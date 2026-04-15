@@ -9,6 +9,7 @@ export default function Profile() {
         full_name: "",
         email: "",
         mobile: "",
+        address: "",
         created_at: "",
         referral_id: "",
         walletConnected: false,
@@ -45,6 +46,7 @@ export default function Profile() {
                 full_name: data.full_name,
                 email: data.email,
                 mobile: data.mobile || "Not set",
+                address: data.address || "Not set",
                 walletConnected: !!walletData?.wallet_add,
                 walletAddress: walletData?.wallet_add || "",
                 created_at: new Date(data.create_at).toLocaleDateString(),
@@ -55,7 +57,8 @@ export default function Profile() {
             setFormData({
                 full_name: data.full_name,
                 email: data.email,
-                mobile: data.mobile || ""
+                mobile: data.mobile || "",
+                address: data.address || ""
             });
             setLoading(false);
         } catch (error) {
@@ -72,7 +75,8 @@ export default function Profile() {
                 ...prev,
                 full_name: data.full_name,
                 email: data.email,
-                mobile: data.mobile
+                mobile: data.mobile,
+                address: data.address
             }));
             setIsEditing(false);
             toast.success("Profile updated successfully!");
@@ -221,6 +225,19 @@ export default function Profile() {
                                     />
                                 ) : (
                                     <p className="text-base md:text-lg text-white font-semibold truncate">{profile.mobile}</p>
+                                )}
+                            </div>
+                            <div className="bg-[#1a1a1a] p-3 md:p-4 rounded-lg border border-[#444] sm:col-span-2">
+                                <label className="text-xs md:text-sm text-[#b0b0b0] mb-1 md:mb-2 block">Address</label>
+                                {isEditing ? (
+                                    <textarea
+                                        className="w-full bg-[#333] text-white p-2 rounded min-h-[80px]"
+                                        value={formData.address}
+                                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                                        placeholder="Enter your full address"
+                                    />
+                                ) : (
+                                    <p className="text-base md:text-lg text-white font-semibold">{profile.address}</p>
                                 )}
                             </div>
                             <div className="bg-[#1a1a1a] p-3 md:p-4 rounded-lg border border-[#444]">

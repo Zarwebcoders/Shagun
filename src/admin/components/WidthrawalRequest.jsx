@@ -99,7 +99,8 @@ export default function WithdrawalRequests() {
                         <thead className="bg-[#1a1a2e] border-b border-teal-500/20">
                             <tr>
                                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">User</th>
-                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Amount</th>
+                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Gross Amount</th>
+                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Net ( -15% )</th>
                                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Type</th>
                                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Date</th>
                                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Status</th>
@@ -125,7 +126,10 @@ export default function WithdrawalRequests() {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className="text-teal-400 font-bold">₹{req.amount.toLocaleString()}</span>
+                                            <span className="text-gray-400 font-medium text-sm line-through">₹{req.amount.toLocaleString()}</span>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <span className="text-teal-400 font-bold">₹{(req.payable_amount || (req.amount * 0.85)).toLocaleString()}</span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <span className="text-gray-300 text-sm capitalize">{req.withdraw_type}</span>

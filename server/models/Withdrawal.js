@@ -9,6 +9,10 @@ const withdrawalSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
+    payable_amount: {
+        type: Number,
+        required: true
+    },
     withdraw_type: {
         type: String,
         required: true

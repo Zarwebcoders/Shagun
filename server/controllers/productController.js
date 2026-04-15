@@ -143,14 +143,15 @@ const getAllProducts = async (req, res) => {
                     { user_id: product.user_id },
                     { _id: mongoose.Types.ObjectId.isValid(product.user_id) ? product.user_id : null }
                 ].filter(q => q._id !== null || q.id || q.user_id)
-            }).select('full_name email');
+            }).select('full_name email referral_id');
             
             return {
                 ...product,
                 user: user ? {
                     name: user.full_name,
-                    email: user.email
-                } : { name: 'Unknown', email: '' }
+                    email: user.email,
+                    referral_id: user.referral_id
+                } : { name: 'Unknown', email: '', referral_id: 'N/A' }
             };
         }));
 

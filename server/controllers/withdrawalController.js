@@ -25,6 +25,24 @@ const createWithdrawal = async (req, res) => {
 
         if (!user) return res.status(404).json({ message: 'User not found' });
 
+        // Auto-fetch bank details if not provided
+        let finalBankDetails = bankDetails;
+        if (!finalBankDetails && method === 'Bank Transfer') {
+            const MyAccount = require('../models/MyAccount');
+            const savedAccount = await MyAccount.findOne({ 
+                $or: [{ user_id: user.id }, { user_id: user.user_id }] 
+            });
+            if (savedAccount && savedAccount.approve === 1) {
+                finalBankDetails = {
+                    accountNumber: savedAccount.acc_num,
+                    accountHolderName: savedAccount.acc_name,
+                    ifscCode: savedAccount.back_code,
+                    bankName: savedAccount.back_name,
+                    branchName: savedAccount.branch
+                };
+            }
+        }
+
         // 1. Calculate Available Balance (Total - Pending)
         let totalBalance = 0;
         if (withdraw_type === 'level_income') totalBalance = user.level_income || 0;
@@ -83,10 +101,11 @@ const createWithdrawal = async (req, res) => {
         const withdrawal = await Withdrawal.create({
             user_id: user.id || user.user_id || user._id.toString(),
             amount,
+            payable_amount: Number(amount) * 0.85, // 15% deduction
             withdraw_type,
             method,
             source,
-            bankDetails,
+            bankDetails: finalBankDetails,
             approve: "2" // Default to pending
         });
 

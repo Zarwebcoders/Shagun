@@ -47,6 +47,7 @@ export default function PackageManagement() {
     // Filter Logic
     const filteredProducts = products.filter(p =>
         (p.user?.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (p.user?.referral_id || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
         (p.packag_type || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
         (p.transcation_id || "").toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -125,6 +126,7 @@ export default function PackageManagement() {
                         <thead className="bg-[#1a1a2e] border-b border-teal-500/20">
                             <tr>
                                 <th className="px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">User</th>
+                                <th className="px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Referral ID</th>
                                 <th className="px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Product / Qty</th>
                                 <th className="px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Txn Info</th>
                                 <th className="px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Amount</th>
@@ -151,6 +153,11 @@ export default function PackageManagement() {
                                                     <p className="text-xs text-gray-500">{item.user?.email}</p>
                                                 </div>
                                             </div>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <span className="text-teal-400 font-mono text-xs font-bold bg-teal-500/10 px-2 py-1 rounded border border-teal-500/20">
+                                                {item.user?.referral_id || "N/A"}
+                                            </span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div>

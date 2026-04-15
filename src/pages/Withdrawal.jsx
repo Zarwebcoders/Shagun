@@ -27,19 +27,23 @@ export default function Withdrawal() {
     })
     const [kycData, setKycData] = useState(null)
     const [walletData, setWalletData] = useState(null)
+    const [bankAccount, setBankAccount] = useState(null)
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [userRes, withdrawRes, kycRes, walletRes, levelAvailRes, levelRecordsRes] = await Promise.all([
+                const results = await Promise.all([
                     client.get('/auth/me'),
                     client.get('/withdrawals/me'), // Fixed path
                     client.get('/kyc/me').catch(() => ({ data: null })),
                     client.get('/wallet/me').catch(() => ({ data: null })),
+                    client.get('/my-account').catch(() => ({ data: null })),
                     client.get('/level-income/available').catch(() => ({ data: { available: 0 } })),
                     client.get('/level-income').catch(() => ({ data: [] }))
                 ]);
+
+                const [userRes, withdrawRes, kycRes, walletRes, bankRes, levelAvailRes, levelRecordsRes] = results;
 
                 const user = userRes.data;
                 const levelAvailable = levelAvailRes.data?.available || 0;
@@ -64,16 +68,16 @@ export default function Withdrawal() {
                 setUserData({
                     name: user.full_name,
                     totalMiningBonus: user.mining_bonus || 0,
-                    levelIncomeROI: exactTotalLevelIncome, 
+                    levelIncomeROI: user.level_income || 0, 
                     withdrawableLevelIncome: Math.max(0, levelAvailable - pendingBySource.level_income), 
                     withdrawableROI: Math.max(0, (levelAvailRes.data?.availableROI || 0) - pendingBySource.mining_bonus),
-                    normalWithdrawal: user.normalWithdrawal || 0,
-                    sosWithdrawal: user.shopping_tokens || 0,
+                    normalWithdrawal: user.total_income || 0, // Mapping to total_income as proxy for 'normal'
+                    sosWithdrawal: Number(user.shopping_tokons || 0),
                     totalWithdrawal: user.totalWithdrawal || 0,
                     totalIncome: user.total_income || 0,
-                    stakeROI: user.stakeROI || 0,
-                    stakeToken: user.stakeToken || 0,
-                    anualBonus: Math.max(0, (user.anual_bonus || 0) - (pendingBySource.annual_bonus || 0))
+                    stakeROI: Number(user.airdrop_tokons || 0),
+                    stakeToken: Number(user.real_tokens || 0),
+                    anualBonus: Math.max(0, Number(user.anual_bonus || 0) - (pendingBySource.annual_bonus || 0))
                 });
 
                 // Map withdrawals from new schema
@@ -94,6 +98,7 @@ export default function Withdrawal() {
 
                 setKycData(kycRes.data);
                 setWalletData(walletRes.data);
+                setBankAccount(bankRes?.data || null);
 
             } catch (error) {
                 console.error("Error fetching data:", error);
@@ -309,12 +314,12 @@ export default function Withdrawal() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
-                {/* Withdrawal Form Section */}
                 <div className="lg:col-span-1">
                     <WithdrawalForm
                         onSubmit={handleWithdraw}
                         userData={userData}
                         kycData={kycData}
+                        bankAccount={bankAccount}
                         savedWallet={walletData?.wallet_add || ""}
                     />
                 </div>

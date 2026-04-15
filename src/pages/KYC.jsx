@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { toast } from "react-hot-toast"
 import { motion, AnimatePresence } from "framer-motion"
 import client from "../api/client"
@@ -19,6 +19,8 @@ export default function KYC() {
     const [step, setStep] = useState(1)
     const [showSuccess, setShowSuccess] = useState(false)
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [existingKYC, setExistingKYC] = useState(null)
+    const [fetchingExisting, setFetchingExisting] = useState(true)
 
     const [formData, setFormData] = useState({
         // Aadhar Details
@@ -49,6 +51,25 @@ export default function KYC() {
         profile: null,
         agreement: null,
     })
+
+    const [fetchTrigger, setFetchTrigger] = useState(0)
+
+    useEffect(() => {
+        const fetchKYCStatus = async () => {
+            try {
+                const res = await client.get('/kyc/me');
+                if (res.data) {
+                    setExistingKYC(res.data);
+                }
+            } catch (error) {
+                console.error("Error fetching KYC status:", error);
+            } finally {
+                setFetchingExisting(false);
+            }
+        };
+
+        fetchKYCStatus();
+    }, [fetchTrigger]);
 
     const handleChange = (e) => {
         const { name, value } = e.target
@@ -82,7 +103,7 @@ export default function KYC() {
     }
 
     const handleNext = () => {
-        if (step < 3) setStep(step + 1)
+        if (step < 4) setStep(step + 1)
     }
 
     const handleBack = () => {
@@ -92,7 +113,7 @@ export default function KYC() {
     const handleSubmit = async (e) => {
         e.preventDefault()
 
-        if (step !== 3) return; // Now max step is 3
+        if (step !== 4) return;
 
         setIsSubmitting(true)
 
@@ -100,6 +121,13 @@ export default function KYC() {
             await client.post('/kyc', {
                 aadharNumber: formData.aadharNumber,
                 panNumber: formData.panNumber,
+                bankDetails: {
+                    accountName: formData.accountName,
+                    bankName: formData.bankName,
+                    accountNumber: formData.accountNumber,
+                    branch: formData.branch,
+                    ifscCode: formData.ifscCode
+                },
                 documents: {
                     profilePhoto: previewUrls.profile,
                     aadharFront: previewUrls.aadharFront,
@@ -110,6 +138,7 @@ export default function KYC() {
             });
 
             setShowSuccess(true)
+            setFetchTrigger(prev => prev + 1)
 
             setTimeout(() => {
                 setShowSuccess(false)
@@ -170,6 +199,7 @@ export default function KYC() {
         { id: 1, title: "Profile", icon: UserCircleIcon },
         { id: 2, title: "Aadhar", icon: IdentificationIcon },
         { id: 3, title: "PAN Card", icon: DocumentCheckIcon },
+        { id: 4, title: "Bank Details", icon: BuildingLibraryIcon },
     ]
 
     return (
@@ -219,42 +249,72 @@ export default function KYC() {
                 )}
             </AnimatePresence>
 
-            {/* Modern Stepper */}
-            <div className="relative flex items-center justify-between w-full max-w-4xl mx-auto mb-12 px-4">
-                <div className="absolute top-8 left-0 w-full h-1 bg-[#2a2a3e] -z-10 rounded-full overflow-hidden">
-                    <motion.div
-                        className="h-full bg-gradient-brand"
-                        initial={{ width: "0%" }}
-                        animate={{ width: `${((step - 1) / 3) * 100}%` }}
-                        transition={{ duration: 0.5, ease: "easeInOut" }}
-                    />
+            {/* Existing KYC View or Form */}
+            {fetchingExisting ? (
+                <div className="flex flex-col items-center justify-center min-h-[400px]">
+                    <div className="w-12 h-12 border-4 border-teal-500/30 border-t-teal-500 rounded-full animate-spin mb-4"></div>
+                    <p className="text-gray-400">Verifying your status...</p>
                 </div>
+            ) : existingKYC && existingKYC.approval !== 0 ? (
+                /* Detail View for Pending/Approved */
+                <KYCDetailsView kyc={existingKYC} />
+            ) : (
+                /* Form View (New or Rejected) */
+                <>
+                    {existingKYC && existingKYC.approval === 0 && (
+                        <div className="bg-red-500/10 border border-red-500/50 p-6 rounded-2xl mb-8 flex items-start gap-4">
+                            <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center shrink-0">
+                                <span className="text-2xl">⚠️</span>
+                            </div>
+                            <div>
+                                <h4 className="text-xl font-bold text-red-500 mb-1">KYC Rejected</h4>
+                                <p className="text-gray-400 mb-4">
+                                    Your previous submission was rejected. Please review your details and resubmit the correct information.
+                                </p>
+                                <button
+                                    onClick={() => setExistingKYC(null)}
+                                    className="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all font-semibold"
+                                >
+                                    Start New Submission
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                    {/* Modern Stepper */}
+                    <div className="relative flex items-center justify-between w-full max-w-4xl mx-auto mb-12 px-4">
+                        <div className="absolute top-8 left-0 w-full h-1 bg-[#2a2a3e] -z-10 rounded-full overflow-hidden">
+                            <motion.div
+                                className="h-full bg-gradient-brand"
+                                initial={{ width: "0%" }}
+                                animate={{ width: `${((step - 1) / 3) * 100}%` }}
+                                transition={{ duration: 0.5, ease: "easeInOut" }}
+                            />
+                        </div>
 
-                {steps.map((s, i) => (
-                    <div key={s.id} className="flex flex-col items-center gap-3 px-2 py-1 relative z-10">
-                        <motion.div
-                            animate={{
-                                backgroundColor: step >= s.id ? "#1a1a2e" : "#0f0f1a",
-                                borderColor: step >= s.id ? "#2dd4bf" : "#333",
-                                scale: step === s.id ? 1.1 : 1
-                            }}
-                            className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center border-2 transition-all duration-300 ${step >= s.id ? 'shadow-[0_0_20px_rgba(45,212,191,0.3)]' : ''
-                                }`}
-                        >
-                            <s.icon className={`w-6 h-6 md:w-7 md:h-7 ${step >= s.id ? 'text-teal-400' : 'text-gray-600'}`} />
-                        </motion.div>
-                        <span className={`text-xs md:text-sm font-medium ${step >= s.id ? 'text-white' : 'text-gray-600'}`}>
-                            {s.title}
-                        </span>
+                        {steps.map((s, i) => (
+                            <div key={s.id} className="flex flex-col items-center gap-3 px-2 py-1 relative z-10">
+                                <motion.div
+                                    animate={{
+                                        backgroundColor: step >= s.id ? "#1a1a2e" : "#0f0f1a",
+                                        borderColor: step >= s.id ? "#2dd4bf" : "#333",
+                                        scale: step === s.id ? 1.1 : 1
+                                    }}
+                                    className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center border-2 transition-all duration-300 ${step >= s.id ? 'shadow-[0_0_20px_rgba(45,212,191,0.3)]' : ''
+                                        }`}
+                                >
+                                    <s.icon className={`w-6 h-6 md:w-7 md:h-7 ${step >= s.id ? 'text-teal-400' : 'text-gray-600'}`} />
+                                </motion.div>
+                                <span className={`text-xs md:text-sm font-medium ${step >= s.id ? 'text-white' : 'text-gray-600'}`}>
+                                    {s.title}
+                                </span>
+                            </div>
+                        ))}
                     </div>
-                ))}
-            </div>
-
-            {/* Content Container */}
-            <motion.div
-                layout
-                className="bg-[#1a1a2e]/60 backdrop-blur-xl rounded-3xl border border-teal-500/20 overflow-hidden relative shadow-2xl min-h-[500px]"
-            >
+                    {/* Content Container */}
+                    <motion.div
+                        layout
+                        className="bg-[#1a1a2e]/60 backdrop-blur-xl rounded-3xl border border-teal-500/20 overflow-hidden relative shadow-2xl min-h-[500px]"
+                    >
                 <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-purple-500/10 rounded-full blur-[100px] pointer-events-none"></div>
 
                 <AnimatePresence mode="wait">
@@ -403,6 +463,64 @@ export default function KYC() {
                     )}
 
 
+                    {/* Step 4: Bank Details */}
+                    {step === 4 && (
+                        <motion.div
+                            key="step4"
+                            variants={containerVariants}
+                            initial="hidden"
+                            animate="show"
+                            exit="exit"
+                            className="p-6 md:p-12"
+                        >
+                            <div className="mb-8">
+                                <h3 className="text-2xl font-bold text-white mb-2">Bank Account Details</h3>
+                                <p className="text-gray-400">Provide bank details for your future withdrawals.</p>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <InputBox
+                                    label="Account Holder Name"
+                                    name="accountName"
+                                    value={formData.accountName}
+                                    onChange={handleChange}
+                                    placeholder="Name as per Bank"
+                                />
+                                <InputBox
+                                    label="Bank Name"
+                                    name="bankName"
+                                    value={formData.bankName}
+                                    onChange={handleChange}
+                                    placeholder="e.g. State Bank of India"
+                                />
+                                <InputBox
+                                    label="Account Number"
+                                    name="accountNumber"
+                                    value={formData.accountNumber}
+                                    onChange={handleChange}
+                                    placeholder="Enter Account Number"
+                                />
+                                <InputBox
+                                    label="IFSC Code"
+                                    name="ifscCode"
+                                    value={formData.ifscCode}
+                                    onChange={handleChange}
+                                    placeholder="SBIN0001234"
+                                />
+                                <div className="md:col-span-2">
+                                    <InputBox
+                                        label="Branch Name"
+                                        name="branch"
+                                        value={formData.branch}
+                                        onChange={handleChange}
+                                        placeholder="Enter Branch Name"
+                                    />
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+
+
                 </AnimatePresence>
 
                 {/* Footer Navigation */}
@@ -417,7 +535,7 @@ export default function KYC() {
                         Back
                     </button>
 
-                    {step < 3 ? (
+                    {step < 4 ? (
                         <button
                             onClick={handleNext}
                             className="flex items-center gap-2 px-8 py-3 bg-white text-black font-bold rounded-xl hover:bg-gray-100 transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)]"
@@ -438,7 +556,126 @@ export default function KYC() {
                     )}
                 </div>
             </motion.div>
+            </>
+            )}
         </div>
+    )
+}
+
+function KYCDetailsView({ kyc }) {
+    const statusInfo = {
+        1: { label: 'Verified', color: 'text-green-400', bg: 'bg-green-500/10', border: 'border-green-500/30' },
+        2: { label: 'Pending Review', color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/30' },
+        0: { label: 'Rejected', color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/30' }
+    }
+
+    const currentStatus = statusInfo[kyc.approval] || statusInfo[2];
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-[#1a1a2e]/60 backdrop-blur-xl rounded-3xl border border-teal-500/20 overflow-hidden shadow-2xl p-6 md:p-12"
+        >
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12 pb-8 border-b border-white/5">
+                <div className="flex items-center gap-6">
+                    {kyc.profile_photo && (
+                        <div className="shrink-0 relative group">
+                            <div className="absolute -inset-1 bg-gradient-brand rounded-2xl blur opacity-30 group-hover:opacity-60 transition duration-1000 group-hover:duration-200"></div>
+                            <img
+                                src={kyc.profile_photo}
+                                alt="Profile"
+                                className="relative w-24 h-24 md:w-32 md:h-32 rounded-2xl object-cover border-2 border-white/10 shadow-2xl"
+                            />
+                        </div>
+                    )}
+                    <div>
+                        <h3 className="text-2xl md:text-3xl font-bold text-white mb-2">KYC Verification Status</h3>
+                        <p className="text-gray-400">Security and identification details submitted on {new Date(kyc.createdAt).toLocaleDateString()}</p>
+                    </div>
+                </div>
+                <div className={`flex items-center gap-3 px-6 py-3 rounded-2xl ${currentStatus.bg} ${currentStatus.border} border shadow-lg`}>
+                    <div className={`w-3 h-3 rounded-full ${kyc.approval === 2 ? 'animate-pulse' : ''}`} style={{ backgroundColor: 'currentColor' }}></div>
+                    <span className={`text-lg font-bold ${currentStatus.color}`}>{currentStatus.label}</span>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+                <div className="bg-[#0f0f1a] p-8 rounded-3xl border border-white/5 relative group overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <IdentificationIcon className="w-16 h-16 text-white" />
+                    </div>
+                    <p className="text-gray-500 text-sm mb-4 uppercase tracking-wider font-bold">Aadhar Card Number</p>
+                    <p className="text-2xl md:text-3xl text-white font-mono tracking-[0.2em]">
+                        {kyc.aadhar || 'XXXXXXXXXXXX'}
+                    </p>
+                </div>
+                <div className="bg-[#0f0f1a] p-8 rounded-3xl border border-white/5 relative group overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <DocumentCheckIcon className="w-16 h-16 text-white" />
+                    </div>
+                    <p className="text-gray-500 text-sm mb-4 uppercase tracking-wider font-bold">PAN Card Number</p>
+                    <p className="text-2xl md:text-3xl text-white font-mono tracking-[0.2em]">
+                        {kyc.pan || 'XXXXXXXXXX'}
+                    </p>
+                </div>
+            </div>
+
+            <h4 className="text-xl font-bold text-white mb-6">Bank Account Details</h4>
+            <div className="bg-[#1a1a2e]/60 border border-teal-500/20 rounded-3xl p-8 mb-12 shadow-inner">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <div>
+                        <p className="text-gray-500 text-xs uppercase tracking-widest font-bold mb-2">Account Holder</p>
+                        <p className="text-white font-semibold text-lg">{kyc.acc_name || 'N/A'}</p>
+                    </div>
+                    <div>
+                        <p className="text-gray-500 text-xs uppercase tracking-widest font-bold mb-2">Bank Name</p>
+                        <p className="text-white font-semibold text-lg">{kyc.bank_name || 'N/A'}</p>
+                    </div>
+                    <div>
+                        <p className="text-gray-500 text-xs uppercase tracking-widest font-bold mb-2">Account Number</p>
+                        <p className="text-white font-mono text-lg">{kyc.acc_num || 'N/A'}</p>
+                    </div>
+                    <div>
+                        <p className="text-gray-500 text-xs uppercase tracking-widest font-bold mb-2">IFSC Code</p>
+                        <p className="text-white font-mono text-lg">{kyc.ifsc_code || 'N/A'}</p>
+                    </div>
+                    <div className="lg:col-span-2">
+                        <p className="text-gray-500 text-xs uppercase tracking-widest font-bold mb-2">Branch</p>
+                        <p className="text-white font-semibold text-lg">{kyc.branch || 'N/A'}</p>
+                    </div>
+                </div>
+            </div>
+
+            <h4 className="text-xl font-bold text-white mb-6">Submitted Documents</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[
+                    { label: 'Aadhar Front', url: kyc.aadharcard },
+                    { label: 'Aadhar Back', url: kyc.aadhar_back },
+                    { label: 'PAN Card', url: kyc.pancard },
+                    { label: 'Agreement', url: kyc.agreement },
+                    { label: 'Profile Photo', url: kyc.profile_photo }
+                ].map((doc, idx) => (
+                    doc.url && (
+                        <div key={idx} className="group relative bg-[#0f0f1a] rounded-2xl overflow-hidden border border-white/5 aspect-video">
+                            <img src={doc.url} alt={doc.label} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" />
+                            <div className="absolute bottom-0 left-0 w-full p-4 bg-gradient-to-t from-black/80 to-transparent">
+                                <p className="text-white text-sm font-semibold">{doc.label}</p>
+                            </div>
+                        </div>
+                    )
+                ))}
+            </div>
+            
+            {kyc.approval === 1 && (
+                <div className="mt-12 p-6 bg-green-500/10 border border-green-500/20 rounded-2xl flex items-center gap-4">
+                    <CheckCircleIcon className="w-8 h-8 text-green-400 shrink-0" />
+                    <p className="text-gray-300">
+                        Your identity has been fully verified. You now have full access to all platform features, including withdrawals and investments.
+                    </p>
+                </div>
+            )}
+        </motion.div>
     )
 }
 

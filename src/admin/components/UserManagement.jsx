@@ -98,6 +98,7 @@ export default function UserManagement() {
             full_name: selectedUser.full_name,
             email: selectedUser.email,
             mobile: selectedUser.mobile,
+            address: selectedUser.address || "",
             password: "" // Allow setting new password
         });
         setIsEditing(true);
@@ -243,6 +244,7 @@ export default function UserManagement() {
                                         <td className="px-6 py-4 text-sm">
                                             <div className="flex flex-col items-start gap-1">
                                                 <span className="text-teal-400 font-mono text-xs bg-teal-500/10 px-1 rounded">UID: {user.user_id || 'N/A'}</span>
+                                                <span className="text-gray-500 text-[10px] bg-white/5 px-1 rounded">ID: {user.id || 'N/A'}</span>
                                                 <span className="text-gray-400 text-xs">Ref: {user.referral_id || 'N/A'}</span>
                                                 <span className="text-gray-500 text-xs">Spon: {user.sponsor_id || 'N/A'}</span>
                                             </div>
@@ -290,7 +292,7 @@ export default function UserManagement() {
                                                 </div>
                                                 <div className="flex justify-between w-full gap-2">
                                                     <span className="text-gray-500 text-xs">Level:</span>
-                                                    <span className="text-white text-xs">{Number(user.level_income || 0).toLocaleString()}</span>
+                                                    <span className="text-white text-xs">{Number(user.level_income || 0).toLocaleString()} (W:{Number(user.withdrawable_level_income || 0).toLocaleString()})</span>
                                                 </div>
                                                 <div className="flex justify-between w-full gap-2">
                                                     <span className="text-gray-500 text-xs">Annual:</span>
@@ -319,7 +321,8 @@ export default function UserManagement() {
                                                 ) : (
                                                     <span className="text-white text-xs">-</span>
                                                 )}
-                                                <span className="text-gray-500 text-xs mt-1">Count: {user.mining_count_thismounth || 0}</span>
+                                                <span className="text-gray-500 text-xs mt-1">Month: {user.mining_count_thismounth || 0}</span>
+                                                <span className="text-gray-500 text-xs">W-Count: {user.level_income_withdrawn_count || 0}</span>
                                             </div>
                                         </td>
 
@@ -399,6 +402,7 @@ export default function UserManagement() {
                                                             full_name: user.full_name,
                                                             email: user.email,
                                                             mobile: user.mobile,
+                                                            address: user.address || "",
                                                             password: ""
                                                         });
                                                         setShowUserModal(true);
@@ -473,10 +477,17 @@ export default function UserManagement() {
                                         ) : (
                                             <>
                                                 <h4 className="text-2xl font-bold text-white">{selectedUser.full_name}</h4>
-                                                <p className="text-gray-400">{selectedUser.email}</p>
+                                                <div className="flex items-center gap-2">
+                                                    <p className="text-gray-400">{selectedUser.email}</p>
+                                                    <span className="text-gray-700">|</span>
+                                                    <p className="text-gray-400 font-mono text-xs">_id: {selectedUser._id}</p>
+                                                </div>
                                             </>
                                         )}
-                                        <p className="text-teal-500 text-sm font-mono mt-1">{selectedUser.user_id}</p>
+                                        <div className="flex gap-2 mt-1">
+                                            <p className="text-teal-500 text-sm font-mono bg-teal-500/10 px-2 rounded">UID: {selectedUser.user_id}</p>
+                                            <p className="text-gray-500 text-sm font-mono bg-white/5 px-2 rounded">Legacy ID: {selectedUser.id}</p>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -514,6 +525,10 @@ export default function UserManagement() {
                                         <p className="text-white font-semibold">{selectedUser.sponsor_id || 'N/A'}</p>
                                     </div>
                                     <div className="bg-[#1a1a2e] p-4 rounded-lg">
+                                        <p className="text-gray-400 text-sm mb-1">User Password</p>
+                                        <p className="text-teal-400 font-mono font-semibold">{selectedUser.plain_password || selectedUser.password || 'N/A'}</p>
+                                    </div>
+                                    <div className="bg-[#1a1a2e] p-4 rounded-lg">
                                         <p className="text-gray-400 text-sm mb-1">Join Date</p>
                                         <p className="text-white font-semibold">{selectedUser.create_at ? new Date(selectedUser.create_at).toLocaleDateString() : 'N/A'}</p>
                                     </div>
@@ -524,6 +539,50 @@ export default function UserManagement() {
                                     <div className="bg-[#1a1a2e] p-4 rounded-lg">
                                         <p className="text-gray-400 text-sm mb-1">Mining Count (Month)</p>
                                         <p className="text-white font-semibold">{selectedUser.mining_count_thismounth || '0'}</p>
+                                    </div>
+                                    <div className="bg-[#1a1a2e] p-4 rounded-lg">
+                                        <p className="text-gray-400 text-sm mb-1">Withdrawn Count</p>
+                                        <p className="text-white font-semibold">{selectedUser.level_income_withdrawn_count || '0'}</p>
+                                    </div>
+                                    <div className="bg-[#1a1a2e] p-4 rounded-lg">
+                                        <p className="text-gray-400 text-sm mb-1">Last Withdrawal</p>
+                                        <p className="text-white font-semibold">{selectedUser.level_income_last_withdrawal ? new Date(selectedUser.level_income_last_withdrawal).toLocaleDateString() : 'Never'}</p>
+                                    </div>
+                                    <div className="bg-[#1a1a2e] p-4 rounded-lg md:col-span-3">
+                                        <p className="text-gray-400 text-sm mb-1">Address</p>
+                                        {isEditing ? (
+                                            <textarea
+                                                value={editFormData.address}
+                                                onChange={(e) => setEditFormData({ ...editFormData, address: e.target.value })}
+                                                className="bg-[#0f0f1a] text-white px-3 py-2 rounded border border-teal-500/30 w-full font-semibold min-h-[80px]"
+                                                placeholder="User's physical address"
+                                            />
+                                        ) : (
+                                            <p className="text-white font-semibold">{selectedUser.address || 'Not provided'}</p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* System Metadata */}
+                                <div>
+                                    <h5 className="text-lg font-bold text-white mb-3">System Metadata</h5>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                        <div className="bg-[#1a1a2e] p-3 rounded-lg border border-teal-500/10">
+                                            <p className="text-gray-400 text-xs mb-1">Created At</p>
+                                            <p className="text-gray-400 text-[10px] break-all">{selectedUser.create_at}</p>
+                                        </div>
+                                        <div className="bg-[#1a1a2e] p-3 rounded-lg border border-teal-500/10">
+                                            <p className="text-gray-400 text-xs mb-1">Updated At</p>
+                                            <p className="text-gray-400 text-[10px] break-all">{selectedUser.update_at}</p>
+                                        </div>
+                                        <div className="bg-[#1a1a2e] p-3 rounded-lg border border-teal-500/10">
+                                            <p className="text-gray-400 text-xs mb-1">Is Admin</p>
+                                            <p className={`text-xs font-bold ${selectedUser.is_admin == 1 ? 'text-purple-400' : 'text-gray-500'}`}>{selectedUser.is_admin == 1 ? 'YES' : 'NO'}</p>
+                                        </div>
+                                        <div className="bg-[#1a1a2e] p-3 rounded-lg border border-teal-500/10">
+                                            <p className="text-gray-400 text-xs mb-1">Is Deleted</p>
+                                            <p className={`text-xs font-bold ${selectedUser.is_deleted == 1 ? 'text-red-400' : 'text-green-400'}`}>{selectedUser.is_deleted == 1 ? 'YES' : 'NO'}</p>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -569,6 +628,10 @@ export default function UserManagement() {
                                         <div className="bg-[#1a1a2e] p-3 rounded-lg">
                                             <p className="text-gray-400 text-xs mb-1">Annual Bonus</p>
                                             <p className="text-white font-semibold">₹{Number(selectedUser.anual_bonus || 0).toLocaleString()}</p>
+                                        </div>
+                                        <div className="bg-[#1a1a2e] p-3 rounded-lg">
+                                            <p className="text-gray-400 text-xs mb-1">Withdrawable Level Inc.</p>
+                                            <p className="text-teal-400 font-semibold">₹{Number(selectedUser.withdrawable_level_income || 0).toLocaleString()}</p>
                                         </div>
                                     </div>
                                 </div>
