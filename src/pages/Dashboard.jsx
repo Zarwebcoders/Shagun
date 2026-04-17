@@ -7,6 +7,7 @@ import { toast } from "react-hot-toast"
 import client from "../api/client"
 import MiningOperationsCard from "../components/MiningOperationsCard"
 import StatsCard from "../components/StatsCard"
+import MiningHistoryTable from "../components/MiningHistoryTable"
 import { useWeb3 } from "../hooks/useWeb3"
 import {
     CurrencyDollarIcon,
@@ -30,6 +31,8 @@ export default function Dashboard() {
     const [walletBalance, setWalletBalance] = useState(0)
     const [userName, setUserName] = useState("")
     const [loading, setLoading] = useState(true)
+    const [miningHistory, setMiningHistory] = useState([]);
+    const [miningHistoryLoading, setMiningHistoryLoading] = useState(true);
 
     const [tokenStats, setTokenStats] = useState({
         loyaltyToken: 0,
@@ -54,7 +57,8 @@ export default function Dashboard() {
         uptime: "99.8%",
         earningsToday: 0,
         lastMinedAt: null,
-        monthlyCount: 0
+        monthlyCount: 0,
+        totalMiningCount: 0
     })
 
     const [referralProgram, setReferralProgram] = useState({
@@ -77,15 +81,19 @@ export default function Dashboard() {
         const fetchUserData = async () => {
             try {
                 // Fetch basic user data and downline in parallel
-                const [userRes, downlineRes, referralRes] = await Promise.all([
+                const [userRes, downlineRes, referralRes, historyRes] = await Promise.all([
                     client.get('/auth/me'),
                     client.get('/users/downline'),
-                    client.get('/referral-incomes/my-referrals')
+                    client.get('/referral-incomes/my-referrals'),
+                    client.get('/users/mining-history')
                 ]);
 
                 const userData = userRes.data;
                 const downlineData = downlineRes.data || [];
                 const referralData = referralRes.data || [];
+                
+                setMiningHistory(historyRes.data || []);
+                setMiningHistoryLoading(false);
 
                 // Calculate accurate referral income from transactions
                 const calculatedSponsorIncome = referralData.reduce((acc, curr) => acc + Number(curr.referral_amount || 0), 0);
@@ -136,7 +144,8 @@ export default function Dashboard() {
                     miningPower: userData.mining_count_thismounth ? `${Number(userData.mining_count_thismounth).toLocaleString()} TH/s` : "0 TH/s",
                     earningsToday: Number(userData.mining_bonus || 0),
                     lastMinedAt: userData.last_mining_data,
-                    monthlyCount: Number(userData.mining_count_thismounth || 0)
+                    monthlyCount: Number(userData.mining_count_thismounth || 0),
+                    totalMiningCount: Number(userData.total_mining_count || 0)
                 });
 
             } catch (error) {
@@ -150,20 +159,39 @@ export default function Dashboard() {
     }, []);
 
     const handleMine = async () => {
+        if (!isConnected) {
+            toast.error("Please connect your wallet first!");
+            connectWallet();
+            return;
+        }
+
+        const miningToast = toast.loading("Processing blockchain transaction...");
         try {
+            // 1. Trigger On-chain Mining
+            // Call claimMiningRewards on the smart contract
+            const tx = await contract.claimMiningRewards();
+            toast.loading("Waiting for network confirmation...", { id: miningToast });
+            await tx.wait(); // Wait for 1 confirmation
+            
+            // 2. Trigger Backend Mining Sync
+            toast.loading("Syncing with mining server...", { id: miningToast });
             const { data } = await client.post('/users/mine');
-            toast.success(data.message || "Mining successful!");
+            
+            toast.success(data.message || "Mining successful!", { id: miningToast });
             
             // Re-fetch data to show new mining time/bonus
-            const [userRes] = await Promise.all([
-                client.get('/auth/me')
+            const [userRes, historyRes] = await Promise.all([
+                client.get('/auth/me'),
+                client.get('/users/mining-history')
             ]);
             
             const userData = userRes.data;
+            setMiningHistory(historyRes.data || []);
             setMiningCenter(prev => ({
                 ...prev,
                 lastMinedAt: userData.last_mining_data,
                 monthlyCount: Number(userData.mining_count_thismounth || 0),
+                totalMiningCount: Number(userData.total_mining_count || 0),
                 earningsToday: Number(userData.mining_bonus || 0)
             }));
             
@@ -175,8 +203,18 @@ export default function Dashboard() {
 
         } catch (error) {
             console.error("Mining error:", error);
-            const msg = error.response?.data?.message || "Failed to start mining";
-            toast.error(msg);
+            let msg = "Failed to start mining";
+            
+            // Handle blockchain errors specifically
+            if (error.code === 'ACTION_REJECTED') {
+                msg = "Transaction rejected by user";
+            } else if (error.reason) {
+                msg = `Contract Error: ${error.reason}`;
+            } else if (error.response?.data?.message) {
+                msg = error.response.data.message;
+            }
+            
+            toast.error(msg, { id: miningToast });
         }
     }
 
@@ -264,7 +302,10 @@ export default function Dashboard() {
                                 earningsToday={miningCenter.earningsToday}
                                 lastMinedAt={miningCenter.lastMinedAt}
                                 monthlyCount={miningCenter.monthlyCount}
+                                totalMiningCount={miningCenter.totalMiningCount}
+                                stakedBalance={isConnected ? stakedBalance : "0"}
                                 onMine={handleMine}
+                                loading={loading}
                             />
                         </div>
                     </div>
@@ -277,20 +318,13 @@ export default function Dashboard() {
                     <BoltIcon className="w-6 h-6 text-[#ffcc4d]" />
                     <h3 className="text-2xl font-bold text-white">Token Performance</h3>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     <StatsCard
                         title="Shagun"
                         amount={isConnected ? onChainBalance : tokenStats.rexToken.toString()}
                         color="#2DD4BF"
                         icon={CpuChipIcon}
                         subValue="Asset Balance"
-                    />
-                    <StatsCard
-                        title="Staked Tokens"
-                        amount={isConnected ? stakedBalance : "0"}
-                        color="#F59E0B"
-                        icon={BriefcaseIcon}
-                        subValue="Staking Reward"
                     />
                     <StatsCard
                         title="Loyalty Token"
@@ -429,6 +463,14 @@ export default function Dashboard() {
                     </div>
                 </motion.section>
             </div>
+
+            {/* Mining History Section */}
+            <motion.section variants={itemVariants} className="w-full">
+                <MiningHistoryTable 
+                    history={miningHistory} 
+                    loading={miningHistoryLoading} 
+                />
+            </motion.section>
         </motion.div>
     )
 }

@@ -2,6 +2,8 @@ const User = require('../models/User');
 const Investment = require('../models/Investment');
 const MiningBonus = require('../models/MiningBonus');
 const Transaction = require('../models/Transaction');
+const Wallet = require('../models/Wallet');
+const Product = require('../models/Product');
 
 // @desc    Get all users (Admin)
 // @route   GET /api/users
@@ -233,33 +235,39 @@ const getDownline = async (req, res) => {
 // @access  Private
 const mineTokens = async (req, res) => {
     try {
-        const user = await User.findById(req.user._id);
+        let user = await User.findById(req.user._id || req.user.id);
         
-        // 24h Cooldown check
-        if (user.last_mining_data) {
-            const lastMined = new Date(user.last_mining_data);
-            const now = new Date();
-            const hoursPassed = (now - lastMined) / (1000 * 60 * 60);
-            if (hoursPassed < 24) {
-                return res.status(400).json({ 
-                    message: "Mining session still active. Come back later!", 
-                    nextAvailable: new Date(lastMined.getTime() + 24 * 60 * 60 * 1000)
-                });
-            }
+        if (!user) {
+            user = await User.findOne({ user_id: req.user.user_id || req.user.id });
         }
 
-        // Check for active investments
+        if (!user) {
+            return res.status(404).json({ message: "User not found." });
+        }
+        
+        // Check for active Products (modern package model)
+        const activeProducts = await Product.find({ 
+            user_id: user.get('id') || user.user_id || user._id.toString(),
+            approve: 1 
+        });
+
+        // Fallback or additional check for legacy Investments (if still used)
         const activeInvestments = await Investment.find({ 
-            user: req.user._id, 
+            user: user._id, 
             status: { $regex: /^active$/i } 
         });
 
-        if (activeInvestments.length === 0) {
+        if (activeProducts.length === 0 && activeInvestments.length === 0) {
             return res.status(403).json({ message: "No active investments found. Buy a package to start mining!" });
         }
 
-        // Calculate total daily return based on active investments
+        // Calculate total daily return based on active products and investments
         let totalReward = 0;
+        
+        activeProducts.forEach(prod => {
+            totalReward += (prod.daily_return_amount || 0);
+        });
+
         activeInvestments.forEach(inv => {
             const dailyReturn = inv.dailyReturn || 0;
             totalReward += (inv.amount * dailyReturn) / 100;
@@ -272,23 +280,39 @@ const mineTokens = async (req, res) => {
         // Update User stats
         user.last_mining_data = new Date();
         user.mining_count_thismounth = String(Number(user.mining_count_thismounth || 0) + 1);
-        user.mining_bonus = (user.mining_bonus || 0) + totalReward;
-        user.total_income = (user.total_income || 0) + totalReward;
+        user.total_mining_count = (Number(user.total_mining_count || 0)) + 1;
+        user.mining_bonus = (Number(user.mining_bonus || 0)) + totalReward;
+        user.total_income = (Number(user.total_income || 0)) + totalReward;
         await user.save();
 
-        // Record Mining Bonus entry
+        // Calculate current cycle (1-24)
+        const currentCycle = ((user.total_mining_count - 1) % 24) + 1;
+
+        // Fetch User's Wallet Address
+        const wallet = await Wallet.findOne({ user_id: user.id || user.user_id || user._id.toString(), approve: 1 });
+        const walletAddress = wallet ? wallet.wallet_add : "N/A";
+
+        // Record Mining Bonus entry with History Data
         await MiningBonus.create({
-            user_id: user._id,
+            user_id: user.id || user.user_id || user._id.toString(),
             amount: totalReward,
+            wallet_address: walletAddress,
+            cycle_number: currentCycle,
             created_at: new Date()
         });
+
+        // Increment cycle count for active products
+        await Product.updateMany(
+            { user_id: user.id || user.user_id || user._id.toString(), approve: 1, cycle_count: { $lt: 24 } },
+            { $inc: { cycle_count: 1 } }
+        );
 
         // Record Transaction
         await Transaction.create({
             user: user._id,
             type: 'mining_bonus',
             amount: totalReward,
-            description: `Daily Mining Reward Claimed`,
+            description: `Mining Reward Claimed - Cycle ${currentCycle}/24`,
             status: 'completed'
         });
 
@@ -296,7 +320,9 @@ const mineTokens = async (req, res) => {
             message: "Mining successful!",
             reward: totalReward,
             last_mining_data: user.last_mining_data,
-            mining_count_thismounth: user.mining_count_thismounth
+            mining_count_thismounth: user.mining_count_thismounth,
+            total_mining_count: user.total_mining_count,
+            cycle_number: currentCycle
         });
 
     } catch (error) {
@@ -305,11 +331,27 @@ const mineTokens = async (req, res) => {
     }
 };
 
+// @desc    Get user's mining history
+// @route   GET /api/users/mining-history
+// @access  Private
+const getMiningHistory = async (req, res) => {
+    try {
+        const history = await MiningBonus.find({ 
+            user_id: { $in: [req.user.id, req.user.user_id, req.user._id.toString()] }
+        }).sort({ created_at: -1 });
+        
+        res.json(history);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+}
+
 module.exports = {
     getUsers,
     getUserById,
     updateUser,
     deleteUser,
     getDownline,
-    mineTokens
+    mineTokens,
+    getMiningHistory
 };

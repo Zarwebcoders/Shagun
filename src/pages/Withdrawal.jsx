@@ -67,11 +67,11 @@ export default function Withdrawal() {
 
                 setUserData({
                     name: user.full_name,
-                    totalMiningBonus: user.mining_bonus || 0,
-                    levelIncomeROI: user.level_income || 0, 
+                    totalMiningBonus: Math.max(0, (user.mining_bonus || 0) - (pendingBySource.mining_bonus || 0)),
+                    levelIncomeROI: Math.max(0, (user.level_income || 0) - (pendingBySource.level_income || 0)), 
                     withdrawableLevelIncome: Math.max(0, levelAvailable - pendingBySource.level_income), 
                     withdrawableROI: Math.max(0, (levelAvailRes.data?.availableROI || 0) - pendingBySource.mining_bonus),
-                    normalWithdrawal: user.total_income || 0, // Mapping to total_income as proxy for 'normal'
+                    normalWithdrawal: Math.max(0, (user.total_income || 0) - pendingAmount), // Deduct everything from total
                     sosWithdrawal: Number(user.shopping_tokons || 0),
                     totalWithdrawal: user.totalWithdrawal || 0,
                     totalIncome: user.total_income || 0,

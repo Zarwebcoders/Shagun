@@ -20,8 +20,8 @@ export const Web3Provider = ({ children }) => {
             setBalance(ethers.formatEther(bal));
 
             // Fetch staked balance
-            const stakeInfo = await userContract.getStakeInfo(userAccount);
-            setStakedBalance(ethers.formatEther(stakeInfo.stakedAmount));
+            const staked = await userContract.getStakedTokens(userAccount);
+            setStakedBalance(ethers.formatEther(staked));
         } catch (err) {
             console.error("Error fetching balance:", err);
         }

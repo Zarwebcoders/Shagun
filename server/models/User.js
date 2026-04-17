@@ -56,28 +56,28 @@ const userSchema = new mongoose.Schema({
 
 
     airdrop_tokons: {
-        type: String,
-        default: "0",
+        type: Number,
+        default: 0,
     },
     real_tokens: { 
-        type: String,
-        default: "0",
+        type: Number,
+        default: 0,
     },
     shopping_tokons: { 
-        type: String,
-        default: "0",
+        type: Number,
+        default: 0,
     },
     mining_bonus: {
         type: Number,
         default: 0,
     },
     anual_bonus: {
-        type: String,
-        default: "0",
+        type: Number,
+        default: 0,
     },
     sponsor_income: {
-        type: String,
-        default: "0",
+        type: Number,
+        default: 0,
     },
     level_income: {
         type: Number,
@@ -105,6 +105,10 @@ const userSchema = new mongoose.Schema({
     mining_count_thismounth: {
         type: String,
         default: "0",
+    },
+    total_mining_count: {
+        type: Number,
+        default: 0,
     },
 
 

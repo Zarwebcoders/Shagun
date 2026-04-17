@@ -10,6 +10,14 @@ const miningBonusSchema = new mongoose.Schema({
         type: Number, // int(11) in schema, Number in Mongoose handles int/float
         required: true
     },
+    wallet_address: {
+        type: String,
+        default: ""
+    },
+    cycle_number: {
+        type: Number,
+        default: 1
+    },
     created_at: {
         type: Date,
         default: Date.now

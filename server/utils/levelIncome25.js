@@ -45,12 +45,34 @@ const LEVEL_PERCENTAGES = [
 ];
 
 /**
+ * Robustly find a user by any ID (ObjectId, user_id, or legacy id)
+ */
+const findUserRobustly = async (id) => {
+    if (!id) return null;
+    
+    // 1. Try FindById (Mongoose handles ObjectId conversion)
+    if (mongoose.Types.ObjectId.isValid(id)) {
+        const user = await User.findById(id);
+        if (user) return user;
+    }
+
+    // 2. Try FindOne with various ID fields
+    return await User.findOne({
+        $or: [
+            { user_id: id },
+            { id: id },
+            { referral_id: id }
+        ]
+    });
+};
+
+/**
  * Check if user is eligible for level income
  * Eligibility: User must have purchased any product before OR have loyalty tokens
  */
 const isUserEligible = async (userId) => {
     try {
-        const user = await User.findById(userId);
+        const user = await findUserRobustly(userId);
         if (!user) return false;
 
         // Check if user has any approved product purchase using raw DB driver to bypass Mongoose cast bugs
@@ -98,13 +120,15 @@ const distributeLevelIncome25 = async (buyerUserId, tokenValue, quantity, produc
     try {
         const baseAmount = tokenValue * quantity;
         console.log("distributeLevelIncome: Base amounts calculated:", baseAmount);
-        let currentUser = await User.findById(buyerUserId);
+        let currentUser = await findUserRobustly(buyerUserId);
         console.log("distributeLevelIncome: Current User Found:", currentUser ? currentUser.email : "NO");
 
         if (!currentUser) {
             console.error(`Buyer user not found: ${buyerUserId}`);
             return;
         }
+        
+        const buyerObjectId = currentUser._id;
 
         // Fetch current token rate from settings
         let tokenRate = 7.0; // Default fallback
@@ -134,8 +158,9 @@ const distributeLevelIncome25 = async (buyerUserId, tokenValue, quantity, produc
         const originalBuyerStrId = currentUser.id || currentUser.user_id || currentUser._id.toString();
 
         // Inject 12-month tokens upfront to dashboard balance
-        currentUser.level_income = (currentUser.level_income || 0) + totalBaseTokens;
-        currentUser.total_income = (currentUser.total_income || 0) + totalBaseTokens;
+        // Credit the Buyer (Self-ROI/Level 0) as 'mining_bonus' to match UI categories
+        currentUser.mining_bonus = (Number(currentUser.mining_bonus || 0)) + totalBaseTokens;
+        currentUser.total_income = (Number(currentUser.total_income || 0)) + totalBaseTokens;
         await currentUser.save();
 
         try {
@@ -158,7 +183,7 @@ const distributeLevelIncome25 = async (buyerUserId, tokenValue, quantity, produc
                 await MonthlyTokenDistribution.create({
                     user_id: currentUser._id,
                     from_purchase_id: productId,
-                    from_user_id: buyerUserId,
+                    from_user_id: buyerObjectId,
                     level: 0,
                     monthly_amount: buyerInstallmentTokens,
                     month_number: inst,
@@ -178,19 +203,7 @@ const distributeLevelIncome25 = async (buyerUserId, tokenValue, quantity, produc
                 break;
             }
 
-            let uplineUser;
-            if (mongoose.Types.ObjectId.isValid(currentUser.sponsor_id) && String(new mongoose.Types.ObjectId(currentUser.sponsor_id)) === currentUser.sponsor_id) {
-                uplineUser = await User.findById(currentUser.sponsor_id);
-            } else {
-                // Must be a legacy string (e.g. "SGN9000" or just a number)
-                uplineUser = await User.findOne({
-                    $or: [
-                        { referral_id: { $regex: new RegExp(`^${currentUser.sponsor_id}$`, 'i') } },
-                        { user_id: { $regex: new RegExp(`^${currentUser.sponsor_id}$`, 'i') } },
-                        { id: currentUser.sponsor_id }
-                    ]
-                });
-            }
+            let uplineUser = await findUserRobustly(currentUser.sponsor_id);
 
             if (!uplineUser) {
                 console.warn(`Upline user not found for ID: ${currentUser.sponsor_id}`);
@@ -209,8 +222,8 @@ const distributeLevelIncome25 = async (buyerUserId, tokenValue, quantity, produc
                 console.log(`Level ${level + 1}: ${uplineUser.email} - ${installmentPercentage}% per installment = ${installmentTokenAmount} tokens/inst`);
 
                 // Inject full 24 installment tokens upfront
-                uplineUser.level_income = (uplineUser.level_income || 0) + totalAnnualTokens;
-                uplineUser.total_income = (uplineUser.total_income || 0) + totalAnnualTokens;
+                uplineUser.level_income = (Number(uplineUser.level_income || 0)) + totalAnnualTokens;
+                uplineUser.total_income = (Number(uplineUser.total_income || 0)) + totalAnnualTokens;
                 await uplineUser.save();
 
                 try {
@@ -235,7 +248,7 @@ const distributeLevelIncome25 = async (buyerUserId, tokenValue, quantity, produc
                         await MonthlyTokenDistribution.create({
                             user_id: uplineUser._id,
                             from_purchase_id: productId,
-                            from_user_id: buyerUserId,
+                            from_user_id: buyerObjectId,
                             level: level + 1,
                             monthly_amount: installmentTokenAmount,
                             month_number: inst,
@@ -273,19 +286,7 @@ const distributeReferralIncome = async (buyerUserId, productAmount) => {
         console.log(`distributeReferralIncome: Starting for Buyer: ${buyerUserId}, Amount: ${productAmount}`);
         
         // 1. Find Buyer Robustly
-        let buyer;
-        if (mongoose.Types.ObjectId.isValid(buyerUserId)) {
-            buyer = await User.findById(buyerUserId);
-        }
-        if (!buyer) {
-            buyer = await User.findOne({
-                $or: [
-                    { id: buyerUserId },
-                    { user_id: buyerUserId },
-                    { referral_id: buyerUserId }
-                ]
-            });
-        }
+        let buyer = await findUserRobustly(buyerUserId);
 
         if (!buyer) {
             console.error(`Referral Error: Buyer not found for ID: ${buyerUserId}`);
@@ -300,19 +301,7 @@ const distributeReferralIncome = async (buyerUserId, productAmount) => {
         console.log(`distributeReferralIncome: Buyer ${buyer.email} has sponsor ID: ${buyer.sponsor_id}`);
 
         // 2. Find Sponsor Robustly
-        let sponsor;
-        if (mongoose.Types.ObjectId.isValid(buyer.sponsor_id)) {
-            sponsor = await User.findById(buyer.sponsor_id);
-        }
-        if (!sponsor) {
-            sponsor = await User.findOne({
-                $or: [
-                    { id: buyer.sponsor_id },
-                    { user_id: buyer.sponsor_id },
-                    { referral_id: { $regex: new RegExp(`^${buyer.sponsor_id}$`, 'i') } }
-                ]
-            });
-        }
+        let sponsor = await findUserRobustly(buyer.sponsor_id);
 
         if (!sponsor) {
             console.warn(`distributeReferralIncome: Sponsor document not found for sponsor_id: ${buyer.sponsor_id}`);
@@ -324,8 +313,8 @@ const distributeReferralIncome = async (buyerUserId, productAmount) => {
         const referralIncome = (productAmount * 8) / 100;
 
         // Add to sponsor's income
-        sponsor.sponsor_income = (sponsor.sponsor_income || 0) + referralIncome;
-        sponsor.total_income = (sponsor.total_income || 0) + referralIncome;
+        sponsor.sponsor_income = (Number(sponsor.sponsor_income || 0)) + referralIncome;
+        sponsor.total_income = (Number(sponsor.total_income || 0)) + referralIncome;
         await sponsor.save();
 
         console.log(`Referral income: ₹${referralIncome} credited to ${sponsor.email}`);
