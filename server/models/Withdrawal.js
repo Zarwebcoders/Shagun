@@ -32,6 +32,10 @@ const withdrawalSchema = new mongoose.Schema({
     approve: {
         type: String,
         default: "2" // 2: Pending, 1: Approved, 0: Rejected
+    },
+    onchain_tx_hash: {
+        type: String,
+        default: ""
     }
 }, {
     timestamps: { createdAt: 'create_at', updatedAt: 'update_at' }

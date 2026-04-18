@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { CpuChipIcon, GiftIcon, ClockIcon, BriefcaseIcon } from '@heroicons/react/24/outline';
 
-export default function MiningOperationsCard({ status, miningPower, earningsToday, lastMinedAt, monthlyCount, onMine, totalMiningCount = 0, stakedBalance = 0, loading = false }) {
+export default function MiningOperationsCard({ status, miningPower, earningsToday, lastMinedAt, monthlyCount, onMine, totalMiningCount = 0, stakedBalance = 0, loading = false, isConnected = false }) {
     const currentCycle = ((Number(totalMiningCount || 0) - 1) % 24) + 1;
     const progressPercent = (currentCycle / 24) * 100;
 
@@ -66,7 +66,10 @@ export default function MiningOperationsCard({ status, miningPower, earningsToda
                 </div>
                 <div className="bg-[#0f0f1a]/60 p-4 rounded-2xl border border-white/5">
                     <span className="text-gray-400 text-xs uppercase tracking-wider">Total Mining Bonus</span>
-                    <div className="text-2xl font-bold text-purple-500 mt-1">₹{(earningsToday || 0).toFixed(2)}</div>
+                    <div className="text-2xl font-bold text-purple-500 mt-1">
+                        {isConnected ? `SGN ${Number(earningsToday || 0).toFixed(2)}` : "****"}
+                    </div>
+                    {!isConnected && <p className="text-[10px] text-gray-500 mt-1 italic">Connect wallet to view</p>}
                 </div>
             </div>
 

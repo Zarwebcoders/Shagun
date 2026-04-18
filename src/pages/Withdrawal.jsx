@@ -110,40 +110,86 @@ export default function Withdrawal() {
     }, []);
 
     const handleWithdraw = async (data) => {
-        try {
-            await client.post('/withdrawals', {
-                amount: data.amount,
-                withdraw_type: data.source === "Level Income" ? "level_income" : data.source === "Mining Bonus" ? "mining_bonus" : "annual_bonus",
-                method: data.method,
-                source: data.source,
-                bankDetails: data.bankDetails
-            });
-            toast.success("Withdrawal request submitted successfully!");
+        const withdrawType = data.source === "Level Income" ? "level_income" : data.source === "Mining Bonus" ? "mining_bonus" : "annual_bonus";
+        
+        // 1. Special Handling for ON-CHAIN Mining Bonus Withdrawal
+        if (withdrawType === "mining_bonus") {
+            if (!isConnected) {
+                toast.error("Please connect your wallet first!");
+                connectWallet();
+                return;
+            }
 
-            // Refresh history
+            const loadingToast = toast.loading("Processing Blockchain Withdrawal...");
+            try {
+                // a. Use direct amount (already SGN in database)
+                const tokensToWithdraw = Number(data.amount);
+                
+                // b. Call Smart Contract
+                console.log(`Withdrawing ${tokensToWithdraw} SGN tokens on-chain`);
+                const tx = await contract.withdrawTokens(ethers.parseUnits(tokensToWithdraw.toFixed(18), 18));
+                
+                toast.loading("Waiting for network confirmation...", { id: loadingToast });
+                await tx.wait();
+
+                // d. Sync with Backend (Marking as Completed automatically)
+                toast.loading("Finalising record in database...", { id: loadingToast });
+                await client.post('/withdrawals', {
+                    amount: data.amount,
+                    withdraw_type: withdrawType,
+                    method: data.method,
+                    source: data.source,
+                    bankDetails: data.bankDetails,
+                    onchain_tx_hash: tx.hash // Backend will auto-approve if this is present
+                });
+
+                toast.success("Withdrawal successful on blockchain & database!", { id: loadingToast });
+            } catch (error) {
+                console.error("Blockchain Withdrawal Error:", error);
+                const msg = error.reason || error.message || "Transaction failed";
+                toast.error(`Blockchain Error: ${msg}`, { id: loadingToast });
+                return; // Exit if blockchain fails
+            }
+        } else {
+            // 2. Standard Manual Withdrawal for Level Income / Annual Bonus
+            try {
+                await client.post('/withdrawals', {
+                    amount: data.amount,
+                    withdraw_type: withdrawType,
+                    method: data.method,
+                    source: data.source,
+                    bankDetails: data.bankDetails
+                });
+                toast.success("Withdrawal request submitted for Admin approval!");
+            } catch (error) {
+                console.error("Error submitting withdrawal:", error);
+                toast.error("Failed to submit withdrawal request");
+                return;
+            }
+        }
+
+        // 3. Refresh History and Stats (Same for both flows)
+        try {
             const { data: withdrawData } = await client.get('/withdrawals/me');
             const withdrawals = withdrawData.map(tx => ({
                 id: tx._id,
                 amount: tx.amount,
                 date: new Date(tx.create_at).toISOString().split('T')[0],
-                status: tx.approve === 1 ? 'Completed' : tx.approve === 0 ? 'Rejected' : 'Pending',
+                status: (tx.approve === 1 || tx.approve === "1") ? 'Completed' : (tx.approve === 0 || tx.approve === "0") ? 'Rejected' : 'Pending',
                 method: tx.method || tx.withdraw_type || "Unknown",
                 source: tx.source || (tx.withdraw_type === 'level_income' ? "Level Income" : "Wallet Balance")
             }));
             setWithdrawalHistory(withdrawals);
 
-            // Recalculate stats
-            const completedWithdrawals = withdrawData.filter(tx => tx.approve === 1);
-            const pendingWithdrawals = withdrawData.filter(tx => tx.approve === 2);
+            const completedWithdrawals = withdrawData.filter(tx => tx.approve === 1 || tx.approve === "1");
+            const pendingWithdrawals = withdrawData.filter(tx => tx.approve === 2 || tx.approve === "2");
 
             setWithdrawalStats({
                 totalWithdrawn: completedWithdrawals.reduce((sum, tx) => sum + tx.amount, 0),
                 pendingWithdrawals: pendingWithdrawals.reduce((sum, tx) => sum + tx.amount, 0)
             });
-
-        } catch (error) {
-            console.error("Error submitting withdrawal:", error);
-            toast.error("Failed to submit withdrawal request");
+        } catch (err) {
+            console.error("Error refreshing stats:", err);
         }
     }
 
@@ -179,7 +225,7 @@ export default function Withdrawal() {
                         </div>
                     </div>
                     <div className="mb-2">
-                        <span className="text-2xl md:text-3xl font-bold text-white">₹{userData.totalMiningBonus.toLocaleString()}</span>
+                        <span className="text-2xl md:text-3xl font-bold text-white">SGN {userData.totalMiningBonus.toLocaleString()}</span>
                     </div>
                     <div className="w-full bg-[#444]/50 rounded-full h-1.5 md:h-2">
                         <div className="bg-gradient-brand h-1.5 md:h-2 rounded-full" style={{ width: "75%" }}></div>

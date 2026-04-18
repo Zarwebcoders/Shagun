@@ -166,7 +166,7 @@ const getAllProducts = async (req, res) => {
 // @access  Private/Admin
 const updateProductStatus = async (req, res) => {
     try {
-        const { status } = req.body; // 1 for Approve, 0 for Reject/Pending?
+        const { status, onchain_tx_hash } = req.body; // 1 for Approve, 0 for Reject/Pending?
         const { distributeLevelIncome25, distributeReferralIncome } = require('../utils/levelIncome25');
 
         const product = await Product.findById(req.params.id);
@@ -177,6 +177,12 @@ const updateProductStatus = async (req, res) => {
             // Update fields
             product.approve = status;
             product.update_at = Date.now();
+            
+            // Capture the transaction hash from the frontend (MetaMask)
+            if (onchain_tx_hash) {
+                product.onchain_tx_hash = onchain_tx_hash;
+            }
+
             await product.save();
 
             if (status == 1) { // Approved

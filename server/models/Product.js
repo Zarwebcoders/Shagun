@@ -14,6 +14,10 @@ const productSchema = new mongoose.Schema({
         type: String,
         default: ""
     },
+    onchain_tx_hash: {
+        type: String,
+        default: ""
+    },
     packag_type: { // Matches JSON spelling
         type: String,
         default: 'Standard'

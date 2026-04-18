@@ -304,6 +304,7 @@ export default function Dashboard() {
                                 monthlyCount={miningCenter.monthlyCount}
                                 totalMiningCount={miningCenter.totalMiningCount}
                                 stakedBalance={isConnected ? stakedBalance : "0"}
+                                isConnected={isConnected}
                                 onMine={handleMine}
                                 loading={loading}
                             />
@@ -373,7 +374,7 @@ export default function Dashboard() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <StatsCard
                                 title="Level Income"
-                                amount={`₹${incomeBreakdown.levelIncome.toFixed(2)}`}
+                                amount={`${incomeBreakdown.levelIncome.toFixed(2)} SGN`}
                                 color="#2196f3"
                                 icon={ArrowTrendingUpIcon}
                             />

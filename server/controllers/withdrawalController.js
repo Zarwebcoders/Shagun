@@ -97,7 +97,10 @@ const createWithdrawal = async (req, res) => {
             }
         }
 
-        // CREATE REQUEST (No deduction here)
+        // CREATE REQUEST
+        const { onchain_tx_hash } = req.body;
+        const isAutoApprove = !!onchain_tx_hash;
+
         const withdrawal = await Withdrawal.create({
             user_id: user.id || user.user_id || user._id.toString(),
             amount,
@@ -106,8 +109,20 @@ const createWithdrawal = async (req, res) => {
             method,
             source,
             bankDetails: finalBankDetails,
-            approve: "2" // Default to pending
+            approve: isAutoApprove ? "1" : "2", // Auto-approve if hash is present
+            onchain_tx_hash: onchain_tx_hash || ""
         });
+
+        // 3. If auto-approved (on-chain), deduct balance IMMEDIATELY
+        if (isAutoApprove) {
+            if (withdraw_type === 'mining_bonus') {
+                user.mining_bonus = (user.mining_bonus || 0) - amount;
+            } else if (withdraw_type === 'annual_bonus') {
+                user.anual_bonus = (user.anual_bonus || 0) - amount;
+            }
+            await user.save();
+            console.log(`On-chain withdrawal ${withdrawal._id} auto-deducted from ${user.email}`);
+        }
 
         res.status(201).json(withdrawal);
     } catch (error) {

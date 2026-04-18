@@ -5,7 +5,11 @@ import client from "../../api/client"
 
 import { ChevronLeft, ChevronRight } from "lucide-react"
 
+import { useWeb3 } from "../../hooks/useWeb3"
+import { toast } from "react-hot-toast"
+
 export default function PackageManagement() {
+    const { contract, isConnected, connectWallet } = useWeb3()
     const [products, setProducts] = useState([])
     const [loading, setLoading] = useState(true)
     const [searchTerm, setSearchTerm] = useState("")
@@ -34,13 +38,54 @@ export default function PackageManagement() {
         }
     }
 
-    const handleStatusUpdate = async (id, status) => { // 1 = Approve, 2 = Reject
-        try {
-            await client.put(`/products/${id}`, { status });
-            // Refresh list
-            fetchProducts();
-        } catch (error) {
-            console.error("Error updating status:", error);
+    const handleStatusUpdate = async (productRecord, status) => { // 1 = Approve, 2 = Reject
+        const id = productRecord._id;
+        
+        if (status === 1) {
+            if (!isConnected) {
+                toast.error("Please connect admin wallet first!");
+                connectWallet();
+                return;
+            }
+
+            const loadingToast = toast.loading("Initiating blockchain approval...");
+            try {
+                // 1. Trigger Smart Contract Call
+                console.log("Approving on chain:", productRecord.wallet_address, productRecord.product_id, productRecord.quantity);
+                
+                const tx = await contract.approveProductPurchase(
+                    productRecord.wallet_address, 
+                    productRecord.product_id, 
+                    productRecord.quantity
+                );
+                
+                toast.loading("Waiting for network confirmation...", { id: loadingToast });
+                const receipt = await tx.wait();
+                
+                // 2. Sync with Backend
+                toast.loading("Syncing with database...", { id: loadingToast });
+                await client.put(`/products/${id}`, { 
+                    status, 
+                    onchain_tx_hash: tx.hash 
+                });
+                
+                toast.success("Product approved on blockchain & database!", { id: loadingToast });
+                fetchProducts();
+            } catch (error) {
+                console.error("Approval Error:", error);
+                const msg = error.reason || error.message || "Approval failed";
+                toast.error(`Blockchain Error: ${msg}`, { id: loadingToast });
+            }
+        } else {
+            // Rejection logic (No blockchain call needed)
+            try {
+                await client.put(`/products/${id}`, { status });
+                toast.success("Product rejected.");
+                fetchProducts();
+            } catch (error) {
+                console.error("Error updating status:", error);
+                toast.error("Failed to update status.");
+            }
         }
     }
 
@@ -202,14 +247,14 @@ export default function PackageManagement() {
                                         <td className="px-6 py-4 whitespace-nowrap text-right">
                                             <div className="flex items-center justify-end gap-2">
                                                 <button
-                                                    onClick={() => handleStatusUpdate(item._id, 1)}
+                                                    onClick={() => handleStatusUpdate(item, 1)}
                                                     className="p-1.5 rounded-lg bg-green-500/20 text-green-500 hover:bg-green-500 hover:text-white transition-all border border-green-500/30"
                                                     title="Approve"
                                                 >
                                                     <CheckCircle className="w-4 h-4" />
                                                 </button>
                                                 <button
-                                                    onClick={() => handleStatusUpdate(item._id, 0)}
+                                                    onClick={() => handleStatusUpdate(item, 0)}
                                                     className="p-1.5 rounded-lg bg-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-all border border-red-500/30"
                                                     title="Reject"
                                                 >
