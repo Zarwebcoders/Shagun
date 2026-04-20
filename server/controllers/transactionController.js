@@ -12,7 +12,7 @@ const KYC = require('../models/KYC');
 const getTransactions = async (req, res) => {
     try {
         let transactions;
-        if (req.user.role === 'admin') {
+        if (req.user.is_admin === 1 || req.user.is_admin === "1") {
             const query = {};
             if (req.query.type && req.query.type !== 'all') {
                 query.type = req.query.type;
@@ -25,23 +25,34 @@ const getTransactions = async (req, res) => {
                 .lean();
 
             // Fetch KYC details for users to get bank info
-            // Get unique user IDs from transactions
-            const userIds = [...new Set(transactions.map(t => t.user?._id))];
+            // Get unique user IDs from transactions (handle both populated objects and raw IDs)
+            const userIds = [...new Set(transactions.map(t => {
+                if (t.user?._id) return t.user._id.toString();
+                if (t.user) return t.user.toString();
+                return null;
+            }).filter(id => id))];
 
-            const kycRecords = await KYC.find({ user: { $in: userIds } }).lean();
+            const kycRecords = await KYC.find({ user_id: { $in: userIds } }).lean();
 
             // Map KYC to user ID for easy lookup
             const kycMap = {};
             kycRecords.forEach(kyc => {
-                if (kyc.user) kycMap[kyc.user.toString()] = kyc;
+                if (kyc.user_id) kycMap[kyc.user_id.toString()] = kyc;
             });
 
             // Attach bank details to transactions
             transactions = transactions.map(t => {
-                const kyc = kycMap[t.user?._id?.toString()];
+                const userId = t.user?._id?.toString() || t.user?.toString();
+                const kyc = kycMap[userId];
                 return {
                     ...t,
-                    bankDetails: kyc?.bankDetails || null
+                    bankDetails: kyc ? {
+                        bank_name: kyc.bank_name,
+                        acc_name: kyc.acc_name,
+                        branch: kyc.branch,
+                        ifsc_code: kyc.ifsc_code,
+                        acc_num: kyc.acc_num
+                    } : null
                 };
             });
 

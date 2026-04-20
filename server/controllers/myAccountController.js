@@ -48,7 +48,8 @@ const getBankDetails = async (req, res) => {
         if (account) {
             res.json(account);
         } else {
-            res.status(404).json({ message: 'No bank details found' });
+            // Return 200 with null so frontend knows no details found without showing 404 error
+            res.status(200).json(null);
         }
     } catch (error) {
         res.status(500).json({ message: error.message });
