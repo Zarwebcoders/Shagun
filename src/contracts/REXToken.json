@@ -1359,6 +1359,13 @@
         "type": "function"
     },
     {
+        "inputs": [],
+        "name": "claimMiningRewards",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
         "inputs": [
             {
                 "internalType": "address",

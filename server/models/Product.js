@@ -43,7 +43,7 @@ const productSchema = new mongoose.Schema({
         default: ""
     },
     approve: { 
-        type: Number,
+        type: mongoose.Schema.Types.Mixed,
         default: 0
     },
     cereate_at: {

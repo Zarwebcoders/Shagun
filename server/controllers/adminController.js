@@ -31,7 +31,7 @@ const getDashboardStats = async (req, res) => {
                 { $group: { _id: '$user' } }
             ]),
             Product.aggregate([
-                { $match: { approve: 1 } },
+                { $match: { approve: { $in: [1, "1"] } } },
                 { $group: { _id: '$user_id' } }
             ])
         ]);
@@ -49,8 +49,8 @@ const getDashboardStats = async (req, res) => {
                 { $group: { _id: null, total: { $sum: '$amount' } } }
             ]),
             Product.aggregate([
-                { $match: { approve: 1 } },
-                { $group: { _id: null, total: { $sum: { $multiply: ['$amount', '$quantity'] } } } }
+                { $match: { approve: { $in: [1, "1"] } } },
+                { $group: { _id: null, total: { $sum: { $toDouble: "$amount" } } } }
             ])
         ]);
 
@@ -59,7 +59,7 @@ const getDashboardStats = async (req, res) => {
         // Active Investments (Count)
         const [countInv, countProd] = await Promise.all([
             Investment.countDocuments({ status: { $in: ['active', 'Active'] } }),
-            Product.countDocuments({ approve: 1 })
+            Product.countDocuments({ approve: { $in: [1, "1"] } })
         ]);
         const activeInvestmentsCount = countInv + countProd;
 

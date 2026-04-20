@@ -35,7 +35,8 @@ export default function Dashboard() {
         balance: onChainBalance, 
         stakedBalance,
         miningBonus: contractMiningBonus,
-        miningSlots: contractMiningSlots
+        miningSlots: contractMiningSlots,
+        contract
     } = useWeb3()
     const [walletBalance, setWalletBalance] = useState(0)
     const [userName, setUserName] = useState("")
@@ -47,8 +48,8 @@ export default function Dashboard() {
         loyaltyToken: 0,
         rexToken: 0,
         stakedTokens: 0,
-        sgnRate: 2.5,
-        currentPhase: "Phase 3",
+        sgnRate: 10,
+        currentPhase: "Phase 6",
     })
 
     const [incomeBreakdown, setIncomeBreakdown] = useState({
