@@ -21,15 +21,15 @@ const corsOptions = {
         'http://localhost:5173'
     ],
     credentials: true,
-    optionSuccessStatus: 200
+    optionsSuccessStatus: 204
 }
 
 const app = express();
 
 // Middleware
+app.use(cors(corsOptions));
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ limit: '100mb', extended: true }));
-app.use(cors(corsOptions));
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {

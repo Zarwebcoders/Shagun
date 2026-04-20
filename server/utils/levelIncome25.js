@@ -97,8 +97,8 @@ const isUserEligible = async (userId) => {
 
         if (hasPurchase) return true;
 
-        // Check if user has loyalty/shopping tokens
-        if (user && (user.shopping_tokens > 0 || user.airdrop_tokens > 0)) {
+        // Check if user has loyalty/shopping tokens (Fixed typos to match User model: tokons)
+        if (user && (user.shopping_tokons > 0 || user.airdrop_tokons > 0)) {
             return true;
         }
 

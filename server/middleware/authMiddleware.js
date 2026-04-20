@@ -16,6 +16,8 @@ const protect = async (req, res, next) => {
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
             const mongoose = require('mongoose');
 
+            console.log(`Auth request for user ID: ${decoded.id}`);
+
             if (mongoose.isValidObjectId(decoded.id)) {
                 req.user = await User.findById(decoded.id).select('-password');
             } else {
@@ -29,16 +31,14 @@ const protect = async (req, res, next) => {
             }
 
             if (!req.user) {
-                // Double check if it might be an ObjectId string but stored in user_id field?
-                // Fallback to findById just in case isValidObjectId was strict but mongo could cast it?
-                // No, avoid crash. If not found, return 401.
-                throw new Error('User not found');
+                console.error(`Auth Error: User with ID ${decoded.id} not found in database.`);
+                return res.status(401).json({ message: 'Not authorized, user not found' });
             }
 
             next();
         } catch (error) {
-            console.error(error);
-            res.status(401).json({ message: 'Not authorized, token failed' });
+            console.error(`Auth Error Details: ${error.message}`);
+            return res.status(401).json({ message: 'Not authorized, token failed' });
         }
     }
 

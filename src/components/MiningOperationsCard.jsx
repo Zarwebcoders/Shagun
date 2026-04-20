@@ -38,7 +38,7 @@ export default function MiningOperationsCard({ status, miningPower, earningsToda
 
                         <div className="px-3 py-2 bg-orange-500/10 border border-orange-500/20 rounded-lg text-orange-400 text-xs font-bold uppercase tracking-wider flex items-center gap-2 h-fit">
                             <BriefcaseIcon className="w-3.5 h-3.5" />
-                            Staked: {stakedBalance}
+                            Staked: {Number(stakedBalance || 0).toFixed(2)}
                         </div>
                     </div>
                 </div>

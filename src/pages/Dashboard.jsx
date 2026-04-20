@@ -27,7 +27,16 @@ import { WalletIcon } from "lucide-react"
 
 export default function Dashboard() {
     const navigate = useNavigate()
-    const { connectWallet, disconnectWallet, isConnected, account, balance: onChainBalance, stakedBalance } = useWeb3()
+    const { 
+        connectWallet, 
+        disconnectWallet, 
+        isConnected, 
+        account, 
+        balance: onChainBalance, 
+        stakedBalance,
+        miningBonus: contractMiningBonus,
+        miningSlots: contractMiningSlots
+    } = useWeb3()
     const [walletBalance, setWalletBalance] = useState(0)
     const [userName, setUserName] = useState("")
     const [loading, setLoading] = useState(true)
@@ -299,10 +308,10 @@ export default function Dashboard() {
                             <MiningOperationsCard
                                 status={miningCenter.status}
                                 miningPower={miningCenter.miningPower}
-                                earningsToday={miningCenter.earningsToday}
+                                earningsToday={isConnected ? contractMiningBonus : miningCenter.earningsToday}
                                 lastMinedAt={miningCenter.lastMinedAt}
                                 monthlyCount={miningCenter.monthlyCount}
-                                totalMiningCount={miningCenter.totalMiningCount}
+                                totalMiningCount={isConnected ? contractMiningSlots : miningCenter.totalMiningCount}
                                 stakedBalance={isConnected ? stakedBalance : "0"}
                                 isConnected={isConnected}
                                 onMine={handleMine}
@@ -322,7 +331,7 @@ export default function Dashboard() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     <StatsCard
                         title="Shagun"
-                        amount={isConnected ? onChainBalance : tokenStats.rexToken.toString()}
+                        amount={isConnected ? Number(onChainBalance).toFixed(2) : Number(tokenStats.rexToken).toFixed(2)}
                         color="#2DD4BF"
                         icon={CpuChipIcon}
                         subValue="Asset Balance"
