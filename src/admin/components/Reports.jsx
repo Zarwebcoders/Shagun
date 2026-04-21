@@ -22,7 +22,8 @@ export default function Reports() {
         totalRevenue: 0,
         totalDeposits: 0,
         totalWithdrawals: 0,
-        netProfit: 0
+        netProfit: 0,
+        maxChartValue: 1000
     })
     const [chartData, setChartData] = useState([])
     const [topCountries, setTopCountries] = useState([])
@@ -37,55 +38,14 @@ export default function Reports() {
             if (data.chartData) setChartData(data.chartData);
             if (data.topCountries) setTopCountries(data.topCountries);
 
-            // Fallback for visual dev if API not fully ready
-            if (!data.stats) {
-                setStats({
-                    totalRevenue: 1250000,
-                    totalDeposits: 5000000,
-                    totalWithdrawals: 1500000,
-                    netProfit: 3500000
-                })
-                setChartData([
-                    { date: 'Jan', value: 4000 },
-                    { date: 'Feb', value: 3000 },
-                    { date: 'Mar', value: 2000 },
-                    { date: 'Apr', value: 2780 },
-                    { date: 'May', value: 1890 },
-                    { date: 'Jun', value: 2390 },
-                    { date: 'Jul', value: 3490 },
-                ])
-                setTopCountries([
-                    { code: 'IN', name: 'India', users: 1200, volume: '₹45M' },
-                    { code: 'US', name: 'USA', users: 450, volume: '₹12M' },
-                    { code: 'UK', name: 'UK', users: 320, volume: '₹8M' },
-                    { code: 'AE', name: 'UAE', users: 210, volume: '₹6.5M' },
-                ])
+            // Re-label to Regions if data found
+            if (data.topCountries?.length > 0) {
+                // Ensure UI is aware of regions
             }
 
         } catch (error) {
             console.error("Error fetching reports:", error);
-            // Fallback on error too for demo
-            setStats({
-                totalRevenue: 1250000,
-                totalDeposits: 5000000,
-                totalWithdrawals: 1500000,
-                netProfit: 3500000
-            })
-            setChartData([
-                { date: 'Jan', value: 4000 },
-                { date: 'Feb', value: 3000 },
-                { date: 'Mar', value: 2000 },
-                { date: 'Apr', value: 2780 },
-                { date: 'May', value: 1890 },
-                { date: 'Jun', value: 2390 },
-                { date: 'Jul', value: 3490 },
-            ])
-            setTopCountries([
-                { code: 'IN', name: 'India', users: 1200, volume: '₹45M' },
-                { code: 'US', name: 'USA', users: 450, volume: '₹12M' },
-                { code: 'UK', name: 'UK', users: 320, volume: '₹8M' },
-                { code: 'AE', name: 'UAE', users: 210, volume: '₹6.5M' },
-            ])
+            toast.error("Failed to fetch real-time reports");
         } finally {
             setLoading(false);
         }
@@ -180,19 +140,19 @@ export default function Reports() {
                             Revenue Trend
                         </h3>
                     </div>
-                    {/* Simplified CSS Bar Chart */}
-                    <div className="h-64 flex items-end justify-between gap-2 px-4 pb-4 border-b border-white/5">
+                    {/* CSS Bar Chart */}
+                    <div className="h-64 flex items-end justify-around gap-2 px-4 pb-4 border-b border-white/5">
                         {chartData.map((d, i) => (
-                            <div key={i} className="flex flex-col items-center gap-2 group w-full">
+                            <div key={i} className="flex flex-col items-center gap-2 group w-full max-w-[40px] h-full justify-end">
                                 <div
-                                    className="w-full bg-gradient-to-t from-teal-500/20 to-teal-500/60 rounded-t-sm hover:from-teal-500/40 hover:to-teal-500/80 transition-all relative group-hover:shadow-[0_0_15px_rgba(20,184,166,0.5)]"
-                                    style={{ height: `${(d.value / 5000) * 100}%` }}
+                                    className="w-full bg-gradient-to-t from-teal-500/80 to-teal-400 rounded-t-lg hover:from-teal-400 hover:to-teal-300 transition-all relative shadow-[0_0_15px_rgba(20,184,166,0.2)] group-hover:shadow-[0_0_20px_rgba(20,184,166,0.6)]"
+                                    style={{ height: `${stats.maxChartValue ? Math.max((d.value / stats.maxChartValue) * 100, 5) : 0}%` }}
                                 >
-                                    <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-black/80 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap border border-teal-500/20">
-                                        {d.value}
+                                    <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-[#1a1a2e] text-white text-xs px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all whitespace-nowrap border border-teal-500/30 shadow-2xl z-30 pointer-events-none scale-90 group-hover:scale-100">
+                                        <p className="font-bold text-teal-400">{reportType === "revenue" ? `₹${d.value.toLocaleString()}` : d.value.toLocaleString()}</p>
                                     </div>
                                 </div>
-                                <span className="text-xs text-gray-500">{d.date}</span>
+                                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter whitespace-nowrap">{d.date}</span>
                             </div>
                         ))}
                     </div>
@@ -203,7 +163,7 @@ export default function Reports() {
                     <div className="flex items-center gap-3 mb-6 border-b border-white/5 pb-4">
                         <h3 className="text-xl font-bold text-white flex items-center gap-2">
                             <Globe className="w-5 h-5 text-blue-400" />
-                            Top Countries
+                            Top Regions
                         </h3>
                     </div>
                     <div className="space-y-4">

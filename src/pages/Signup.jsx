@@ -35,7 +35,7 @@ export default function Signup({ setIsAuthenticated }) {
         if (formData.full_name && formData.email && formData.password && formData.mobile && formData.referral_id) {
             setIsLoading(true)
             try {
-                const { confirmPassword, ...registerData } = formData; 
+                const { confirmPassword, ...registerData } = formData;
                 const { data } = await client.post('/auth/register', registerData);
 
                 // Store user data
