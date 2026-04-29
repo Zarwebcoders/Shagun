@@ -346,6 +346,31 @@ const getMiningHistory = async (req, res) => {
     }
 }
 
+// @desc    Check sponsor name by referral ID
+// @route   GET /api/users/check-sponsor/:referralId
+// @access  Public
+const checkSponsor = async (req, res) => {
+    try {
+        const referralId = req.params.referralId;
+        
+        const sponsor = await User.findOne({
+            $or: [
+                { referral_id: referralId },
+                { user_id: referralId },
+                { id: referralId }
+            ]
+        }).select('full_name');
+
+        if (sponsor) {
+            res.json({ name: sponsor.full_name });
+        } else {
+            res.status(404).json({ message: 'Sponsor not found' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 module.exports = {
     getUsers,
     getUserById,
@@ -353,5 +378,6 @@ module.exports = {
     deleteUser,
     getDownline,
     mineTokens,
-    getMiningHistory
+    getMiningHistory,
+    checkSponsor
 };

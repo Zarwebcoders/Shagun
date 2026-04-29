@@ -1,9 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import client from "../api/client"
 import { motion } from "framer-motion"
+import logo from "../../public/removedbg.png"
 import { User, Mail, Lock, Hash, ArrowRight, Loader2, Phone } from "lucide-react"
 
 export default function Signup({ setIsAuthenticated }) {
@@ -15,6 +16,8 @@ export default function Signup({ setIsAuthenticated }) {
         confirmPassword: "",
         referral_id: "",
     })
+    const [sponsorName, setSponsorName] = useState("")
+    const [isFetchingSponsor, setIsFetchingSponsor] = useState(false)
     const [error, setError] = useState("")
     const [isLoading, setIsLoading] = useState(false)
     const navigate = useNavigate()
@@ -22,7 +25,34 @@ export default function Signup({ setIsAuthenticated }) {
     const handleChange = (e) => {
         const { name, value } = e.target
         setFormData((prev) => ({ ...prev, [name]: value }))
+        
+        // Reset sponsor name if referral ID is cleared
+        if (name === 'referral_id' && !value) {
+            setSponsorName("");
+        }
     }
+
+    // Effect to fetch sponsor name
+    useEffect(() => {
+        const fetchSponsor = async () => {
+            if (formData.referral_id && formData.referral_id.length >= 3) {
+                setIsFetchingSponsor(true);
+                try {
+                    const { data } = await client.get(`/users/check-sponsor/${formData.referral_id}`);
+                    setSponsorName(data.name);
+                } catch (err) {
+                    setSponsorName(""); // Don't show name if not found
+                } finally {
+                    setIsFetchingSponsor(false);
+                }
+            } else {
+                setSponsorName("");
+            }
+        };
+
+        const timeoutId = setTimeout(fetchSponsor, 500); // Debounce
+        return () => clearTimeout(timeoutId);
+    }, [formData.referral_id]);
 
     const handleSubmit = async (e) => {
         e.preventDefault()
@@ -68,15 +98,18 @@ export default function Signup({ setIsAuthenticated }) {
                 {/* Card */}
                 <div className="bg-white/5 backdrop-blur-xl p-8 rounded-2xl shadow-2xl border border-white/10 ring-1 ring-white/5">
                     {/* Header */}
+                    <div className="flex justify-center">
+                                            <img className="w-32 h-32" src={logo} alt="" />
+                                        </div>
                     <div className="text-center mb-8">
                         <motion.div
                             initial={{ scale: 0.9, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             transition={{ delay: 0.2 }}
                         >
-                            <h1 className="text-4xl font-black italic tracking-tighter bg-gradient-to-r from-teal-400 via-blue-500 to-purple-600 bg-clip-text text-transparent mb-3 drop-shadow-sm">
+                            {/* <h1 className="text-4xl font-black italic tracking-tighter bg-gradient-to-r from-teal-400 via-blue-500 to-purple-600 bg-clip-text text-transparent mb-3 drop-shadow-sm">
                                 ShagunPro
-                            </h1>
+                            </h1> */}
                         </motion.div>
                         <p className="text-gray-400 font-light tracking-wide">Join the Revolution</p>
                     </div>
@@ -207,6 +240,26 @@ export default function Signup({ setIsAuthenticated }) {
                                     className="w-full pl-12 pr-4 py-3.5 bg-black/40 border border-white/10 rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-teal-500/50 focus:ring-2 focus:ring-teal-500/20 transition-all duration-300 hover:border-white/20"
                                 />
                             </div>
+                            
+                            {/* Sponsor Name Display */}
+                            {isFetchingSponsor && (
+                                <div className="flex items-center gap-2 mt-1 ml-1">
+                                    <Loader2 className="w-3 h-3 text-teal-400 animate-spin" />
+                                    <span className="text-[10px] text-gray-500 uppercase tracking-widest font-medium">Verifying Sponsor...</span>
+                                </div>
+                            )}
+                            {sponsorName && !isFetchingSponsor && (
+                                <motion.div 
+                                    initial={{ opacity: 0, x: -5 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    className="mt-1.5 ml-1 px-2.5 py-1 bg-teal-500/10 border border-teal-500/20 rounded-lg inline-flex items-center gap-2 shadow-inner"
+                                >
+                                    <div className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-pulse" />
+                                    <span className="text-[11px] text-teal-300 font-bold tracking-wide uppercase">
+                                        Sponsor: <span className="text-white">{sponsorName}</span>
+                                    </span>
+                                </motion.div>
+                            )}
                         </div>
 
                         {/* Error Message */}

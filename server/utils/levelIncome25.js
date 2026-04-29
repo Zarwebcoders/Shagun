@@ -98,10 +98,11 @@ const isUserEligible = async (userId) => {
         if (hasPurchase) return true;
 
         // Check if user has loyalty/shopping tokens (Fixed typos to match User model: tokons)
-        if (user && (user.shopping_tokons > 0 || user.airdrop_tokons > 0)) {
+        if (user && (Number(user.shopping_tokons || 0) > 0 || Number(user.airdrop_tokons || 0) > 0)) {
             return true;
         }
 
+        console.log(`User ${user.email} not eligible: No approved products and no tokens.`);
         return false;
     } catch (error) {
         console.error('Error checking eligibility:', error);
@@ -113,87 +114,67 @@ const isUserEligible = async (userId) => {
  * Distribute 25-level income with monthly payouts
  * @param {ObjectId} buyerUserId - The user who purchased the product
  * @param {Number} tokenValue - Token value (10000 or 20000)
+ * @param {ObjectId} userId - The user who purchased the product
+ * @param {Number} baseAmount - Total amount for calculations
  * @param {Number} quantity - Quantity purchased
  * @param {ObjectId} productId - Product document ID
+ * @param {Number} forcedRate - Optional override for token rate
  */
-const distributeLevelIncome25 = async (buyerUserId, tokenValue, quantity, productId) => {
+async function distributeLevelIncome25(userId, baseAmount, quantity, productId, forcedRate = null) {
     try {
-        const baseAmount = tokenValue * quantity;
-        console.log("distributeLevelIncome: Base amounts calculated:", baseAmount);
-        let currentUser = await findUserRobustly(buyerUserId);
-        console.log("distributeLevelIncome: Current User Found:", currentUser ? currentUser.email : "NO");
+        const User = require('../models/User');
+        const Product = require('../models/Product');
+        const LevelIncome = require('../models/LevelIncome');
+        const MonthlyTokenDistribution = require('../models/MonthlyTokenDistribution');
 
-        if (!currentUser) {
-            console.error(`Buyer user not found: ${buyerUserId}`);
-            return;
+        const mongoose = require('mongoose');
+        let currentUser = null;
+        
+        if (mongoose.Types.ObjectId.isValid(userId)) {
+            currentUser = await User.findById(userId);
         }
         
-        const buyerObjectId = currentUser._id;
+        if (!currentUser) {
+            currentUser = await User.findOne({ 
+                $or: [{ user_id: userId }, { id: userId }, { referral_id: userId }] 
+            });
+        }
 
-        // Fetch current token rate from settings
-        let tokenRate = 7.0; // Default fallback
-        try {
-            const Setting = require('../models/Setting');
-            const rateSetting = await Setting.findOne({ key: 'rexTokenPrice' });
-            if (rateSetting) {
-                tokenRate = Number(rateSetting.value);
-                console.log(`Using dynamic token rate from settings: ₹${tokenRate}`);
-            } else {
-                console.warn('rexTokenPrice setting not found, using default ₹7.0');
+        if (!currentUser) {
+            console.error(`User not found for income distribution: ${userId}`);
+            return;
+        }
+
+        let tokenRate = 7.0; // Default
+
+        if (forcedRate) {
+            tokenRate = Number(forcedRate);
+            console.log(`Using FORCED historical token rate: ₹${tokenRate}`);
+        } else {
+            try {
+                const Setting = require('../models/Setting');
+                const rateSetting = await Setting.findOne({ key: 'rexTokenPrice' });
+                if (rateSetting) {
+                    tokenRate = Number(rateSetting.value);
+                    console.log(`Using dynamic token rate from settings: ₹${tokenRate}`);
+                } else {
+                    console.warn('rexTokenPrice setting not found, using default ₹7.0');
+                }
+            } catch (err) {
+                console.error('Error fetching dynamic token rate:', err.message);
             }
-        } catch (err) {
-            console.error('Error fetching dynamic token rate:', err.message);
         }
 
         console.log(`Starting 24-installment distribution for product ${productId}, base amount: ₹${baseAmount}, token rate: ₹${tokenRate}`);
 
-        // --- LEVEL 0: BUYER (SELF-ROI) ---
-        const totalBaseTokens = baseAmount / tokenRate;
-        const buyerInstallmentTokens = totalBaseTokens / 24;
-        const pDate = new Date(); // Use current date for new purchases
+        // --- LEVEL 0: BUYER (SELF-ROI REMOVED) ---
+        const totalBaseTokens = (baseAmount * quantity) / tokenRate;
+        const pDate = new Date(); 
         const baseScheduleDate = pDate;
-
-        console.log(`Level 0: ${currentUser.email} (Buyer) - 100% = ${totalBaseTokens} total tokens = ${buyerInstallmentTokens} tokens/installment`);
-
         const originalBuyerStrId = currentUser.id || currentUser.user_id || currentUser._id.toString();
-
-        // Inject 12-month tokens upfront to dashboard balance
-        // Credit the Buyer (Self-ROI/Level 0) as 'mining_bonus' to match UI categories
-        currentUser.mining_bonus = (Number(currentUser.mining_bonus || 0)) + totalBaseTokens;
-        currentUser.total_income = (Number(currentUser.total_income || 0)) + totalBaseTokens;
-        await currentUser.save();
-
-        try {
-            const LevelIncome = require('../models/LevelIncome');
-            await LevelIncome.create({
-                user_id: originalBuyerStrId,
-                from_user_id: originalBuyerStrId,
-                level: 0,
-                amount: totalBaseTokens,
-                product_id: productId,
-                create_at: pDate,
-                created_at: pDate
-            });
-        } catch (err) { console.error('Error logging buyer passbook', err.message); }
-
-        for (let inst = 1; inst <= 24; inst++) {
-            const scheduledDate = new Date(baseScheduleDate);
-            scheduledDate.setDate(scheduledDate.getDate() + ((inst - 1) * 15)); // 15-day intervals, 1st one immediate
-            try {
-                await MonthlyTokenDistribution.create({
-                    user_id: currentUser._id,
-                    from_purchase_id: productId,
-                    from_user_id: buyerObjectId,
-                    level: 0,
-                    monthly_amount: buyerInstallmentTokens,
-                    month_number: inst,
-                    status: 'pending',
-                    scheduled_date: scheduledDate
-                });
-            } catch (err) {
-                console.error('Failed to save MonthlyTokenDistribution for buyer', err.message);
-            }
-        }
+        
+        const buyerObjectId = currentUser._id;
+        console.log(`Self-ROI skipped for buyer: ${currentUser.email}. Total base tokens calculated for upline: ${totalBaseTokens}`);
 
         // --- Traverse 25 levels ---
         for (let level = 0; level < 25; level++) {
@@ -213,13 +194,18 @@ const distributeLevelIncome25 = async (buyerUserId, tokenValue, quantity, produc
             // Check eligibility
             const eligible = await isUserEligible(uplineUser._id);
 
-            if (eligible) {
-                const installmentPercentage = LEVEL_PERCENTAGES[level];
+            if (!eligible) {
+                console.log(`Skipping Level ${level + 1}: ${uplineUser.email} is not eligible.`);
+            } else {
+                const levelPercentage = LEVEL_PERCENTAGES[level];
 
-                const installmentTokenAmount = (totalBaseTokens * installmentPercentage) / 100;
-                const totalAnnualTokens = installmentTokenAmount * 24; // Actually "Total Contract Duration"
+                // Calculate total income based on percentage (e.g. Level 1 gets 3.6% TOTAL)
+                const totalAnnualTokens = (totalBaseTokens * levelPercentage) / 100;
+                
+                // Divide total income into 24 equal installments
+                const installmentTokenAmount = totalAnnualTokens / 24;
 
-                console.log(`Level ${level + 1}: ${uplineUser.email} - ${installmentPercentage}% per installment = ${installmentTokenAmount} tokens/inst`);
+                console.log(`Level ${level + 1}: ${uplineUser.email} - ${levelPercentage}% TOTAL = ${totalAnnualTokens} tokens (${installmentTokenAmount} tokens/inst)`);
 
                 // Inject full 24 installment tokens upfront
                 uplineUser.level_income = (Number(uplineUser.level_income || 0)) + totalAnnualTokens;
@@ -261,8 +247,6 @@ const distributeLevelIncome25 = async (buyerUserId, tokenValue, quantity, produc
                 }
 
                 console.log(`Created 24 installment records for ${uplineUser.email} at level ${level + 1} (${installmentTokenAmount} tokens/inst)`);
-            } else {
-                console.log(`Level ${level + 1}: ${uplineUser.email} - NOT ELIGIBLE (no purchases)`);
             }
 
             // Move to next level

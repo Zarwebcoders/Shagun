@@ -7,10 +7,12 @@ const {
     deleteUser,
     getDownline,
     mineTokens,
-    getMiningHistory
+    getMiningHistory,
+    checkSponsor
 } = require('../controllers/userController');
 const { protect, admin } = require('../middleware/authMiddleware');
 
+router.get('/check-sponsor/:referralId', checkSponsor);
 router.get('/', protect, admin, getUsers);
 router.get('/downline', protect, getDownline);
 router.post('/mine', protect, mineTokens);

@@ -1,4 +1,4 @@
-CastError: Cast to ObjectId failed for value "1070" (type string) at path "_id" for model "User"
+CastError: Cast to ObjectId failed for value "4" (type string) at path "_id" for model "User"
     at SchemaObjectId.cast (C:\Users\User\Desktop\VS.CODE\WEB3\Shagun\server\node_modules\mongoose\lib\schema\objectId.js:253:11)
     at SchemaType.applySetters (C:\Users\User\Desktop\VS.CODE\WEB3\Shagun\server\node_modules\mongoose\lib\schemaType.js:1280:12)
     at SchemaType.castForQuery (C:\Users\User\Desktop\VS.CODE\WEB3\Shagun\server\node_modules\mongoose\lib\schemaType.js:1706:17)
@@ -8,4 +8,4 @@ CastError: Cast to ObjectId failed for value "1070" (type string) at path "_id" 
     at model.Query._findOne (C:\Users\User\Desktop\VS.CODE\WEB3\Shagun\server\node_modules\mongoose\lib\query.js:2708:8)
     at model.Query.exec (C:\Users\User\Desktop\VS.CODE\WEB3\Shagun\server\node_modules\mongoose\lib\query.js:4627:80)
     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
-    at async distributeLevelIncome25 (C:\Users\User\Desktop\VS.CODE\WEB3\Shagun\server\utils\levelIncome25.js:101:27)
+    at async distributeLevelIncome25 (C:\Users\User\Desktop\VS.CODE\WEB3\Shagun\server\utils\levelIncome25.js:130:29)
