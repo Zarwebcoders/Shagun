@@ -267,7 +267,7 @@ export default function Withdrawal() {
                         </div>
                     </div>
                     <div className="mb-2">
-                        <span className="text-2xl md:text-3xl font-bold text-white">₹{userData.sosWithdrawal.toLocaleString()}</span>
+                        <span className="text-2xl md:text-3xl font-bold text-white">SGN {userData.sosWithdrawal.toLocaleString()}</span>
                     </div>
                     <div className="w-full bg-[#444]/50 rounded-full h-1.5 md:h-2">
                         <div className="bg-gradient-to-r from-[#fd79a8] to-[#e17055] h-1.5 md:h-2 rounded-full" style={{ width: "40%" }}></div>
@@ -288,7 +288,7 @@ export default function Withdrawal() {
                         </div>
                     </div>
                     <div className="mb-2">
-                        <span className="text-2xl md:text-3xl font-bold text-white">₹{withdrawalStats.totalWithdrawn.toLocaleString()}</span>
+                        <span className="text-2xl md:text-3xl font-bold text-white">SGN {withdrawalStats.totalWithdrawn.toLocaleString()}</span>
                     </div>
                     <div className="w-full bg-[#444]/50 rounded-full h-1.5 md:h-2">
                         <div className="bg-gradient-to-r from-[#a29bfe] to-[#6c5ce7] h-1.5 md:h-2 rounded-full" style={{ width: "90%" }}></div>
@@ -309,7 +309,7 @@ export default function Withdrawal() {
                         </div>
                     </div>
                     <div className="mb-2">
-                        <span className="text-2xl md:text-3xl font-bold text-white">₹{userData.totalIncome.toLocaleString()}</span>
+                        <span className="text-2xl md:text-3xl font-bold text-white">SGN {userData.totalIncome.toLocaleString()}</span>
                     </div>
                     <div className="w-full bg-[#444]/50 rounded-full h-1.5 md:h-2">
                         <div className="bg-gradient-to-r from-[#ffeaa7] to-[#fdcb6e] h-1.5 md:h-2 rounded-full" style={{ width: "70%" }}></div>
@@ -317,7 +317,7 @@ export default function Withdrawal() {
                 </div>
 
                 {/* Stake ROI Card */}
-                <div className="bg-gradient-to-br from-[#040408] to-[#1a1a2e] p-4 md:p-6 rounded-xl border border-[#55efc4]/30 hover:border-[#55efc4] transition-all group hover:shadow-lg hover:shadow-[#55efc4]/20">
+                {/* <div className="bg-gradient-to-br from-[#040408] to-[#1a1a2e] p-4 md:p-6 rounded-xl border border-[#55efc4]/30 hover:border-[#55efc4] transition-all group hover:shadow-lg hover:shadow-[#55efc4]/20">
                     <div className="flex items-start justify-between mb-3 md:mb-4">
                         <div>
                             <h3 className="text-white font-bold text-base md:text-lg">Stake ROI</h3>
@@ -335,7 +335,7 @@ export default function Withdrawal() {
                     <div className="w-full bg-[#444]/50 rounded-full h-1.5 md:h-2">
                         <div className="bg-gradient-to-r from-[#55efc4] to-[#00b894] h-1.5 md:h-2 rounded-full" style={{ width: "55%" }}></div>
                     </div>
-                </div>
+                </div> */}
 
                 {/* Stake Token Card */}
                 <div className="bg-gradient-to-br from-[#040408] to-[#1a1a2e] p-4 md:p-6 rounded-xl border border-[#fab1a0]/30 hover:border-[#fab1a0] transition-all group hover:shadow-lg hover:shadow-[#fab1a0]/20">
@@ -351,7 +351,7 @@ export default function Withdrawal() {
                         </div>
                     </div>
                     <div className="mb-2">
-                        <span className="text-2xl md:text-3xl font-bold text-white">₹{userData.stakeToken.toLocaleString()}</span>
+                        <span className="text-2xl md:text-3xl font-bold text-white">SGN {userData.stakeToken.toLocaleString()}</span>
                     </div>
                     <div className="w-full bg-[#444]/50 rounded-full h-1.5 md:h-2">
                         <div className="bg-gradient-to-r from-[#fab1a0] to-[#ff7675] h-1.5 md:h-2 rounded-full" style={{ width: "50%" }}></div>
@@ -407,7 +407,7 @@ export default function Withdrawal() {
                                                 </div>
                                             </td>
                                             <td className="py-3 md:py-4 px-3 md:px-6">
-                                                <span className="text-lg md:text-xl font-bold text-white">₹{item.amount}</span>
+                                                <span className="text-lg md:text-xl font-bold text-white">SGN {item.amount}</span>
                                             </td>
                                             <td className="py-3 md:py-4 px-3 md:px-6 text-[#b0b0b0] text-xs md:text-sm">{item.date}</td>
                                             <td className="py-3 md:py-4 px-3 md:px-6">
@@ -490,7 +490,7 @@ export default function Withdrawal() {
                             <h4 className="text-white font-bold text-base md:text-lg">Total Withdrawn</h4>
                             <p className="text-gray-400 text-xs md:text-sm">All Time</p>
                         </div>
-                        <div className="text-2xl md:text-3xl font-bold text-teal-400">₹{withdrawalStats.totalWithdrawn.toLocaleString()}</div>
+                        <div className="text-2xl md:text-3xl font-bold text-teal-400">SGN {withdrawalStats.totalWithdrawn.toLocaleString()}</div>
                     </div>
                 </div>
                 <div className="bg-gradient-to-br from-[#040408] to-[#1a1a2e] p-4 md:p-6 rounded-xl border border-[#00b894]/30">
@@ -499,7 +499,7 @@ export default function Withdrawal() {
                             <h4 className="text-white font-bold text-base md:text-lg">Pending Withdrawals</h4>
                             <p className="text-gray-400 text-xs md:text-sm">Awaiting Processing</p>
                         </div>
-                        <div className="text-2xl md:text-3xl font-bold text-[#00b894]">₹{withdrawalStats.pendingWithdrawals.toLocaleString()}</div>
+                        <div className="text-2xl md:text-3xl font-bold text-[#00b894]">SGN {withdrawalStats.pendingWithdrawals.toLocaleString()}</div>
                     </div>
                 </div>
                 <div className="bg-gradient-to-br from-[#040408] to-[#1a1a2e] p-4 md:p-6 rounded-xl border border-[#0984e3]/30">

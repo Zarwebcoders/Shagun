@@ -11,11 +11,10 @@ async function migrate() {
         await mongoose.connect(process.env.MONGODB_URL || process.env.MONGO_URI);
         console.log('Connected to MongoDB');
 
-        // 1. Get next 50 users (51-100)
+        // 1. Get first 100 users
         const users = await User.find({ is_admin: { $ne: "1" } })
             .sort({ create_at: 1 })
-            .skip(50)
-            .limit(50);
+            .limit(100);
 
         console.log(`Processing ${users.length} users...`);
 
@@ -65,14 +64,19 @@ async function migrate() {
             const m = date.getMonth(); // 0-indexed
             const d = date.getDate();
 
+            let rate = 7.0; // Default
+
             // Oct 1, 2025 to Dec 5, 2025 = 4rs
-            if (date >= new Date(2025, 9, 1) && date <= new Date(2025, 11, 5)) return 4.0;
+            if (date >= new Date(2025, 9, 1) && date <= new Date(2025, 11, 5)) rate = 4.0;
             // Dec 6, 2025 to Dec 26, 2025 = 4.8rs
-            if (date >= new Date(2025, 11, 6) && date <= new Date(2025, 11, 26)) return 4.8;
+            else if (date >= new Date(2025, 11, 6) && date <= new Date(2025, 11, 26)) rate = 4.8;
             // Dec 27, 2025 to Jan 12, 2026 = 5.8rs
-            if (date >= new Date(2025, 11, 27) && date <= new Date(2026, 0, 12)) return 5.8;
+            else if (date >= new Date(2025, 11, 27) && date <= new Date(2026, 0, 12)) rate = 5.8;
             // Jan 13, 2026 till now = 7rs
-            return 7.0;
+            else if (date >= new Date(2026, 0, 13)) rate = 7.0;
+
+            console.log(`Checking rate for date: ${dateString} -> Parsed: ${date.toDateString()} -> Rate: ₹${rate}`);
+            return rate;
         };
 
         for (const product of approvedProducts) {
@@ -93,6 +97,13 @@ async function migrate() {
                 else if (product.packag_type.includes('Home')) tVal = 10000;
                 else if (product.packag_type.includes('EV')) tVal = 20000;
             }
+
+            // Calculate new token amount for the product record itself
+            const newProductTokens = (tVal * Number(product.quantity || 1)) / forcedRate;
+            product.token_amount = newProductTokens;
+            await product.save();
+
+            console.log(`Updated Product ${product._id}: Tokens set to ${newProductTokens} (Rate: ₹${forcedRate})`);
 
             // Using the updated utility which now takes forcedRate as 5th argument
             await distributeLevelIncome25(

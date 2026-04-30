@@ -12,6 +12,10 @@ const createWithdrawal = async (req, res) => {
         return res.status(400).json({ message: 'Please provide amount and withdrawal type' });
     }
 
+    if (Number(amount) < 10) {
+        return res.status(400).json({ message: 'Minimum withdrawal amount is 10' });
+    }
+
     try {
         // Find user with robust ID lookup
         const userId = req.user._id || req.user.id;
@@ -69,10 +73,17 @@ const createWithdrawal = async (req, res) => {
             const MonthlyTokenDistribution = require('../models/MonthlyTokenDistribution');
             const now = new Date();
 
-            const distributions = await MonthlyTokenDistribution.find({
-                user_id: user._id,
+            // Use raw collection to bypass Mongoose CastError with legacy string IDs
+            const distCollection = mongoose.connection.db.collection('monthlytokendistributions');
+            const distributions = await distCollection.find({
+                $or: [
+                    { user_id: user._id },
+                    { user_id: user.id },
+                    { user_id: user.user_id },
+                    { user_id: String(user._id) }
+                ],
                 status: 'pending'
-            });
+            }).toArray();
 
             let availableMatured = 0;
             if (withdraw_type === 'level_income') {
@@ -87,12 +98,13 @@ const createWithdrawal = async (req, res) => {
                 }, 0);
             }
 
-            // Available matured must also account for pending withdrawals of that type
-            const availableMaturedNet = availableMatured - totalPending;
+            // Round to 2 decimal places for comparison to handle floating point issues
+            const availableMaturedNet = Math.round((availableMatured - totalPending) * 100) / 100;
+            const requestedAmount = Math.round(Number(amount) * 100) / 100;
 
-            if (amount > availableMaturedNet) {
+            if (requestedAmount > availableMaturedNet) {
                 return res.status(400).json({
-                    message: `Insufficient matured balance. Available: ${Math.round(availableMaturedNet * 100) / 100}`
+                    message: `Insufficient matured balance. Available: ${availableMaturedNet}`
                 });
             }
         }

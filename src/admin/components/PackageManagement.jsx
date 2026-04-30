@@ -1,6 +1,6 @@
 "use client"
 import { useState, useEffect } from "react"
-import { Package, Search, Calendar, User, CheckCircle, Trash2 } from "lucide-react"
+import { Package, Search, Calendar, User, CheckCircle, Trash2, Zap } from "lucide-react"
 import client from "../../api/client"
 
 import { ChevronLeft, ChevronRight } from "lucide-react"
@@ -35,6 +35,18 @@ export default function PackageManagement() {
         } catch (error) {
             console.error("Error fetching products:", error);
             setLoading(false);
+        }
+    }
+
+    const handleDirectApprove = async (id) => {
+        const loadingToast = toast.loading("Processing direct approval...");
+        try {
+            await client.put(`/products/${id}`, { status: 1 });
+            toast.success("Product approved and income distributed!", { id: loadingToast });
+            fetchProducts();
+        } catch (error) {
+            console.error("Direct Approval Error:", error);
+            toast.error("Failed to approve product.", { id: loadingToast });
         }
     }
 
@@ -246,10 +258,19 @@ export default function PackageManagement() {
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-right">
                                             <div className="flex items-center justify-end gap-2">
+                                                {item.approve == 0 && (
+                                                    <button
+                                                        onClick={() => handleDirectApprove(item._id)}
+                                                        className="p-1.5 rounded-lg bg-teal-500/20 text-teal-500 hover:bg-teal-500 hover:text-white transition-all border border-teal-500/30"
+                                                        title="Direct Approve (No Wallet)"
+                                                    >
+                                                        <Zap className="w-4 h-4" />
+                                                    </button>
+                                                )}
                                                 <button
                                                     onClick={() => handleStatusUpdate(item, 1)}
                                                     className="p-1.5 rounded-lg bg-green-500/20 text-green-500 hover:bg-green-500 hover:text-white transition-all border border-green-500/30"
-                                                    title="Approve"
+                                                    title="Approve on Blockchain"
                                                 >
                                                     <CheckCircle className="w-4 h-4" />
                                                 </button>

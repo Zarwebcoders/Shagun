@@ -14,8 +14,8 @@ const getMyReferrals = async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        // Query using all possible user identifiers
-        const queryIds = [user.id, user.user_id, user._id.toString()].filter(id => id);
+        // Query using all possible user identifiers including referral_id
+        const queryIds = [user.id, user.user_id, user.referral_id, user._id.toString()].filter(id => id);
 
         const incomes = await ReferralIncomes.find({ earner_user_id: { $in: queryIds } }).sort({ create_at: -1 }).lean();
 
@@ -28,6 +28,7 @@ const getMyReferrals = async (req, res) => {
             $or: [
                 { id: { $in: referredIds } },
                 { user_id: { $in: referredIds } },
+                { referral_id: { $in: referredIds } },
                 { _id: { $in: referredIds.filter(id => mongoose.Types.ObjectId.isValid(id)) } }
             ]
         }).select('id full_name user_id').lean();

@@ -149,8 +149,17 @@ export default function Dashboard() {
                     totalIncome: totalCalculatedIncome,
                 });
 
+                // Calculate active status: airdrop > 0 OR has approved products
+                const hasAirdrop = Number(userData.airdrop_tokons || 0) > 0;
+                
+                // Fetch products to check for approval
+                const productsRes = await client.get('/products');
+                const hasApprovedProduct = productsRes.data.products?.some(p => p.approve === 1 || p.approve === '1');
+                
+                const isUserActive = hasAirdrop || hasApprovedProduct;
+
                 setMiningCenter({
-                    status: Number(userData.mining_bonus || 0) > 0 ? "Active" : "Pending",
+                    status: isUserActive ? "Active" : "Inactive",
                     miningPower: userData.mining_count_thismounth ? `${Number(userData.mining_count_thismounth).toLocaleString()} TH/s` : "0 TH/s",
                     earningsToday: Number(userData.mining_bonus || 0),
                     lastMinedAt: userData.last_mining_data,
@@ -266,11 +275,22 @@ export default function Dashboard() {
                             <div className="inline-block px-3 py-1 rounded-full bg-teal-500/20 border border-teal-500/40 text-teal-300 text-xs font-bold tracking-wider uppercase mb-2">
                                 Dashboard Overview
                             </div>
-                            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white leading-tight">
+                            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white leading-tight flex flex-wrap items-center gap-3">
                                 Welcome back,<br />
                                 <span className="bg-gradient-brand bg-clip-text text-transparent">
                                     {userName}
                                 </span>
+                                {miningCenter.status === "Active" ? (
+                                    <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-teal-500/20 border border-teal-500/50 shadow-[0_0_15px_rgba(45,212,191,0.2)]">
+                                        <div className="w-2 h-2 rounded-full bg-teal-400 animate-pulse"></div>
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-teal-300">Active</span>
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-rose-500/20 border border-rose-500/50">
+                                        <div className="w-2 h-2 rounded-full bg-rose-400"></div>
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-rose-300">Inactive</span>
+                                    </div>
+                                )}
                             </h2>
                             <p className="text-gray-400 text-lg max-w-xl">
                                 Your portfolio performance and network growth at a glance.
