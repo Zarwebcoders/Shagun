@@ -57,7 +57,7 @@ export default function PackageManagement() {
                 const tx = await contract.approveProductPurchase(
                     productRecord.wallet_address, 
                     productRecord.product_id, 
-                    productRecord.quantity
+                    1 // TESTING: Hardcoded to 1 as requested, original was productRecord.quantity
                 );
                 
                 toast.loading("Waiting for network confirmation...", { id: loadingToast });
