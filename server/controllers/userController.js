@@ -273,9 +273,8 @@ const mineTokens = async (req, res) => {
             totalReward += (inv.amount * dailyReturn) / 100;
         });
 
-        if (totalReward <= 0) {
-            return res.status(400).json({ message: "No mining rewards available from current packages." });
-        }
+        // Proceed even if reward is 0 (for testing/history tracking)
+        if (totalReward < 0) totalReward = 0; 
 
         // Update User stats
         user.last_mining_data = new Date();
@@ -336,8 +335,18 @@ const mineTokens = async (req, res) => {
 // @access  Private
 const getMiningHistory = async (req, res) => {
     try {
+        // 1. Find user to get all ID formats
+        const user = await User.findById(req.user._id || req.user.id);
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        // 2. Query history using all known IDs for this user
         const history = await MiningBonus.find({ 
-            user_id: { $in: [req.user.id, req.user.user_id, req.user._id.toString()] }
+            user_id: { $in: [
+                user._id.toString(),
+                user.id,
+                user.user_id,
+                user.referral_id
+            ].filter(Boolean) }
         }).sort({ created_at: -1 });
         
         res.json(history);

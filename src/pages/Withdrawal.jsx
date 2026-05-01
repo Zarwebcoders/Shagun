@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { toast } from "react-hot-toast"
 import client from "../api/client"
 import WithdrawalForm from "../components/WithdrawalForm"
+import { useWeb3 } from "../hooks/useWeb3"
 
 export default function Withdrawal() {
     const [userData, setUserData] = useState({
@@ -20,6 +21,18 @@ export default function Withdrawal() {
         stakeToken: 0,
         anualBonus: 0
     })
+    const { isConnected, miningBonus: contractMiningBonus, connectWallet } = useWeb3()
+    
+    // Sync Contract Mining Bonus with UI state
+    useEffect(() => {
+        if (isConnected && contractMiningBonus) {
+            setUserData(prev => ({
+                ...prev,
+                totalMiningBonus: Number(contractMiningBonus)
+            }));
+        }
+    }, [isConnected, contractMiningBonus]);
+
     const [withdrawalHistory, setWithdrawalHistory] = useState([])
     const [withdrawalStats, setWithdrawalStats] = useState({
         totalWithdrawn: 0,
@@ -225,7 +238,9 @@ export default function Withdrawal() {
                         </div>
                     </div>
                     <div className="mb-2">
-                        <span className="text-2xl md:text-3xl font-bold text-white">SGN {userData.totalMiningBonus.toLocaleString()}</span>
+                        <span className="text-2xl md:text-3xl font-bold text-white">
+                            SGN {isConnected ? Number(contractMiningBonus).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 }) : "***"}
+                        </span>
                     </div>
                     <div className="w-full bg-[#444]/50 rounded-full h-1.5 md:h-2">
                         <div className="bg-gradient-brand h-1.5 md:h-2 rounded-full" style={{ width: "75%" }}></div>
