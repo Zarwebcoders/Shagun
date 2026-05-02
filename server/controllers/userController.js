@@ -115,11 +115,12 @@ const updateUser = async (req, res) => {
                     if (wallet) {
                         wallet.wallet_add = req.body.wallet_address;
                         await wallet.save();
-                    } else {
+                    } else if (req.body.wallet_address.trim() !== "") {
+                        // Only create if address is not empty
                         await Wallet.create({
                             user_id: user._id.toString(),
                             wallet_add: req.body.wallet_address,
-                            approve: 1 // Default to approved when admin sets it
+                            approve: 1 
                         });
                     }
                 }

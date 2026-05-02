@@ -7,7 +7,6 @@ const walletSchema = new mongoose.Schema({
     },
     wallet_add: {
         type: String,
-        required: true
     },
     approve: {
         type: Number,
