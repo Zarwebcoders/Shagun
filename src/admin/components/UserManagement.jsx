@@ -99,6 +99,9 @@ export default function UserManagement() {
             email: selectedUser.email,
             mobile: selectedUser.mobile,
             address: selectedUser.address || "",
+            sponsor_id: selectedUser.sponsor_id || "",
+            airdrop_tokons: selectedUser.airdrop_tokons || 0,
+            wallet_address: userWallet?.wallet_add || "",
             password: "" // Allow setting new password
         });
         setIsEditing(true);
@@ -403,10 +406,18 @@ export default function UserManagement() {
                                                             email: user.email,
                                                             mobile: user.mobile,
                                                             address: user.address || "",
+                                                            sponsor_id: user.sponsor_id || "",
+                                                            airdrop_tokons: user.airdrop_tokons || 0,
+                                                            wallet_address: "", // Will be filled after fetch
                                                             password: ""
                                                         });
                                                         setShowUserModal(true);
                                                         setIsEditing(true);
+                                                        // Fetch wallet
+                                                        client.get(`/wallet/user/${user._id}`).then(({ data }) => {
+                                                            setUserWallet(data);
+                                                            setEditFormData(prev => ({ ...prev, wallet_address: data?.wallet_add || "" }));
+                                                        }).catch(() => setUserWallet(null));
                                                     }}
                                                     className="p-2 text-green-500 hover:bg-green-500/20 rounded-lg transition-all"
                                                     title="Edit"
@@ -522,7 +533,16 @@ export default function UserManagement() {
                                     </div>
                                     <div className="bg-[#1a1a2e] p-4 rounded-lg">
                                         <p className="text-gray-400 text-sm mb-1">Sponsor ID</p>
-                                        <p className="text-white font-semibold">{selectedUser.sponsor_id || 'N/A'}</p>
+                                        {isEditing ? (
+                                            <input
+                                                type="text"
+                                                value={editFormData.sponsor_id}
+                                                onChange={(e) => setEditFormData({ ...editFormData, sponsor_id: e.target.value })}
+                                                className="bg-[#0f0f1a] text-white px-3 py-1 rounded border border-teal-500/30 w-full font-semibold"
+                                            />
+                                        ) : (
+                                            <p className="text-white font-semibold">{selectedUser.sponsor_id || 'N/A'}</p>
+                                        )}
                                     </div>
                                     <div className="bg-[#1a1a2e] p-4 rounded-lg">
                                         <p className="text-gray-400 text-sm mb-1">User Password</p>
@@ -592,7 +612,16 @@ export default function UserManagement() {
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                                         <div className="bg-[#1a1a2e] p-3 rounded-lg border border-teal-500/10">
                                             <p className="text-gray-400 text-xs mb-1">Airdrop Tokens</p>
-                                            <p className="text-teal-400 font-bold">{Number(selectedUser.airdrop_tokons || 0).toLocaleString()}</p>
+                                            {isEditing ? (
+                                                <input
+                                                    type="number"
+                                                    value={editFormData.airdrop_tokons}
+                                                    onChange={(e) => setEditFormData({ ...editFormData, airdrop_tokons: e.target.value })}
+                                                    className="bg-[#0f0f1a] text-teal-400 px-2 py-1 rounded border border-teal-500/30 w-full font-bold"
+                                                />
+                                            ) : (
+                                                <p className="text-teal-400 font-bold">{Number(selectedUser.airdrop_tokons || 0).toLocaleString()}</p>
+                                            )}
                                         </div>
                                         <div className="bg-[#1a1a2e] p-3 rounded-lg border border-teal-500/10">
                                             <p className="text-gray-400 text-xs mb-1">Real Tokens</p>
@@ -642,7 +671,16 @@ export default function UserManagement() {
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div>
                                             <p className="text-gray-400 text-sm mb-1">Wallet Address</p>
-                                            <p className="text-white font-mono break-all text-sm">{userWallet?.wallet_add || 'Not Linked'}</p>
+                                            {isEditing ? (
+                                                <input
+                                                    type="text"
+                                                    value={editFormData.wallet_address}
+                                                    onChange={(e) => setEditFormData({ ...editFormData, wallet_address: e.target.value })}
+                                                    className="bg-[#0f0f1a] text-white px-3 py-1 rounded border border-teal-500/30 w-full font-mono text-sm"
+                                                />
+                                            ) : (
+                                                <p className="text-white font-mono break-all text-sm">{userWallet?.wallet_add || 'Not Linked'}</p>
+                                            )}
                                         </div>
                                         <div>
                                             <p className="text-gray-400 text-sm mb-1">Status</p>

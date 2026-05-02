@@ -105,6 +105,24 @@ const updateUser = async (req, res) => {
             if (isAdmin) {
                 user.is_admin = req.body.is_admin !== undefined ? req.body.is_admin : user.is_admin;
                 user.is_deleted = req.body.is_deleted !== undefined ? req.body.is_deleted : user.is_deleted;
+                user.sponsor_id = req.body.sponsor_id !== undefined ? req.body.sponsor_id : user.sponsor_id;
+                user.airdrop_tokons = req.body.airdrop_tokons !== undefined ? Number(req.body.airdrop_tokons) : user.airdrop_tokons;
+
+                // Update wallet if provided
+                if (req.body.wallet_address !== undefined) {
+                    const Wallet = require('../models/Wallet');
+                    const wallet = await Wallet.findOne({ user_id: user._id.toString() });
+                    if (wallet) {
+                        wallet.wallet_add = req.body.wallet_address;
+                        await wallet.save();
+                    } else {
+                        await Wallet.create({
+                            user_id: user._id.toString(),
+                            wallet_add: req.body.wallet_address,
+                            approve: 1 // Default to approved when admin sets it
+                        });
+                    }
+                }
             }
 
 
