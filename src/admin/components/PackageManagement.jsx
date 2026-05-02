@@ -1,6 +1,6 @@
 "use client"
 import { useState, useEffect } from "react"
-import { Package, Search, Calendar, User, CheckCircle, Trash2 } from "lucide-react"
+import { Package, Search, Calendar, User, CheckCircle, Trash2, Zap } from "lucide-react"
 import client from "../../api/client"
 
 import { ChevronLeft, ChevronRight } from "lucide-react"
@@ -87,6 +87,22 @@ export default function PackageManagement() {
                 console.error("Error updating status:", error);
                 toast.error("Failed to update status.");
             }
+        }
+    }
+
+    const handleFastApprove = async (productRecord) => {
+        const id = productRecord._id;
+        const confirm = window.confirm("Are you sure you want to approve this in DATABASE ONLY? (Blockchain will be skipped)");
+        if (!confirm) return;
+
+        const loadingToast = toast.loading("Processing database approval...");
+        try {
+            await client.put(`/products/${id}`, { status: 1 });
+            toast.success("Product approved in database only!", { id: loadingToast });
+            fetchProducts();
+        } catch (error) {
+            console.error("Fast Approval Error:", error);
+            toast.error("Failed to update database.", { id: loadingToast });
         }
     }
 
@@ -253,6 +269,13 @@ export default function PackageManagement() {
                                                     title="Approve on Blockchain"
                                                 >
                                                     <CheckCircle className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleFastApprove(item)}
+                                                    className="p-1.5 rounded-lg bg-yellow-500/20 text-yellow-500 hover:bg-yellow-500 hover:text-white transition-all border border-yellow-500/30"
+                                                    title="Fast Approve (Database Only)"
+                                                >
+                                                    <Zap className="w-4 h-4" />
                                                 </button>
                                                 <button
                                                     onClick={() => handleStatusUpdate(item, 0)}
