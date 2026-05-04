@@ -265,7 +265,7 @@ async function distributeLevelIncome25(userId, baseAmount, quantity, productId, 
  * @param {ObjectId} buyerUserId - The user who purchased
  * @param {Number} productAmount - Product purchase amount
  */
-const distributeReferralIncome = async (buyerUserId, productAmount) => {
+const distributeReferralIncome = async (buyerUserId, productAmount, productId = null, txnId = null) => {
     try {
         console.log(`distributeReferralIncome: Starting for Buyer: ${buyerUserId}, Amount: ${productAmount}`);
         
@@ -307,7 +307,7 @@ const distributeReferralIncome = async (buyerUserId, productAmount) => {
         const Transaction = require('../models/Transaction');
         await Transaction.create({
             user: sponsor._id,
-            relatedUser: buyerUserId,
+            relatedUser: buyer._id,
             type: 'referral',
             amount: referralIncome,
             description: `Referral Income (8%) from product purchase`,
@@ -321,10 +321,10 @@ const distributeReferralIncome = async (buyerUserId, productAmount) => {
         const referredId = buyer.id || buyer.user_id || buyer._id.toString();
         
         await ReferralIncomes.create({
-            earner_user_id: earnerId,
-            referred_user_id: referredId,
-            product_id: null,
-            product_transcation_id: `REF${Date.now()}`,
+            earner_user_id: String(earnerId),
+            referred_user_id: String(referredId),
+            product_id: productId ? String(productId) : null,
+            product_transcation_id: txnId || `REF${Date.now()}`,
             amount: productAmount,
             percentage: 8.00,
             referral_amount: referralIncome,

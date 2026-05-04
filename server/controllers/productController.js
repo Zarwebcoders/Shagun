@@ -203,7 +203,7 @@ const updateProductStatus = async (req, res) => {
                 if (oldStatus != 1 || !hasReferralIncome) {
                     console.log(`Distributing Referral Income for ${product._id}...`);
                     const totalProductAmount = product.amount * product.quantity;
-                    await distributeReferralIncome(product.user_id, totalProductAmount);
+                    await distributeReferralIncome(product.user_id, totalProductAmount, product._id, product.transcation_id);
                 }
 
                 // 2. Fill Level Income if missing

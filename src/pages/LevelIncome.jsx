@@ -25,6 +25,7 @@ export default function LevelIncome() {
                     pending: income.pending === true,
                     fromUser: income.from_user_id?.name || "Unknown User",
                     email: income.from_user_id?.email || "N/A",
+                    referralId: income.from_user_id?.referral_id || "N/A",
                     date: new Date(income.created_at).toLocaleDateString(),
                     time: new Date(income.created_at).toLocaleTimeString(),
                     originalDate: new Date(income.created_at),
@@ -148,6 +149,7 @@ export default function LevelIncome() {
                                             <thead className="text-xs text-gray-400 uppercase bg-[#0f0f1a]">
                                                 <tr className="text-center">
                                                     <th className="px-4 py-3">From User</th>
+                                                    <th className="px-4 py-3">User ID</th>
                                                     <th className="px-4 py-3">Email</th>
                                                     <th className="px-4 py-3">Total Income</th>
                                                     <th className="px-4 py-3 text-teal-400">Released Income</th>
@@ -160,6 +162,9 @@ export default function LevelIncome() {
                                                     <tr key={idx} className="border-b border-[#333] hover:bg-[#1f1f2e]">
                                                         <td className="px-4 py-3 font-medium text-white">
                                                             {detail.fromUser}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-teal-400 font-mono">
+                                                            {detail.referralId}
                                                         </td>
                                                         <td className="px-4 py-3 text-gray-300">
                                                             {detail.email}

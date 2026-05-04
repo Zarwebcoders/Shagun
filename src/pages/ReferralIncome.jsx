@@ -101,7 +101,8 @@ export default function ReferralIncome() {
                                                     <User className="w-4 h-4 text-indigo-400" />
                                                     <div className="flex flex-col">
                                                         <span className="font-semibold">{item.referred_user_name}</span>
-                                                        <span className="text-xs text-gray-400">{item.referred_user_official_id}</span>
+                                                        <span className="text-xs text-teal-400 font-mono">{item.referred_user_referral_id}</span>
+                                                        {/* <span className="text-[10px] text-gray-500">{item.referred_user_official_id}</span> */}
                                                     </div>
                                                 </div>
                                             </td>

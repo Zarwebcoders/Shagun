@@ -31,7 +31,7 @@ const getMyReferrals = async (req, res) => {
                 { referral_id: { $in: referredIds } },
                 { _id: { $in: referredIds.filter(id => mongoose.Types.ObjectId.isValid(id)) } }
             ]
-        }).select('id full_name user_id').lean();
+        }).select('id full_name user_id referral_id').lean();
 
         // Create a map for quick lookup
         const userMap = {};
@@ -45,7 +45,8 @@ const getMyReferrals = async (req, res) => {
         const incomesWithDetails = incomes.map(inc => ({
             ...inc,
             referred_user_name: userMap[inc.referred_user_id]?.full_name || 'Unknown',
-            referred_user_official_id: userMap[inc.referred_user_id]?.user_id || inc.referred_user_id
+            referred_user_official_id: userMap[inc.referred_user_id]?.user_id || inc.referred_user_id,
+            referred_user_referral_id: userMap[inc.referred_user_id]?.referral_id || 'N/A'
         }));
 
         res.status(200).json(incomesWithDetails);

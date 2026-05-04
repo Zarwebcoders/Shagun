@@ -31,7 +31,7 @@ const getMyLevelIncomes = async (req, res) => {
                 { _id: { $in: fromIds.filter(id => require('mongoose').Types.ObjectId.isValid(id)) } }
             ]
         })
-            .select('id full_name email user_id')
+            .select('id full_name email user_id referral_id')
             .lean();
 
         // 5. Create Map
@@ -68,7 +68,8 @@ const getMyLevelIncomes = async (req, res) => {
                 from_user_id: fromUser ? {
                     name: fromUser.full_name,
                     email: fromUser.email,
-                    _id: fromUser._id
+                    _id: fromUser._id,
+                    referral_id: fromUser.referral_id
                 } : { name: 'Unknown', email: '' }
             };
         });
@@ -138,7 +139,8 @@ const getMyLevelIncomes = async (req, res) => {
                     from_user_id: {
                         name: netUser.full_name,
                         email: netUser.email,
-                        _id: netUser._id
+                        _id: netUser._id,
+                        referral_id: netUser.referral_id
                     },
                     level: netUser.level_depth + 1, // level_depth 0 = level 1
                     amount: 0,
