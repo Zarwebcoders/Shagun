@@ -622,13 +622,13 @@ export default function Packages() {
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
-                                                    <span className={`px-3 py-1 rounded-full text-xs font-bold border ${item.approve === 1
+                                                    <span className={`px-3 py-1 rounded-full text-xs font-bold border ${(item.approve === 1 || item.approve === "1")
                                                         ? 'bg-green-500/10 text-green-400 border-green-500/20'
-                                                        : item.approve === 2 // Assuming 2 is rejected
+                                                        : (item.approve === 2 || item.approve === "2")
                                                             ? 'bg-red-500/10 text-red-400 border-red-500/20'
                                                             : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
                                                         }`}>
-                                                        {item.approve === 1 ? 'APPROVED' : item.approve === 2 ? 'REJECTED' : 'PENDING'}
+                                                        {(item.approve === 1 || item.approve === "1") ? 'APPROVED' : (item.approve === 2 || item.approve === "2") ? 'REJECTED' : 'PENDING'}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-right">

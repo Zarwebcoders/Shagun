@@ -152,7 +152,7 @@ export default function PackageManagement() {
                         <div>
                             <p className="text-xs text-gray-400">Total Approved</p>
                             <p className="text-xl font-bold text-white">
-                                {products.filter(p => p.approve != 0).length}
+                                {products.filter(p => p.approve === 1 || p.approve === "1").length}
                             </p>
                         </div>
                     </div>
@@ -163,7 +163,7 @@ export default function PackageManagement() {
                         <div>
                             <p className="text-xs text-gray-400">Total Pending</p>
                             <p className="text-xl font-bold text-white">
-                                {products.filter(p => p.approve == 0).length}
+                                {products.filter(p => p.approve === 0 || p.approve === "0").length}
                             </p>
                         </div>
                     </div>
@@ -254,11 +254,13 @@ export default function PackageManagement() {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border ${item.approve != 0
+                                            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border ${(item.approve === 1 || item.approve === "1")
                                                 ? 'bg-green-500/10 text-green-500 border-green-500/20'
-                                                : 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
+                                                : (item.approve === 2 || item.approve === "2")
+                                                    ? 'bg-red-500/10 text-red-500 border-red-500/20'
+                                                    : 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
                                                 }`}>
-                                                {item.approve != 0 ? 'Active' : 'Pending'}
+                                                {(item.approve === 1 || item.approve === "1") ? 'Active' : (item.approve === 2 || item.approve === "2") ? 'Rejected' : 'Pending'}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-right">
@@ -278,7 +280,7 @@ export default function PackageManagement() {
                                                     <Zap className="w-4 h-4" />
                                                 </button>
                                                 <button
-                                                    onClick={() => handleStatusUpdate(item, 0)}
+                                                    onClick={() => handleStatusUpdate(item, 2)}
                                                     className="p-1.5 rounded-lg bg-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-all border border-red-500/30"
                                                     title="Reject"
                                                 >
