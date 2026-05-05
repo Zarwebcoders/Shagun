@@ -240,7 +240,7 @@ export default function PackageManagement() {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className="text-teal-400 font-bold">₹{item.amount?.toLocaleString()}</span>
+                                            <span className="text-teal-400 font-bold">₹{(item.amount * (item.quantity || 1))?.toLocaleString()}</span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="flex flex-col text-sm text-gray-400">
