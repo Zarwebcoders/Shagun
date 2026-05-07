@@ -17,6 +17,7 @@ import {
     SparklesIcon
 } from '@heroicons/react/24/outline';
 import Pagination from "../components/common/Pagination"; // Import Pagination
+import InvoiceModal from "../components/common/InvoiceModal";
 
 
 export default function Packages() {
@@ -32,9 +33,12 @@ export default function Packages() {
     const [totalResults, setTotalResults] = useState(0); // Add totalResults state
     const [searchTerm, setSearchTerm] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
+    const [user, setUser] = useState(null);
+    const [selectedInvoice, setSelectedInvoice] = useState(null);
+    const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
 
     const [formData, setFormData] = useState({
-        amount: "11000",
+        amount: "15000",
         transactionId: "",
         paymentSlip: null,
         product: "Milkish Herbal Animal Feed", // Default product
@@ -49,7 +53,7 @@ export default function Packages() {
             db_id: 1,
             name: "Milkish Herbal Animal Feed",
             image: "/products/milkish-feed.jpg",
-            minAmount: 11000,
+            minAmount: 15000,
             description: "Natural herbal supplement for dairy animals"
         },
         {
@@ -117,6 +121,7 @@ export default function Packages() {
                     client.get('/auth/me')
                 ]);
                 setPackages(packagesRes.data);
+                setUser(userRes.data);
 
                 // Set sponsor ID from user data
                 if (userRes.data) {
@@ -217,7 +222,7 @@ export default function Packages() {
 
             // Reset form
             setFormData({
-                amount: "11000",
+                amount: "15000",
                 transactionId: "",
                 paymentSlip: null,
                 product: PRODUCTS[0].name,
@@ -590,6 +595,7 @@ export default function Packages() {
                                             <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Product</th>
                                             <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Quantity</th>
                                             <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Amount</th>
+                                            <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Total Amount</th>
                                             <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Token</th>
                                             <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Transaction</th>
                                             <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Status</th>
@@ -609,11 +615,28 @@ export default function Packages() {
                                                     {item.quantity}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-white font-bold">₹{item.amount}</span>
-                                                    </div>
+                                                    {(() => {
+                                                        const prod = PRODUCTS.find(p => item.packag_type?.includes(p.name) || p.name.includes(item.packag_type));
+                                                        const unitPrice = prod ? prod.minAmount : (item.amount > 50000 ? Math.round(item.amount / item.quantity) : item.amount);
+                                                        const totalAmt = unitPrice * item.quantity;
+                                                        return (
+                                                            <>
+                                                                <div className="text-white font-bold">₹{unitPrice.toLocaleString('en-IN')}</div>
+                                                            </>
+                                                        );
+                                                    })()}
                                                 </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-teal-400">
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    {(() => {
+                                                        const prod = PRODUCTS.find(p => item.packag_type?.includes(p.name) || p.name.includes(item.packag_type));
+                                                        const unitPrice = prod ? prod.minAmount : (item.amount > 50000 ? Math.round(item.amount / item.quantity) : item.amount);
+                                                        const totalAmt = unitPrice * item.quantity;
+                                                        return (
+                                                            <div className="text-teal-400 font-bold text-lg">₹{totalAmt.toLocaleString('en-IN')}</div>
+                                                        );
+                                                    })()}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
                                                     {item.token_amount}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
@@ -632,7 +655,20 @@ export default function Packages() {
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-right">
-                                                    <button className="text-teal-400 hover:text-white hover:underline text-sm font-medium flex items-center justify-end gap-1 w-full">
+                                                    <button 
+                                                        onClick={() => {
+                                                            const prod = PRODUCTS.find(p => item.packag_type?.includes(p.name) || p.name.includes(item.packag_type));
+                                                            const unitPrice = prod ? prod.minAmount : (item.amount > 50000 ? Math.round(item.amount / item.quantity) : item.amount);
+                                                            
+                                                            setSelectedInvoice({
+                                                                ...item,
+                                                                displayAmount: unitPrice,
+                                                                displayTotal: unitPrice * item.quantity
+                                                            });
+                                                            setIsInvoiceModalOpen(true);
+                                                        }}
+                                                        className="text-teal-400 hover:text-white hover:underline text-sm font-medium flex items-center justify-end gap-1 w-full transition-colors"
+                                                    >
                                                         <DocumentTextIcon className="w-4 h-4" />
                                                         Invoice
                                                     </button>
@@ -663,6 +699,13 @@ export default function Packages() {
                     )}
                 </div>
             </motion.div>
+
+            <InvoiceModal 
+                isOpen={isInvoiceModalOpen}
+                onClose={() => setIsInvoiceModalOpen(false)}
+                invoiceData={selectedInvoice}
+                userData={user}
+            />
         </motion.div>
     )
 }

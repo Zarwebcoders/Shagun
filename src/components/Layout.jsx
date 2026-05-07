@@ -16,7 +16,8 @@ import {
     UserIcon,
     Bars3Icon,
     XMarkIcon,
-    WalletIcon
+    WalletIcon,
+    CpuChipIcon
 } from "@heroicons/react/24/outline";
 import logo from "../../public/removedbg.png"
 
@@ -34,6 +35,7 @@ export default function Layout({ children, setIsAuthenticated }) {
         { label: "Downline", path: "/downline", icon: <UsersIcon className="w-6 h-6" /> },
         { label: "Referral Income", path: "/referral-income", icon: <CurrencyDollarIcon className="w-6 h-6" /> },
         { label: "Level Income", path: "/level-income", icon: <ChartBarIcon className="w-6 h-6" /> },
+        { label: "Mining History", path: "/mining-history", icon: <CpuChipIcon className="w-6 h-6" /> },
         { label: "Transactions", path: "/transactions", icon: <ClipboardDocumentListIcon className="w-6 h-6" /> },
         { label: "Profile", path: "/profile", icon: <UserIcon className="w-6 h-6" /> },
     ]

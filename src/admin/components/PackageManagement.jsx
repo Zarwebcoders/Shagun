@@ -342,3 +342,11 @@ export default function PackageManagement() {
         </div>
     )
 }
+
+
+// 1 oct 2025 to 5 dec 2025 = rate 4rs
+// 6 dec 2025 to 26 dec 2025 = rate 4.8rs
+// 27 dec 2025 to 12 jan 2025 = rate 5.8rs
+// 13 jan till now = rate 7rs
+
+// iss rate ke hisab se hoga to usko phir se generate karo users ki level income ko

@@ -18,6 +18,7 @@ import { Web3Provider } from "./context/Web3Context"
 
 import BankDetails from "./pages/BankDetails"
 import BankRequests from "./admin/components/BankRequests"
+import MiningHistory from "./pages/MiningHistory"
 import MiningBonus from "./pages/MiningBonus"
 import Downline from "./pages/Downline"
 import ReferralIncome from "./pages/ReferralIncome"
@@ -149,6 +150,9 @@ export default function App() {
             } />
             <Route path="/level-income" element={
               isAuthenticated ? <LevelIncome /> : <Navigate to="/login" />
+            } />
+            <Route path="/mining-history" element={
+              isAuthenticated ? <MiningHistory /> : <Navigate to="/login" />
             } />
             <Route path="/mining-bonus" element={
               isAuthenticated ? <MiningBonus /> : <Navigate to="/login" />

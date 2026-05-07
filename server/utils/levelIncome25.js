@@ -5,9 +5,10 @@ const MonthlyTokenDistribution = require('../models/MonthlyTokenDistribution');
 
 /**
  * Product definitions with token values
+ * UPDATED: Milkish Herbal price changed to 15000, tokens remain 10000
  */
 const PRODUCT_DEFINITIONS = {
-    1: { name: 'Milkish Herbal', price: 11000, tokenValue: 10000 },
+    1: { name: 'Milkish Herbal', price: 15000, tokenValue: 10000 },
     2: { name: 'Petro', price: 12500, tokenValue: 10000 },
     3: { name: 'Smart Home', price: 20000, tokenValue: 10000 },
     4: { name: 'Shagun EV', price: 85000, tokenValue: 20000 }
@@ -49,6 +50,7 @@ const LEVEL_PERCENTAGES = [
  */
 const findUserRobustly = async (id) => {
     if (!id) return null;
+    id = String(id).trim();
     
     // 1. Try FindById (Mongoose handles ObjectId conversion)
     if (mongoose.Types.ObjectId.isValid(id)) {
@@ -56,12 +58,12 @@ const findUserRobustly = async (id) => {
         if (user) return user;
     }
 
-    // 2. Try FindOne with various ID fields
+    // 2. Try FindOne with various ID fields (Case-Insensitive)
     return await User.findOne({
         $or: [
-            { user_id: id },
-            { id: id },
-            { referral_id: id }
+            { user_id: { $regex: new RegExp(`^${id}$`, 'i') } },
+            { id: { $regex: new RegExp(`^${id}$`, 'i') } },
+            { referral_id: { $regex: new RegExp(`^${id}$`, 'i') } }
         ]
     });
 };
@@ -112,13 +114,6 @@ const isUserEligible = async (userId) => {
 
 /**
  * Distribute 25-level income with monthly payouts
- * @param {ObjectId} buyerUserId - The user who purchased the product
- * @param {Number} tokenValue - Token value (10000 or 20000)
- * @param {ObjectId} userId - The user who purchased the product
- * @param {Number} baseAmount - Total amount for calculations
- * @param {Number} quantity - Quantity purchased
- * @param {ObjectId} productId - Product document ID
- * @param {Number} forcedRate - Optional override for token rate
  */
 async function distributeLevelIncome25(userId, baseAmount, quantity, productId, forcedRate = null) {
     try {
@@ -145,7 +140,7 @@ async function distributeLevelIncome25(userId, baseAmount, quantity, productId, 
             return;
         }
 
-        let tokenRate = 7.0; // Default
+        let tokenRate = 12.0; // Default
 
         if (forcedRate) {
             tokenRate = Number(forcedRate);
@@ -157,8 +152,6 @@ async function distributeLevelIncome25(userId, baseAmount, quantity, productId, 
                 if (rateSetting) {
                     tokenRate = Number(rateSetting.value);
                     console.log(`Using dynamic token rate from settings: ₹${tokenRate}`);
-                } else {
-                    console.warn('rexTokenPrice setting not found, using default ₹7.0');
                 }
             } catch (err) {
                 console.error('Error fetching dynamic token rate:', err.message);
@@ -167,47 +160,27 @@ async function distributeLevelIncome25(userId, baseAmount, quantity, productId, 
 
         console.log(`Starting 24-installment distribution for product ${productId}, base amount: ₹${baseAmount}, token rate: ₹${tokenRate}`);
 
-        // --- LEVEL 0: BUYER (SELF-ROI REMOVED) ---
         const totalBaseTokens = (baseAmount * quantity) / tokenRate;
         const pDate = new Date(); 
         const baseScheduleDate = pDate;
         const originalBuyerStrId = currentUser.id || currentUser.user_id || currentUser._id.toString();
-        
         const buyerObjectId = currentUser._id;
-        console.log(`Self-ROI skipped for buyer: ${currentUser.email}. Total base tokens calculated for upline: ${totalBaseTokens}`);
 
         // --- Traverse 25 levels ---
         for (let level = 0; level < 25; level++) {
-            // Find sponsor
-            if (!currentUser.sponsor_id) {
-                console.log(`No more upline at level ${level + 1}`);
-                break;
-            }
+            if (!currentUser.sponsor_id) break;
 
             let uplineUser = await findUserRobustly(currentUser.sponsor_id);
+            if (!uplineUser) break;
 
-            if (!uplineUser) {
-                console.warn(`Upline user not found for ID: ${currentUser.sponsor_id}`);
-                break;
-            }
-
-            // Check eligibility
             const eligible = await isUserEligible(uplineUser._id);
-
             if (!eligible) {
                 console.log(`Skipping Level ${level + 1}: ${uplineUser.email} is not eligible.`);
             } else {
                 const levelPercentage = LEVEL_PERCENTAGES[level];
-
-                // Calculate total income based on percentage (e.g. Level 1 gets 3.6% TOTAL)
                 const totalAnnualTokens = (totalBaseTokens * levelPercentage) / 100;
-                
-                // Divide total income into 24 equal installments
                 const installmentTokenAmount = totalAnnualTokens / 24;
 
-                console.log(`Level ${level + 1}: ${uplineUser.email} - ${levelPercentage}% TOTAL = ${totalAnnualTokens} tokens (${installmentTokenAmount} tokens/inst)`);
-
-                // Inject full 24 installment tokens upfront
                 uplineUser.level_income = (Number(uplineUser.level_income || 0)) + totalAnnualTokens;
                 uplineUser.total_income = (Number(uplineUser.total_income || 0)) + totalAnnualTokens;
                 await uplineUser.save();
@@ -225,10 +198,9 @@ async function distributeLevelIncome25(userId, baseAmount, quantity, productId, 
                     });
                 } catch (err) { console.error('Error logging passbook', err.message); }
 
-                // Create 24 installment distribution records
                 for (let inst = 1; inst <= 24; inst++) {
                     const scheduledDate = new Date(baseScheduleDate);
-                    scheduledDate.setDate(scheduledDate.getDate() + ((inst - 1) * 15)); // 1st installment immediate
+                    scheduledDate.setDate(scheduledDate.getDate() + ((inst - 1) * 15));
 
                     try {
                         await MonthlyTokenDistribution.create({
@@ -241,96 +213,116 @@ async function distributeLevelIncome25(userId, baseAmount, quantity, productId, 
                             status: 'pending',
                             scheduled_date: scheduledDate
                         });
-                    } catch (err) {
-                        console.error('Failed to save MonthlyTokenDistribution for user', uplineUser.email, 'error:', err.message);
-                    }
+                    } catch (err) {}
                 }
-
-                console.log(`Created 24 installment records for ${uplineUser.email} at level ${level + 1} (${installmentTokenAmount} tokens/inst)`);
             }
-
-            // Move to next level
             currentUser = uplineUser;
         }
-
-        console.log('25-level distribution completed');
     } catch (error) {
         console.error('Error in distributeLevelIncome25:', error);
-        require('fs').writeFileSync('dist_error.txt', error.stack);
     }
-};
+}
 
 /**
- * Distribute referral income (8% of product amount)
- * @param {ObjectId} buyerUserId - The user who purchased
- * @param {Number} productAmount - Product purchase amount
+ * Distribute referral income
+ * MODIFIED: Support 10-level fixed referral for Milkish 15,000 product
  */
 const distributeReferralIncome = async (buyerUserId, productAmount, productId = null, txnId = null) => {
     try {
-        console.log(`distributeReferralIncome: Starting for Buyer: ${buyerUserId}, Amount: ${productAmount}`);
+        console.log(`distributeReferralIncome: Starting for Buyer: ${buyerUserId}, Amount: ${productAmount}, ProductId: ${productId}`);
         
-        // 1. Find Buyer Robustly
         let buyer = await findUserRobustly(buyerUserId);
+        if (!buyer) return;
 
-        if (!buyer) {
-            console.error(`Referral Error: Buyer not found for ID: ${buyerUserId}`);
-            return;
+        // Find the product to check if it's the 15k Milkish
+        const productDoc = await Product.findById(productId);
+        const isMilkish15k = productDoc && productDoc.packag_type?.includes('Milkish') && productAmount >= 15000;
+
+        if (isMilkish15k) {
+            console.log("MILKISH 15K DETECTED: Starting 10-level referral distribution.");
+            const MILKISH_LEVELS = [1200, 600, 400, 400, 400, 400, 300, 300, 300, 300];
+            
+            let currentUser = buyer;
+            for (let level = 0; level < MILKISH_LEVELS.length; level++) {
+                if (!currentUser.sponsor_id) break;
+
+                let sponsor = await findUserRobustly(currentUser.sponsor_id);
+                if (!sponsor) break;
+
+                const eligible = await isUserEligible(sponsor._id);
+                if (eligible) {
+                    const commission = MILKISH_LEVELS[level];
+                    
+                    sponsor.sponsor_income = (Number(sponsor.sponsor_income || 0)) + commission;
+                    sponsor.total_income = (Number(sponsor.total_income || 0)) + commission;
+                    await sponsor.save();
+
+                    console.log(`Level ${level + 1} Referral: ₹${commission} credited to ${sponsor.email}`);
+
+                    const Transaction = require('../models/Transaction');
+                    await Transaction.create({
+                        user: sponsor._id,
+                        relatedUser: buyer._id,
+                        type: 'referral_income',
+                        amount: commission,
+                        description: `Milkish Referral Income (Level ${level + 1})`,
+                        status: 'completed',
+                        hash: `REF15K_${Date.now()}_L${level + 1}`
+                    });
+
+                    const ReferralIncomes = require('../models/ReferralIncomes');
+                    await ReferralIncomes.create({
+                        earner_user_id: String(sponsor.user_id || sponsor._id),
+                        referred_user_id: String(buyer.user_id || buyer._id),
+                        product_id: String(productId),
+                        product_transcation_id: txnId || `REF15K_${Date.now()}`,
+                        amount: productAmount,
+                        percentage: 0, // Fixed amount
+                        referral_amount: commission,
+                        status: 'credited'
+                    });
+                } else {
+                    console.log(`Skipping Level ${level + 1}: Sponsor ${sponsor.email} inactive.`);
+                }
+                currentUser = sponsor;
+            }
+        } else {
+            // ORIGINAL LOGIC (1-level 8%)
+            if (!buyer.sponsor_id) return;
+            let sponsor = await findUserRobustly(buyer.sponsor_id);
+            if (!sponsor) return;
+
+            const eligible = await isUserEligible(sponsor._id);
+            if (!eligible) return;
+
+            const referralIncome = (productAmount * 8) / 100;
+            sponsor.sponsor_income = (Number(sponsor.sponsor_income || 0)) + referralIncome;
+            sponsor.total_income = (Number(sponsor.total_income || 0)) + referralIncome;
+            await sponsor.save();
+
+            const Transaction = require('../models/Transaction');
+            await Transaction.create({
+                user: sponsor._id,
+                relatedUser: buyer._id,
+                type: 'referral_income',
+                amount: referralIncome,
+                description: `Referral Income (8%) from product purchase`,
+                status: 'completed',
+                hash: `REF${Date.now()}`
+            });
+
+            const ReferralIncomes = require('../models/ReferralIncomes');
+            await ReferralIncomes.create({
+                earner_user_id: String(sponsor.user_id || sponsor._id),
+                referred_user_id: String(buyer.user_id || buyer._id),
+                product_id: String(productId),
+                product_transcation_id: txnId || `REF${Date.now()}`,
+                amount: productAmount,
+                percentage: 8.00,
+                referral_amount: referralIncome,
+                status: 'credited'
+            });
         }
-
-        if (!buyer.sponsor_id) {
-            console.log(`distributeReferralIncome: No sponsor found for buyer ${buyer.email}`);
-            return;
-        }
-
-        console.log(`distributeReferralIncome: Buyer ${buyer.email} has sponsor ID: ${buyer.sponsor_id}`);
-
-        // 2. Find Sponsor Robustly
-        let sponsor = await findUserRobustly(buyer.sponsor_id);
-
-        if (!sponsor) {
-            console.warn(`distributeReferralIncome: Sponsor document not found for sponsor_id: ${buyer.sponsor_id}`);
-            return;
-        }
-
-        console.log(`distributeReferralIncome: Crediting sponsor ${sponsor.email}`);
-
-        const referralIncome = (productAmount * 8) / 100;
-
-        // Add to sponsor's income
-        sponsor.sponsor_income = (Number(sponsor.sponsor_income || 0)) + referralIncome;
-        sponsor.total_income = (Number(sponsor.total_income || 0)) + referralIncome;
-        await sponsor.save();
-
-        console.log(`Referral income: ₹${referralIncome} credited to ${sponsor.email}`);
-
-        // Create transaction record
-        const Transaction = require('../models/Transaction');
-        await Transaction.create({
-            user: sponsor._id,
-            relatedUser: buyer._id,
-            type: 'referral',
-            amount: referralIncome,
-            description: `Referral Income (8%) from product purchase`,
-            status: 'completed',
-            hash: `REF${Date.now()}`
-        });
-
-        // NEW: Create ReferralIncomes record for history table
-        const ReferralIncomes = require('../models/ReferralIncomes');
-        const earnerId = sponsor.id || sponsor.user_id || sponsor._id.toString();
-        const referredId = buyer.id || buyer.user_id || buyer._id.toString();
-        
-        await ReferralIncomes.create({
-            earner_user_id: String(earnerId),
-            referred_user_id: String(referredId),
-            product_id: productId ? String(productId) : null,
-            product_transcation_id: txnId || `REF${Date.now()}`,
-            amount: productAmount,
-            percentage: 8.00,
-            referral_amount: referralIncome,
-            status: 'credited'
-        });
-
     } catch (error) {
         console.error('Error distributing referral income:', error);
     }

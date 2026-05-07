@@ -7,7 +7,6 @@ import { toast } from "react-hot-toast"
 import client from "../api/client"
 import MiningOperationsCard from "../components/MiningOperationsCard"
 import StatsCard from "../components/StatsCard"
-import MiningHistoryTable from "../components/MiningHistoryTable"
 import { useWeb3 } from "../hooks/useWeb3"
 import {
     CurrencyDollarIcon,
@@ -495,13 +494,6 @@ export default function Dashboard() {
                 </motion.section>
             </div>
 
-            {/* Mining History Section */}
-            <motion.section variants={itemVariants} className="w-full">
-                <MiningHistoryTable 
-                    history={miningHistory} 
-                    loading={miningHistoryLoading} 
-                />
-            </motion.section>
         </motion.div>
     )
 }
