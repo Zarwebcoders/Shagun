@@ -359,22 +359,27 @@ export default function UserManagement() {
                                                     <div className="relative inline-block w-8 h-4 align-middle select-none">
                                                         <input
                                                             type="checkbox"
-                                                            checked={user.is_deleted === 0}
+                                                            checked={user.is_deleted == 0 || user.is_deleted === "0"}
                                                             onChange={async (e) => {
                                                                 try {
-                                                                    // If checked (Active), is_deleted = 0. If unchecked (Inactive), is_deleted = 1
-                                                                    const newVal = e.target.checked ? 0 : 1;
+                                                                    // If checked (Active), is_deleted = "0". If unchecked (Inactive), is_deleted = "1"
+                                                                    // Deactivated users are NOT eligible for any income (level, referral, etc.)
+                                                                    const newVal = e.target.checked ? "0" : "1";
                                                                     await client.put(`/users/${user._id}`, { is_deleted: newVal });
                                                                     fetchUsers();
-                                                                    toast.success(`User marked as ${newVal === 0 ? 'Active' : 'Deleted'}`);
+                                                                    toast.success(
+                                                                        newVal === "0" 
+                                                                            ? 'User Activated — Now eligible for incomes' 
+                                                                            : 'User Deactivated — No longer eligible for incomes'
+                                                                    );
                                                                 } catch (err) {
                                                                     toast.error("Update failed");
                                                                 }
                                                             }}
                                                             className="sr-only"
                                                         />
-                                                        <div className={`block w-8 h-4 rounded-full transition-colors ${user.is_deleted === 0 ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                                                        <div className={`absolute left-0 bottom-0 top-0 w-4 h-4 rounded-full bg-white transition-transform transform ${user.is_deleted === 0 ? 'translate-x-4' : 'translate-x-0'}`}></div>
+                                                        <div className={`block w-8 h-4 rounded-full transition-colors ${user.is_deleted == 0 || user.is_deleted === "0" ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                                                        <div className={`absolute left-0 bottom-0 top-0 w-4 h-4 rounded-full bg-white transition-transform transform ${user.is_deleted == 0 || user.is_deleted === "0" ? 'translate-x-4' : 'translate-x-0'}`}></div>
                                                     </div>
                                                 </label>
                                             </div>

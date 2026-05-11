@@ -614,28 +614,25 @@ export default function Packages() {
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
                                                     {item.quantity}
                                                 </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    {(() => {
-                                                        const prod = PRODUCTS.find(p => item.packag_type?.includes(p.name) || p.name.includes(item.packag_type));
-                                                        const unitPrice = prod ? prod.minAmount : (item.amount > 50000 ? Math.round(item.amount / item.quantity) : item.amount);
-                                                        const totalAmt = unitPrice * item.quantity;
-                                                        return (
-                                                            <>
+                                                {(() => {
+                                                    const qty = item.quantity || 1;
+                                                    // business_volume always stores unitPrice * qty correctly
+                                                    // Old records: amount = unitPrice * qty (total baked in)
+                                                    // New records: amount = unitPrice, business_volume = unitPrice * qty
+                                                    const hasBV = item.business_volume && item.business_volume > 0;
+                                                    const totalAmount = hasBV ? item.business_volume : Number(item.amount);
+                                                    const unitPrice = Math.round(totalAmount / qty);
+                                                    return (
+                                                        <>
+                                                            <td className="px-6 py-4 whitespace-nowrap">
                                                                 <div className="text-white font-bold">₹{unitPrice.toLocaleString('en-IN')}</div>
-                                                            </>
-                                                        );
-                                                    })()}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    {(() => {
-                                                        const prod = PRODUCTS.find(p => item.packag_type?.includes(p.name) || p.name.includes(item.packag_type));
-                                                        const unitPrice = prod ? prod.minAmount : (item.amount > 50000 ? Math.round(item.amount / item.quantity) : item.amount);
-                                                        const totalAmt = unitPrice * item.quantity;
-                                                        return (
-                                                            <div className="text-teal-400 font-bold text-lg">₹{totalAmt.toLocaleString('en-IN')}</div>
-                                                        );
-                                                    })()}
-                                                </td>
+                                                            </td>
+                                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                                <div className="text-teal-400 font-bold text-lg">₹{totalAmount.toLocaleString('en-IN')}</div>
+                                                            </td>
+                                                        </>
+                                                    );
+                                                })()}
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
                                                     {item.token_amount}
                                                 </td>
@@ -657,13 +654,14 @@ export default function Packages() {
                                                 <td className="px-6 py-4 whitespace-nowrap text-right">
                                                     <button 
                                                         onClick={() => {
-                                                            const prod = PRODUCTS.find(p => item.packag_type?.includes(p.name) || p.name.includes(item.packag_type));
-                                                            const unitPrice = prod ? prod.minAmount : (item.amount > 50000 ? Math.round(item.amount / item.quantity) : item.amount);
-                                                            
+                                                            const qty2 = item.quantity || 1;
+                                                            const hasBV2 = item.business_volume && item.business_volume > 0;
+                                                            const total2 = hasBV2 ? item.business_volume : Number(item.amount);
+                                                            const unit2 = Math.round(total2 / qty2);
                                                             setSelectedInvoice({
                                                                 ...item,
-                                                                displayAmount: unitPrice,
-                                                                displayTotal: unitPrice * item.quantity
+                                                                displayAmount: unit2,
+                                                                displayTotal: total2
                                                             });
                                                             setIsInvoiceModalOpen(true);
                                                         }}

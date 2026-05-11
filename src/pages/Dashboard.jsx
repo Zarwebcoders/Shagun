@@ -148,14 +148,16 @@ export default function Dashboard() {
                     totalIncome: totalCalculatedIncome,
                 });
 
-                // Calculate active status: airdrop > 0 OR has approved products
+                // Calculate active status: 
+                // Condition: If id approve product OR id has airdrop token > 0 OR id activates from admin
+                const isAdminActive = String(userData.is_deleted) === "0";
                 const hasAirdrop = Number(userData.airdrop_tokons || 0) > 0;
                 
                 // Fetch products to check for approval
                 const productsRes = await client.get('/products');
                 const hasApprovedProduct = productsRes.data.products?.some(p => p.approve === 1 || p.approve === '1');
                 
-                const isUserActive = hasAirdrop || hasApprovedProduct;
+                const isUserActive = hasApprovedProduct || hasAirdrop || isAdminActive;
 
                 setMiningCenter({
                     status: isUserActive ? "Active" : "Inactive",
