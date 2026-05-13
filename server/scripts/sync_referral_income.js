@@ -35,7 +35,7 @@ async function syncReferralIncomes() {
                 // Note: distributeReferralIncome handles user lookup, sponsor lookup, balance update, and record creation
                 await distributeReferralIncome(
                     product.user_id, 
-                    product.amount, 
+                    product.amount * product.quantity, 
                     product._id, 
                     product.transcation_id
                 );

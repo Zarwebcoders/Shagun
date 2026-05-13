@@ -254,7 +254,8 @@ const distributeReferralIncome = async (buyerUserId, productAmount, productId = 
         const isMilkish15k = productDoc && productDoc.packag_type?.includes('Milkish') && productAmount >= 15000;
 
         if (isMilkish15k) {
-            console.log("MILKISH 15K DETECTED: Starting 10-level referral distribution with Dynamic Compression.");
+            const qty = productDoc?.quantity || 1;
+            console.log(`MILKISH 15K DETECTED: Starting 10-level referral distribution with Dynamic Compression. Quantity: ${qty}`);
             const MILKISH_LEVELS = [1200, 600, 400, 400, 400, 400, 300, 300, 300, 300];
             
             let currentUplineTracker = buyer;
@@ -268,7 +269,7 @@ const distributeReferralIncome = async (buyerUserId, productAmount, productId = 
 
                 const eligible = await isUserEligible(sponsor._id);
                 if (eligible) {
-                    const commission = MILKISH_LEVELS[levelDistributed];
+                    const commission = MILKISH_LEVELS[levelDistributed] * qty;
                     
                     sponsor.sponsor_income = (Number(sponsor.sponsor_income || 0)) + commission;
                     sponsor.total_income = (Number(sponsor.total_income || 0)) + commission;

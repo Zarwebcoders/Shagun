@@ -41,7 +41,7 @@ async function debugReferral() {
             // Re-triggering the distribution logic
             const { distributeReferralIncome } = require('../utils/levelIncome25');
             console.log('Triggering distributeReferralIncome manually...');
-            await distributeReferralIncome(user10._id.toString(), product.amount * product.quantity);
+            await distributeReferralIncome(user10._id.toString(), product.amount * product.quantity, product._id, product.transcation_id);
             console.log('Distribution logic finished.');
             
             // Refresh User9 to see if income updated
