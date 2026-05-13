@@ -79,9 +79,12 @@ const isUserEligible = async (userId) => {
         const user = await findUserRobustly(userId);
         if (!user) return false;
 
-        // CHECK 1: Admin active ID check
+        // CHECK 1: Admin active ID check (MUST be 0 to be active)
         const isAdminActive = String(user.is_deleted) === "0";
-        if (isAdminActive) return true;
+        if (!isAdminActive) {
+            console.log(`User ${user.email} not eligible: Deactivated by admin.`);
+            return false;
+        }
 
         // CHECK 2: User must have an approved product purchase
         // Using raw DB driver to bypass Mongoose cast bugs
@@ -111,7 +114,7 @@ const isUserEligible = async (userId) => {
             return true;
         }
 
-        console.log(`User ${user.email} not eligible: Admin deactivated, no approved products, and no tokens.`);
+        console.log(`User ${user.email} not eligible: No approved products and no tokens.`);
         return false;
     } catch (error) {
         console.error('Error checking eligibility:', error);
