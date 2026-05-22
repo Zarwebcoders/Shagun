@@ -1,0 +1,68 @@
+--- FINAL INCOME REPORT FOR USER 7 (blank@blank.com) ---
+
+Total Records: 10
+
+From: gandhi dilipbhai dahyabhai (SGN9043)
+- Level: 1
+- Annual Amount (12 months): ₹5400.00
+- Monthly Amount: ₹450.00
+- Product ID: 699edb51092b0b5232819def
+-------------------------------------------
+From: GEETA MANISH SHAH (SGN9007)
+- Level: 0
+- Annual Amount (12 months): ₹2500.00
+- Monthly Amount: ₹208.33
+- Product ID: 699edb51092b0b5232819df7
+-------------------------------------------
+From: GEETA MANISH SHAH (SGN9007)
+- Level: 0
+- Annual Amount (12 months): ₹1428.57
+- Monthly Amount: ₹119.05
+- Product ID: 699edb51092b0b5232819e8d
+-------------------------------------------
+From: GEETA MANISH SHAH (SGN9007)
+- Level: 0
+- Annual Amount (12 months): ₹2500.00
+- Monthly Amount: ₹208.33
+- Product ID: 699edb51092b0b5232819df4
+-------------------------------------------
+From: GEETA MANISH SHAH (SGN9007)
+- Level: 0
+- Annual Amount (12 months): ₹2500.00
+- Monthly Amount: ₹208.33
+- Product ID: 699edb51092b0b5232819e06
+-------------------------------------------
+From: GEETA MANISH SHAH (SGN9007)
+- Level: 0
+- Annual Amount (12 months): ₹2500.00
+- Monthly Amount: ₹208.33
+- Product ID: 699edb51092b0b5232819ddc
+-------------------------------------------
+From: GEETA MANISH SHAH (SGN9007)
+- Level: 0
+- Annual Amount (12 months): ₹2857.14
+- Monthly Amount: ₹238.10
+- Product ID: 699edb51092b0b5232819ea7
+-------------------------------------------
+From: JAT SHANKARLAL MADHUJI (SGN9768)
+- Level: 1
+- Annual Amount (12 months): ₹91800.00
+- Monthly Amount: ₹7650.00
+- Product ID: 699edb51092b0b5232819de6
+-------------------------------------------
+From: JAT SHANKARLAL MADHUJI (SGN9768)
+- Level: 1
+- Annual Amount (12 months): ₹64800.00
+- Monthly Amount: ₹5400.00
+- Product ID: 699edb51092b0b5232819e03
+-------------------------------------------
+From: Sharma Devdhankumar Ghanshyambhai (SGN9942)
+- Level: 1
+- Annual Amount (12 months): ₹43200.00
+- Monthly Amount: ₹3600.00
+- Product ID: 699edb51092b0b5232819e3a
+-------------------------------------------
+
+Main User Dynamic Balances:
+- Level Income: ₹219485.71
+- Total Income: ₹223885.71

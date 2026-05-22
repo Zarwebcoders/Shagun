@@ -1,0 +1,340 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { toast } from "react-hot-toast"
+import client from "../api/client"
+
+export default function Profile() {
+    const [profile, setProfile] = useState({
+        full_name: "",
+        email: "",
+        mobile: "",
+        address: "",
+        created_at: "",
+        referral_id: "",
+        walletConnected: false,
+        walletAddress: ""
+    })
+    const [isEditing, setIsEditing] = useState(false)
+    const [loading, setLoading] = useState(true)
+    const [formData, setFormData] = useState({})
+    const [showPasswordModal, setShowPasswordModal] = useState(false)
+    const [passwordData, setPasswordData] = useState({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: ""
+    })
+
+    useEffect(() => {
+        fetchProfile()
+    }, [])
+
+    const fetchProfile = async () => {
+        try {
+            const res = await client.get('/auth/me');
+            const data = res.data;
+
+            let walletData = null;
+            try {
+                const walletRes = await client.get('/api/wallet/me');
+                walletData = walletRes.data;
+            } catch (err) {
+                console.log("No wallet found or error fetching wallet", err);
+            }
+
+            const formattedProfile = {
+                full_name: data.full_name,
+                email: data.email,
+                mobile: data.mobile || "Not set",
+                address: data.address || "Not set",
+                walletConnected: !!walletData?.wallet_add,
+                walletAddress: walletData?.wallet_add || "",
+                created_at: new Date(data.create_at).toLocaleDateString(),
+                referral_id: data.referral_id || "No Code",
+                _id: data._id
+            };
+            setProfile(formattedProfile);
+            setFormData({
+                full_name: data.full_name,
+                email: data.email,
+                mobile: data.mobile || "",
+                address: data.address || ""
+            });
+            setLoading(false);
+        } catch (error) {
+            console.error("Error fetching profile:", error);
+            setLoading(false);
+        }
+    }
+
+    const handleUpdateProfile = async () => {
+        try {
+            const res = await client.put(`/users/${profile._id}`, formData);
+            const data = res.data;
+            setProfile(prev => ({
+                ...prev,
+                full_name: data.full_name,
+                email: data.email,
+                mobile: data.mobile,
+                address: data.address
+            }));
+            setIsEditing(false);
+            toast.success("Profile updated successfully!");
+        } catch (error) {
+            console.error("Error updating profile:", error);
+            toast.error(error.response?.data?.message || "Failed to update profile");
+        }
+    }
+
+    const handleConnectWallet = async () => {
+        try {
+            // Check if MetaMask or Web3 wallet is available
+            if (typeof window.ethereum !== 'undefined') {
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                const walletAddress = accounts[0];
+
+                await client.post('/api/wallet', { wallet_add: walletAddress });
+
+                setProfile(prev => ({
+                    ...prev,
+                    walletAddress: walletAddress,
+                    walletConnected: true
+                }));
+
+                toast.success("Wallet connected successfully!");
+            } else {
+                toast.error("Please install MetaMask or another Web3 wallet!");
+            }
+        } catch (error) {
+            console.error("Error connecting wallet:", error);
+            toast.error("Failed to connect wallet");
+        }
+    }
+
+    const handleChangePassword = async () => {
+        if (passwordData.newPassword !== passwordData.confirmPassword) {
+            toast.error("New passwords do not match!");
+            return;
+        }
+
+        if (passwordData.newPassword.length < 6) {
+            toast.error("Password must be at least 6 characters long!");
+            return;
+        }
+
+        try {
+            await client.post('/auth/change-password', {
+                currentPassword: passwordData.currentPassword,
+                newPassword: passwordData.newPassword
+            });
+            toast.success("Password changed successfully!");
+            setShowPasswordModal(false);
+            setPasswordData({
+                currentPassword: "",
+                newPassword: "",
+                confirmPassword: ""
+            });
+        } catch (error) {
+            console.error("Error changing password:", error);
+            toast.error(error.response?.data?.message || "Failed to change password");
+        }
+    }
+
+    const handleCopyReferralLink = () => {
+        const referralLink = `${window.location.origin}/register?ref=${profile.referral_id}`;
+        navigator.clipboard.writeText(referralLink);
+        toast.success("Referral link copied to clipboard!");
+    }
+
+    if (loading) return <div className="text-white">Loading profile...</div>
+
+    return (
+        <div className="w-full space-y-6 md:space-y-8">
+            <div className="flex justify-between items-center mb-4 md:mb-8">
+                <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white">Profile</h2>
+                <button
+                    onClick={() => isEditing ? handleUpdateProfile() : setIsEditing(true)}
+                    className="px-4 py-2 bg-gradient-brand text-white rounded-lg hover:shadow-lg hover:shadow-teal-500/20 transition-all"
+                >
+                    {isEditing ? "Save Changes" : "Edit Profile"}
+                </button>
+            </div>
+
+            <div className="bg-gradient-to-br from-[#040408] to-[#1f1f1f] p-4 md:p-6 lg:p-8 rounded-xl border border-[#444]">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 md:gap-6 mb-6 md:mb-8 pb-6 md:pb-8 border-b border-[#444]">
+                    <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-gradient-brand flex items-center justify-center text-2xl md:text-3xl font-bold text-white flex-shrink-0">
+                        {profile.full_name?.charAt(0)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-3 mb-2">
+                            <h3 className="text-xl md:text-2xl lg:text-3xl font-bold text-white truncate">{profile.full_name}</h3>
+                            <button
+                                onClick={handleConnectWallet}
+                                className="px-3 md:px-4 py-1 md:py-2 rounded-lg font-semibold text-xs md:text-sm transition-all bg-gradient-brand text-white hover:shadow-lg"
+                            >
+                                {profile.walletConnected ? "Update Wallet" : "Connect Wallet"}
+                            </button>
+                        </div>
+                        {profile.walletConnected && (
+                            <p className="text-teal-400 text-xs md:text-sm font-mono truncate">
+                                {profile.walletAddress}
+                            </p>
+                        )}
+
+                    </div>
+                </div>
+
+                <div className="space-y-6 md:space-y-8">
+                    <div>
+                        <h4 className="text-lg md:text-xl font-bold text-teal-400 mb-3 md:mb-4">Personal Information</h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
+                            <div className="bg-[#1a1a1a] p-3 md:p-4 rounded-lg border border-[#444]">
+                                <label className="text-xs md:text-sm text-[#b0b0b0] mb-1 md:mb-2 block">Full Name</label>
+                                {isEditing ? (
+                                    <input
+                                        type="text"
+                                        className="w-full bg-[#333] text-white p-2 rounded"
+                                        value={formData.full_name}
+                                        onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                                    />
+                                ) : (
+                                    <p className="text-base md:text-lg text-white font-semibold truncate">{profile.full_name}</p>
+                                )}
+                            </div>
+                            <div className="bg-[#1a1a1a] p-3 md:p-4 rounded-lg border border-[#444]">
+                                <label className="text-xs md:text-sm text-[#b0b0b0] mb-1 md:mb-2 block">Email</label>
+                                {isEditing ? (
+                                    <input
+                                        type="email"
+                                        className="w-full bg-[#333] text-white p-2 rounded"
+                                        value={formData.email}
+                                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                    />
+                                ) : (
+                                    <p className="text-base md:text-lg text-white font-semibold truncate">{profile.email}</p>
+                                )}
+                            </div>
+                            <div className="bg-[#1a1a1a] p-3 md:p-4 rounded-lg border border-[#444]">
+                                <label className="text-xs md:text-sm text-[#b0b0b0] mb-1 md:mb-2 block">Mobile</label>
+                                {isEditing ? (
+                                    <input
+                                        type="text"
+                                        className="w-full bg-[#333] text-white p-2 rounded"
+                                        value={formData.mobile}
+                                        onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
+                                    />
+                                ) : (
+                                    <p className="text-base md:text-lg text-white font-semibold truncate">{profile.mobile}</p>
+                                )}
+                            </div>
+                            <div className="bg-[#1a1a1a] p-3 md:p-4 rounded-lg border border-[#444] sm:col-span-2">
+                                <label className="text-xs md:text-sm text-[#b0b0b0] mb-1 md:mb-2 block">Address</label>
+                                {isEditing ? (
+                                    <textarea
+                                        className="w-full bg-[#333] text-white p-2 rounded min-h-[80px]"
+                                        value={formData.address}
+                                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                                        placeholder="Enter your full address"
+                                    />
+                                ) : (
+                                    <p className="text-base md:text-lg text-white font-semibold">{profile.address}</p>
+                                )}
+                            </div>
+                            <div className="bg-[#1a1a1a] p-3 md:p-4 rounded-lg border border-[#444]">
+                                <label className="text-xs md:text-sm text-[#b0b0b0] mb-1 md:mb-2 block">Member Since</label>
+                                <p className="text-base md:text-lg text-white font-semibold">{profile.created_at}</p>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <div>
+                        <h4 className="text-lg md:text-xl font-bold text-teal-400 mb-3 md:mb-4">Referral Link</h4>
+                        <div className="bg-[#1a1a1a] p-3 md:p-4 rounded-lg border border-[#444] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                                <label className="text-xs md:text-sm text-[#b0b0b0] mb-1 md:mb-2 block">Your Referral Link</label>
+                                <code className="text-white font-mono text-xs md:text-sm break-all">
+                                    {`${window.location.origin}/register?ref=${profile.referral_id}`}
+                                </code>
+                            </div>
+                            <button
+                                onClick={handleCopyReferralLink}
+                                className="px-3 md:px-4 py-2 bg-gradient-brand text-white font-bold rounded-lg hover:shadow-lg transition-all flex-shrink-0 text-sm md:text-base w-full sm:w-auto"
+                            >
+                                Copy Link
+                            </button>
+                        </div>
+                    </div>
+
+
+                    <div className="flex flex-col sm:flex-row gap-3 md:gap-4 pt-3 md:pt-4">
+                        <button
+                            onClick={() => setShowPasswordModal(true)}
+                            className="flex-1 px-4 md:px-6 py-2 md:py-3 bg-gradient-brand text-white font-bold rounded-lg hover:shadow-lg hover:shadow-teal-500/50 transition-all duration-300 hover:-translate-y-1 active:translate-y-0 text-sm md:text-base"
+                        >
+                            Change Password
+                        </button>
+                        <button className="flex-1 px-4 md:px-6 py-2 md:py-3 border border-teal-500 text-teal-400 font-bold rounded-lg hover:bg-teal-500/10 transition-all duration-300 text-sm md:text-base">
+                            Two-Factor Authentication
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* Change Password Modal */}
+            {showPasswordModal && (
+                <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+                    <div className="bg-gradient-to-br from-[#040408] to-[#1f1f1f] p-6 md:p-8 rounded-xl border border-teal-500 max-w-md w-full">
+                        <h3 className="text-xl md:text-2xl font-bold text-white mb-4">Change Password</h3>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-sm text-[#b0b0b0] mb-2 block">Current Password</label>
+                                <input
+                                    type="password"
+                                    className="w-full bg-[#1a1a1a] text-white p-3 rounded-lg border border-[#444] focus:border-teal-500 focus:outline-none"
+                                    value={passwordData.currentPassword}
+                                    onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <label className="text-sm text-[#b0b0b0] mb-2 block">New Password</label>
+                                <input
+                                    type="password"
+                                    className="w-full bg-[#1a1a1a] text-white p-3 rounded-lg border border-[#444] focus:border-teal-500 focus:outline-none"
+                                    value={passwordData.newPassword}
+                                    onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <label className="text-sm text-[#b0b0b0] mb-2 block">Confirm New Password</label>
+                                <input
+                                    type="password"
+                                    className="w-full bg-[#1a1a1a] text-white p-3 rounded-lg border border-[#444] focus:border-teal-500 focus:outline-none"
+                                    value={passwordData.confirmPassword}
+                                    onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                                />
+                            </div>
+                            <div className="flex gap-3 pt-4">
+                                <button
+                                    onClick={handleChangePassword}
+                                    className="flex-1 px-4 py-3 bg-gradient-brand text-white font-bold rounded-lg hover:shadow-lg transition-all"
+                                >
+                                    Change Password
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setShowPasswordModal(false);
+                                        setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
+                                    }}
+                                    className="flex-1 px-4 py-3 border border-teal-500 text-teal-400 font-bold rounded-lg hover:bg-teal-500/10 transition-all"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    )
+}

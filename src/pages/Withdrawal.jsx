@@ -1,0 +1,492 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { toast } from "react-hot-toast"
+import client from "../api/client"
+import WithdrawalForm from "../components/WithdrawalForm"
+import { useWeb3 } from "../hooks/useWeb3"
+
+export default function Withdrawal() {
+    const [userData, setUserData] = useState({
+        name: "",
+        totalMiningBonus: 0,
+        levelIncomeROI: 0,
+        withdrawableLevelIncome: 0,
+        withdrawableROI: 0,
+        normalWithdrawal: 0,
+        sosWithdrawal: 0,
+        totalWithdrawal: 0,
+        totalIncome: 0,
+        stakeROI: 0,
+        stakeToken: 0,
+        anualBonus: 0
+    })
+    const { isConnected, miningBonus: contractMiningBonus, connectWallet } = useWeb3()
+    
+    // Sync Contract Mining Bonus with UI state
+    useEffect(() => {
+        if (isConnected && contractMiningBonus) {
+            setUserData(prev => ({
+                ...prev,
+                totalMiningBonus: Number(contractMiningBonus)
+            }));
+        }
+    }, [isConnected, contractMiningBonus]);
+
+    const [withdrawalHistory, setWithdrawalHistory] = useState([])
+    const [withdrawalStats, setWithdrawalStats] = useState({
+        totalWithdrawn: 0,
+        pendingWithdrawals: 0
+    })
+    const [kycData, setKycData] = useState(null)
+    const [walletData, setWalletData] = useState(null)
+    const [bankAccount, setBankAccount] = useState(null)
+    const [loading, setLoading] = useState(true)
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const results = await Promise.all([
+                    client.get('/auth/me'),
+                    client.get('/withdrawals/me'), // Fixed path
+                    client.get('/kyc/me').catch(() => ({ data: null })),
+                    client.get('/wallet/me').catch(() => ({ data: null })),
+                    client.get('/my-account').catch(() => ({ data: null })),
+                    client.get('/level-income/available').catch(() => ({ data: { available: 0 } })),
+                    client.get('/level-income').catch(() => ({ data: [] }))
+                ]);
+
+                const [userRes, withdrawRes, kycRes, walletRes, bankRes, levelAvailRes, levelRecordsRes] = results;
+
+                const user = userRes.data;
+                const levelAvailable = levelAvailRes.data?.available || 0;
+                // Calculate Exact Total Level Income to match the Level Income Page
+                const levelRecords = levelRecordsRes.data || [];
+                const exactTotalLevelIncome = levelRecords.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+
+                // Calculate withdrawal statistics
+                const completedWithdrawals = withdrawRes.data.filter(tx => tx.approve === 1 || tx.approve === "1");
+                const pendingWithdrawals = withdrawRes.data.filter(tx => tx.approve === 2 || tx.approve === "2");
+
+                const totalWithdrawn = completedWithdrawals.reduce((sum, tx) => sum + tx.amount, 0);
+                const pendingAmount = pendingWithdrawals.reduce((sum, tx) => sum + tx.amount, 0);
+
+                // Group pending by type to subtract from available display
+                const pendingBySource = {
+                    level_income: pendingWithdrawals.filter(w => w.withdraw_type === 'level_income').reduce((s, w) => s + w.amount, 0),
+                    mining_bonus: pendingWithdrawals.filter(w => w.withdraw_type === 'mining_bonus').reduce((s, w) => s + w.amount, 0),
+                    annual_bonus: pendingWithdrawals.filter(w => w.withdraw_type === 'annual_bonus' || w.withdraw_type === 'annual_bonus').reduce((s, w) => s + w.amount, 0)
+                };
+
+                setUserData({
+                    name: user.full_name,
+                    totalMiningBonus: Math.max(0, (user.mining_bonus || 0) - (pendingBySource.mining_bonus || 0)),
+                    levelIncomeROI: Math.max(0, (user.level_income || 0) - (pendingBySource.level_income || 0)), 
+                    withdrawableLevelIncome: Math.max(0, levelAvailable - pendingBySource.level_income), 
+                    withdrawableROI: Math.max(0, (levelAvailRes.data?.availableROI || 0) - pendingBySource.mining_bonus),
+                    normalWithdrawal: Math.max(0, (user.total_income || 0) - pendingAmount), // Deduct everything from total
+                    sosWithdrawal: Number(user.shopping_tokons || 0),
+                    totalWithdrawal: user.totalWithdrawal || 0,
+                    totalIncome: user.total_income || 0,
+                    stakeROI: Number(user.airdrop_tokons || 0),
+                    stakeToken: Number(user.real_tokens || 0),
+                    anualBonus: Math.max(0, Number(user.anual_bonus || 0) - (pendingBySource.annual_bonus || 0))
+                });
+
+                // Map withdrawals from new schema
+                const withdrawalsList = withdrawRes.data.map(tx => ({
+                    id: tx._id,
+                    amount: tx.amount,
+                    date: new Date(tx.create_at).toISOString().split('T')[0],
+                    status: (tx.approve === 1 || tx.approve === "1") ? 'Completed' : (tx.approve === 0 || tx.approve === "0") ? 'Rejected' : 'Pending',
+                    method: tx.method || tx.withdraw_type || "Unknown",
+                    source: tx.source || (tx.withdraw_type === 'level_income' ? "Level Income" : "Wallet Balance")
+                }));
+                setWithdrawalHistory(withdrawalsList);
+
+                setWithdrawalStats({
+                    totalWithdrawn,
+                    pendingWithdrawals: pendingAmount
+                });
+
+                setKycData(kycRes.data);
+                setWalletData(walletRes.data);
+                setBankAccount(bankRes?.data || null);
+
+            } catch (error) {
+                console.error("Error fetching data:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchData();
+    }, []);
+
+    const handleWithdraw = async (data) => {
+        const withdrawType = data.source === "Level Income" ? "level_income" : data.source === "Mining Bonus" ? "mining_bonus" : "annual_bonus";
+        
+        // 1. Special Handling for ON-CHAIN Mining Bonus Withdrawal
+        if (withdrawType === "mining_bonus") {
+            if (!isConnected) {
+                toast.error("Please connect your wallet first!");
+                connectWallet();
+                return;
+            }
+
+            const loadingToast = toast.loading("Processing Blockchain Withdrawal...");
+            try {
+                // a. Use direct amount (already SGN in database)
+                const tokensToWithdraw = Number(data.amount);
+                
+                // b. Call Smart Contract
+                console.log(`Withdrawing ${tokensToWithdraw} SGN tokens on-chain`);
+                const tx = await contract.withdrawTokens(ethers.parseUnits(tokensToWithdraw.toFixed(18), 18));
+                
+                toast.loading("Waiting for network confirmation...", { id: loadingToast });
+                await tx.wait();
+
+                // d. Sync with Backend (Marking as Completed automatically)
+                toast.loading("Finalising record in database...", { id: loadingToast });
+                await client.post('/withdrawals', {
+                    amount: data.amount,
+                    withdraw_type: withdrawType,
+                    method: data.method,
+                    source: data.source,
+                    bankDetails: data.bankDetails,
+                    onchain_tx_hash: tx.hash // Backend will auto-approve if this is present
+                });
+
+                toast.success("Withdrawal successful on blockchain & database!", { id: loadingToast });
+            } catch (error) {
+                console.error("Blockchain Withdrawal Error:", error);
+                const msg = error.reason || error.message || "Transaction failed";
+                toast.error(`Blockchain Error: ${msg}`, { id: loadingToast });
+                return; // Exit if blockchain fails
+            }
+        } else {
+            // 2. Standard Manual Withdrawal for Level Income / Annual Bonus
+            try {
+                await client.post('/withdrawals', {
+                    amount: data.amount,
+                    withdraw_type: withdrawType,
+                    method: data.method,
+                    source: data.source,
+                    bankDetails: data.bankDetails
+                });
+                toast.success("Withdrawal request submitted for Admin approval!");
+            } catch (error) {
+                console.error("Error submitting withdrawal:", error);
+                toast.error("Failed to submit withdrawal request");
+                return;
+            }
+        }
+
+        // 3. Refresh History and Stats (Same for both flows)
+        try {
+            const { data: withdrawData } = await client.get('/withdrawals/me');
+            const withdrawals = withdrawData.map(tx => ({
+                id: tx._id,
+                amount: tx.amount,
+                date: new Date(tx.create_at).toISOString().split('T')[0],
+                status: (tx.approve === 1 || tx.approve === "1") ? 'Completed' : (tx.approve === 0 || tx.approve === "0") ? 'Rejected' : 'Pending',
+                method: tx.method || tx.withdraw_type || "Unknown",
+                source: tx.source || (tx.withdraw_type === 'level_income' ? "Level Income" : "Wallet Balance")
+            }));
+            setWithdrawalHistory(withdrawals);
+
+            const completedWithdrawals = withdrawData.filter(tx => tx.approve === 1 || tx.approve === "1");
+            const pendingWithdrawals = withdrawData.filter(tx => tx.approve === 2 || tx.approve === "2");
+
+            setWithdrawalStats({
+                totalWithdrawn: completedWithdrawals.reduce((sum, tx) => sum + tx.amount, 0),
+                pendingWithdrawals: pendingWithdrawals.reduce((sum, tx) => sum + tx.amount, 0)
+            });
+        } catch (err) {
+            console.error("Error refreshing stats:", err);
+        }
+    }
+
+    return (
+        <div className="w-full space-y-6 md:space-y-8 animate-fadeIn">
+            {/* Header Section */}
+            <div className="space-y-3 md:space-y-4">
+                <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-2">Withdrawal Center</h2>
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+                    <p className="text-[#b0b0b0] text-sm md:text-lg flex-1">
+                        Welcome, <span className="text-teal-400 font-bold">{userData.name}!</span> Manage your earnings and withdraw funds securely from your available wallets.
+                    </p>
+                    <div className="flex items-center gap-2 bg-teal-500/10 border border-teal-500/30 px-3 md:px-4 py-2 rounded-lg w-full md:w-auto">
+                        <div className="w-2 h-2 md:w-3 md:h-3 bg-teal-500 rounded-full animate-pulse"></div>
+                        <span className="text-teal-400 text-xs md:text-sm font-semibold">Available Balance</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Wallet Stats Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+                {/* Monthly ROI Card */}
+                <div className="bg-gradient-to-br from-[#040408] to-[#1a1a2e] p-4 md:p-6 rounded-xl border border-teal-500/30 hover:border-teal-500 transition-all group hover:shadow-lg hover:shadow-teal-500/20">
+                    <div className="flex items-start justify-between mb-3 md:mb-4">
+                        <div>
+                            <h3 className="text-white font-bold text-base md:text-lg">Mining Commission </h3>
+                            <p className="text-gray-400 text-xs md:text-sm">Return on Investment</p>
+                        </div>
+                        <div className="p-1 md:p-2 rounded-lg bg-teal-500/20 group-hover:bg-teal-500/30 transition-all">
+                            <svg className="w-5 h-5 md:w-6 md:h-6 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div className="mb-2">
+                        <span className="text-2xl md:text-3xl font-bold text-white">
+                            SGN {isConnected ? Number(contractMiningBonus).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 }) : "***"}
+                        </span>
+                    </div>
+                    <div className="w-full bg-[#444]/50 rounded-full h-1.5 md:h-2">
+                        <div className="bg-gradient-brand h-1.5 md:h-2 rounded-full" style={{ width: "75%" }}></div>
+                    </div>
+                </div>
+
+                {/* Level Income ROI Card */}
+                <div className="bg-gradient-to-br from-[#040408] to-[#1a1a2e] p-4 md:p-6 rounded-xl border border-[#00b894]/30 hover:border-[#00b894] transition-all group hover:shadow-lg hover:shadow-[#00b894]/20">
+                    <div className="flex items-start justify-between mb-3 md:mb-4">
+                        <div>
+                            <h3 className="text-white font-bold text-base md:text-lg">Level Income </h3>
+                            <p className="text-gray-400 text-xs md:text-sm">Level Earnings</p>
+                        </div>
+                        <div className="p-1 md:p-2 rounded-lg bg-[#00b894]/20 group-hover:bg-[#00b894]/30 transition-all">
+                            <svg className="w-5 h-5 md:w-6 md:h-6 text-[#00b894]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div className="mb-2">
+                        <span className="text-2xl md:text-3xl font-bold text-white">SGN {userData.levelIncomeROI.toLocaleString()}</span>
+                    </div>
+                    <div className="w-full bg-[#444]/50 rounded-full h-1.5 md:h-2">
+                        <div className="bg-gradient-to-r from-[#00b894] to-[#00cec9] h-1.5 md:h-2 rounded-full" style={{ width: "60%" }}></div>
+                    </div>
+                </div>
+
+
+                {/* Total Withdrawal Card */}
+                <div className="bg-gradient-to-br from-[#040408] to-[#1a1a2e] p-4 md:p-6 rounded-xl border border-[#a29bfe]/30 hover:border-[#a29bfe] transition-all group hover:shadow-lg hover:shadow-[#a29bfe]/20">
+                    <div className="flex items-start justify-between mb-3 md:mb-4">
+                        <div>
+                            <h3 className="text-white font-bold text-base md:text-lg">Total Withdrawal</h3>
+                            <p className="text-gray-400 text-xs md:text-sm">Lifetime Withdrawn</p>
+                        </div>
+                        <div className="p-1 md:p-2 rounded-lg bg-[#a29bfe]/20 group-hover:bg-[#a29bfe]/30 transition-all">
+                            <svg className="w-5 h-5 md:w-6 md:h-6 text-[#a29bfe]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div className="mb-2">
+                        <span className="text-2xl md:text-3xl font-bold text-white">SGN {withdrawalStats.totalWithdrawn.toLocaleString()}</span>
+                    </div>
+                    <div className="w-full bg-[#444]/50 rounded-full h-1.5 md:h-2">
+                        <div className="bg-gradient-to-r from-[#a29bfe] to-[#6c5ce7] h-1.5 md:h-2 rounded-full" style={{ width: "90%" }}></div>
+                    </div>
+                </div>
+
+                {/* Total Income Card (renamed from REX Token) */}
+                <div className="bg-gradient-to-br from-[#040408] to-[#1a1a2e] p-4 md:p-6 rounded-xl border border-[#ffeaa7]/30 hover:border-[#ffeaa7] transition-all group hover:shadow-lg hover:shadow-[#ffeaa7]/20">
+                    <div className="flex items-start justify-between mb-3 md:mb-4">
+                        <div>
+                            <h3 className="text-white font-bold text-base md:text-lg">Total Income</h3>
+                            <p className="text-gray-400 text-xs md:text-sm">Total Earnings</p>
+                        </div>
+                        <div className="p-1 md:p-2 rounded-lg bg-[#ffeaa7]/20 group-hover:bg-[#ffeaa7]/30 transition-all">
+                            <svg className="w-5 h-5 md:w-6 md:h-6 text-[#fdcb6e]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div className="mb-2">
+                        <span className="text-2xl md:text-3xl font-bold text-white">SGN {userData.totalIncome.toLocaleString()}</span>
+                    </div>
+                    <div className="w-full bg-[#444]/50 rounded-full h-1.5 md:h-2">
+                        <div className="bg-gradient-to-r from-[#ffeaa7] to-[#fdcb6e] h-1.5 md:h-2 rounded-full" style={{ width: "70%" }}></div>
+                    </div>
+                </div>
+
+                {/* Stake ROI Card */}
+                {/* <div className="bg-gradient-to-br from-[#040408] to-[#1a1a2e] p-4 md:p-6 rounded-xl border border-[#55efc4]/30 hover:border-[#55efc4] transition-all group hover:shadow-lg hover:shadow-[#55efc4]/20">
+                    <div className="flex items-start justify-between mb-3 md:mb-4">
+                        <div>
+                            <h3 className="text-white font-bold text-base md:text-lg">Stake ROI</h3>
+                            <p className="text-gray-400 text-xs md:text-sm">Staking Returns</p>
+                        </div>
+                        <div className="p-1 md:p-2 rounded-lg bg-[#55efc4]/20 group-hover:bg-[#55efc4]/30 transition-all">
+                            <svg className="w-5 h-5 md:w-6 md:h-6 text-[#55efc4]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div className="mb-2">
+                        <span className="text-2xl md:text-3xl font-bold text-white">₹{userData.stakeROI.toLocaleString()}</span>
+                    </div>
+                    <div className="w-full bg-[#444]/50 rounded-full h-1.5 md:h-2">
+                        <div className="bg-gradient-to-r from-[#55efc4] to-[#00b894] h-1.5 md:h-2 rounded-full" style={{ width: "55%" }}></div>
+                    </div>
+                </div> */}
+
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+                <div className="lg:col-span-1">
+                    <WithdrawalForm
+                        onSubmit={handleWithdraw}
+                        userData={userData}
+                        kycData={kycData}
+                        bankAccount={bankAccount}
+                        savedWallet={walletData?.wallet_add || ""}
+                    />
+                </div>
+
+                {/* Withdrawal History Section */}
+                <div className="lg:col-span-2">
+                    <div className="bg-gradient-to-br from-[#040408] to-[#1a1a2e] rounded-xl border border-teal-500/30 overflow-hidden">
+                        <div className="p-4 md:p-6 border-b border-teal-500/30 bg-gradient-to-r from-teal-500/10 to-purple-500/10">
+                            <h3 className="text-xl md:text-2xl font-bold text-white">Withdrawal History</h3>
+                            <p className="text-gray-400 text-sm md:text-base">Track all your withdrawal requests</p>
+                        </div>
+
+                        <div className="overflow-x-auto">
+                            <table className="w-full min-w-max">
+                                <thead>
+                                    <tr className="border-b border-teal-500/30">
+                                        <th className="text-left py-3 md:py-4 px-3 md:px-6 text-white font-bold text-xs md:text-sm">Source</th>
+                                        <th className="text-left py-3 md:py-4 px-3 md:px-6 text-white font-bold text-xs md:text-sm">Amount</th>
+                                        <th className="text-left py-3 md:py-4 px-3 md:px-6 text-white font-bold text-xs md:text-sm">Date</th>
+                                        <th className="text-left py-3 md:py-4 px-3 md:px-6 text-white font-bold text-xs md:text-sm">Method</th>
+                                        <th className="text-left py-3 md:py-4 px-3 md:px-6 text-white font-bold text-xs md:text-sm">Status</th>
+                                        <th className="text-left py-3 md:py-4 px-3 md:px-6 text-white font-bold text-xs md:text-sm">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {withdrawalHistory.map((item) => (
+                                        <tr
+                                            key={item.id}
+                                            className="border-b border-[#444]/30 hover:bg-teal-500/10 transition-colors group"
+                                        >
+                                            <td className="py-3 md:py-4 px-3 md:px-6">
+                                                <div className="flex items-center gap-2 md:gap-3">
+                                                    <div className={`w-8 h-8 md:w-10 md:h-10 rounded-lg flex items-center justify-center ${item.source === "Loyalty Points" ? "bg-teal-500/20" : item.source === "ShagunPro" ? "bg-[#00b894]/20" : "bg-purple-500/20"}`}>
+                                                        <span className={`font-bold text-sm md:text-base ${item.source === "Loyalty Points" ? "text-teal-400" : item.source === "ShagunPro" ? "text-[#00b894]" : "text-purple-400"}`}>
+                                                            {item.source.charAt(0)}
+                                                        </span>
+                                                    </div>
+                                                    <span className="text-white font-medium text-xs md:text-sm truncate max-w-[80px] md:max-w-none">{item.source}</span>
+                                                </div>
+                                            </td>
+                                            <td className="py-3 md:py-4 px-3 md:px-6">
+                                                <span className="text-lg md:text-xl font-bold text-white">SGN {item.amount}</span>
+                                            </td>
+                                            <td className="py-3 md:py-4 px-3 md:px-6 text-[#b0b0b0] text-xs md:text-sm">{item.date}</td>
+                                            <td className="py-3 md:py-4 px-3 md:px-6">
+                                                <div className="flex items-center gap-1 md:gap-2">
+                                                    <div className={`p-1 rounded ${item.method === "Bank Transfer" ? "bg-blue-500/20" : "bg-yellow-500/20"}`}>
+                                                        {item.method === "Bank Transfer" ? (
+                                                            <svg className="w-3 h-3 md:w-4 md:h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                                                            </svg>
+                                                        ) : (
+                                                            <svg className="w-3 h-3 md:w-4 md:h-4 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                            </svg>
+                                                        )}
+                                                    </div>
+                                                    <span className="text-white text-xs md:text-sm truncate max-w-[60px] md:max-w-none">{item.method}</span>
+                                                </div>
+                                            </td>
+                                            <td className="py-3 md:py-4 px-3 md:px-6">
+                                                <span className={`inline-flex items-center gap-1 px-2 md:px-3 py-1 rounded-full text-xs md:text-sm font-semibold ${item.status === "Completed"
+                                                    ? "bg-green-600/20 text-green-400 border border-green-600/30"
+                                                    : item.status === "Pending"
+                                                        ? "bg-yellow-600/20 text-yellow-400 border border-yellow-600/30"
+                                                        : "bg-red-600/20 text-red-400 border border-red-600/30"
+                                                    }`}
+                                                >
+                                                    {item.status}
+                                                </span>
+                                            </td>
+                                            <td className="py-3 md:py-4 px-3 md:px-6">
+                                                <button className="px-2 md:px-3 py-1 bg-teal-500/20 text-teal-400 rounded-lg hover:bg-teal-500/30 transition-colors text-xs md:text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    View
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Empty State */}
+                        {withdrawalHistory.length === 0 && (
+                            <div className="p-6 md:p-12 text-center">
+                                <div className="inline-block p-3 md:p-4 rounded-full bg-gradient-to-br from-teal-500/10 to-purple-500/10 mb-3 md:mb-4">
+                                    <svg className="w-12 h-12 md:w-16 md:h-16 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                                <h3 className="text-lg md:text-xl font-bold text-white mb-2">No Withdrawal History</h3>
+                                <p className="text-gray-400 mb-4 md:mb-6 text-sm md:text-base">Your withdrawal requests will appear here</p>
+                            </div>
+                        )}
+
+                        {/* Table Footer */}
+                        <div className="p-3 md:p-4 bg-[#0f0f1a] border-t border-teal-500/30 flex flex-col sm:flex-row justify-between items-center gap-3">
+                            <div className="text-gray-400 text-xs md:text-sm">
+                                Showing {withdrawalHistory.length} withdrawals
+                            </div>
+                            <div className="flex gap-1 md:gap-2">
+                                <button className="px-2 md:px-3 py-1 bg-teal-500/20 text-teal-400 rounded-lg hover:bg-teal-500/30 transition-colors text-xs md:text-sm">
+                                    Previous
+                                </button>
+                                <button className="px-2 md:px-3 py-1 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors text-xs md:text-sm">
+                                    1
+                                </button>
+                                <button className="px-2 md:px-3 py-1 bg-teal-500/20 text-teal-400 rounded-lg hover:bg-teal-500/30 transition-colors text-xs md:text-sm">
+                                    Next
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Quick Stats */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                <div className="bg-gradient-to-br from-[#040408] to-[#1a1a2e] p-4 md:p-6 rounded-xl border border-teal-500/30">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h4 className="text-white font-bold text-base md:text-lg">Total Withdrawn</h4>
+                            <p className="text-gray-400 text-xs md:text-sm">All Time</p>
+                        </div>
+                        <div className="text-2xl md:text-3xl font-bold text-teal-400">SGN {withdrawalStats.totalWithdrawn.toLocaleString()}</div>
+                    </div>
+                </div>
+                <div className="bg-gradient-to-br from-[#040408] to-[#1a1a2e] p-4 md:p-6 rounded-xl border border-[#00b894]/30">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h4 className="text-white font-bold text-base md:text-lg">Pending Withdrawals</h4>
+                            <p className="text-gray-400 text-xs md:text-sm">Awaiting Processing</p>
+                        </div>
+                        <div className="text-2xl md:text-3xl font-bold text-[#00b894]">SGN {withdrawalStats.pendingWithdrawals.toLocaleString()}</div>
+                    </div>
+                </div>
+                <div className="bg-gradient-to-br from-[#040408] to-[#1a1a2e] p-4 md:p-6 rounded-xl border border-[#0984e3]/30">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h4 className="text-white font-bold text-base md:text-lg">Withdrawal Fee</h4>
+                            <p className="text-gray-400 text-xs md:text-sm">Standard Charge</p>
+                        </div>
+                        <div className="text-2xl md:text-3xl font-bold text-[#0984e3]">5%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    )
+}
