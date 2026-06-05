@@ -7,7 +7,7 @@ const Wallet = require('../models/Wallet');
 const Product = require('../models/Product');
 
 const dashboardCache = new Map(); // userId -> { data, expiry }
-const DASHBOARD_CACHE_TTL = 5000; // 5 seconds cache
+const DASHBOARD_CACHE_TTL = 30000; // 30 seconds cache (aligned with browser Cache-Control)
 
 const clearDashboardCache = (userId) => {
     if (userId) {
@@ -593,6 +593,9 @@ const getDashboardData = async (req, res) => {
             expiry: nowTime + DASHBOARD_CACHE_TTL
         });
 
+        // Tell the browser to cache this response privately for 10s
+        // (avoids repeat requests + ETag 304 round-trips on Vercel)
+        res.set('Cache-Control', 'private, max-age=10');
         res.json(responseData);
     } catch (error) {
         res.status(500).json({ message: error.message });

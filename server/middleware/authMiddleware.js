@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
 const userCache = new Map(); // userId -> { user, expiry }
-const CACHE_TTL = 3000; // 3 seconds TTL
+const CACHE_TTL = 10000; // 10 seconds TTL (aligned with browser Cache-Control max-age)
 
 const protect = async (req, res, next) => {
     let token;

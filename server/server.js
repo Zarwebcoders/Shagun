@@ -46,6 +46,15 @@ const corsOptions = {
 
 const app = express();
 
+// ─── Disable ETag globally ────────────────────────────────────────────────────
+// Express enables ETag by default. This causes the server to:
+//   1. Run ALL database queries to build the full response body
+//   2. Compute a SHA hash of the response
+//   3. Compare it against the client's If-None-Match header
+//   4. Send a 304 with no body — but AFTER spending 4-5s doing the above!
+// Disabling ETag removes this useless round-trip overhead entirely.
+app.set('etag', false);
+
 // Middleware
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '100mb' }));
@@ -63,6 +72,21 @@ app.use(morgan('dev'));
 // Basic Route
 app.get('/', (req, res) => {
     res.send('Shagun API is running...');
+});
+
+// ─── Client-Side Cache-Control for API routes ─────────────────────────────────
+// Instructs the browser to cache GET responses privately for 10 seconds.
+// During those 10 seconds the browser uses its local copy — no network request,
+// no Vercel cold-start, no DB queries. After 10s the browser fetches fresh data.
+// 'private' ensures CDNs / shared caches do NOT store user-specific responses.
+app.use('/api', (req, res, next) => {
+    if (req.method === 'GET') {
+        res.set('Cache-Control', 'private, max-age=10');
+    } else {
+        // Mutations must never be cached
+        res.set('Cache-Control', 'no-store');
+    }
+    next();
 });
 
 // Routes
