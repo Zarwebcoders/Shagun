@@ -90,21 +90,16 @@ export default function Dashboard() {
     useEffect(() => {
         const fetchUserData = async () => {
             try {
-                // Fetch basic user data and summary stats in parallel
-                const [userRes, summaryRes, historyRes, settingsRes, levelIncomeRes] = await Promise.all([
-                    client.get('/auth/me'),
-                    client.get('/users/dashboard-summary').catch(() => ({
-                        data: { directTeamCount: 0, calculatedSponsorIncome: 0, hasApprovedProduct: false }
-                    })),
-                    client.get('/users/mining-history').catch(() => ({ data: [] })),
-                    client.get('/settings').catch(() => ({ data: {} })),
-                    client.get('/level-income/available').catch(() => ({ data: { available: 0 } }))
-                ]);
+                // Fetch consolidated dashboard data in a single request
+                const { data } = await client.get('/users/dashboard-data');
 
-                const userData = userRes.data;
-                const summaryData = summaryRes.data || { directTeamCount: 0, calculatedSponsorIncome: 0, hasApprovedProduct: false };
-                
-                setMiningHistory(historyRes.data || []);
+                const userData = data.user;
+                const summaryData = data.summary || { directTeamCount: 0, calculatedSponsorIncome: 0, hasApprovedProduct: false };
+                const historyData = data.miningHistory || [];
+                const settingsData = data.settings || {};
+                const levelIncomeData = data.availableWithdrawal || { available: 0 };
+
+                setMiningHistory(historyData);
                 setMiningHistoryLoading(false);
 
                 // Sponsor income from aggregated query
@@ -114,7 +109,6 @@ export default function Dashboard() {
                 setUserName(userData.full_name || "User");
 
                 // Get dynamic token rate
-                const settingsData = settingsRes.data || {};
                 const liveRate = settingsData.rexTokenPrice ? Number(settingsData.rexTokenPrice) : 12;
                 const phaseDisplay = settingsData.currentPhase !== undefined && settingsData.currentPhase !== null
                     ? (typeof settingsData.currentPhase === 'number' || !isNaN(settingsData.currentPhase)
@@ -138,7 +132,7 @@ export default function Dashboard() {
                     ? userData.sponsor_id.referral_id 
                     : userData.sponsor_id || "None";
 
-                const levelIncomeTokens = Number(levelIncomeRes.data?.available || 0);
+                const levelIncomeTokens = Number(levelIncomeData.available || 0);
 
                 setReferralProgram(prev => ({
                     ...prev,
@@ -217,15 +211,14 @@ export default function Dashboard() {
             
             toast.success(data.message || "Mining successful!", { id: miningToast });
             
-            // Re-fetch data to show new mining time/bonus
-            const [userRes, historyRes, levelIncomeRes] = await Promise.all([
-                client.get('/auth/me'),
-                client.get('/users/mining-history'),
-                client.get('/level-income/available').catch(() => ({ data: { available: 0 } }))
-            ]);
+            // Re-fetch data to show new mining time/bonus using consolidated endpoint
+            const dashboardRes = await client.get('/users/dashboard-data');
+            const userData = dashboardRes.data.user;
+            const historyData = dashboardRes.data.miningHistory || [];
+            const levelIncomeData = dashboardRes.data.availableWithdrawal || { available: 0 };
+            const settingsData = dashboardRes.data.settings || {};
             
-            const userData = userRes.data;
-            setMiningHistory(historyRes.data || []);
+            setMiningHistory(historyData);
             setMiningCenter(prev => ({
                 ...prev,
                 lastMinedAt: userData.last_mining_data,
@@ -235,8 +228,6 @@ export default function Dashboard() {
             }));
             
             // Get dynamic token rate
-            const settingsRes = await client.get('/settings').catch(() => ({ data: {} }));
-            const settingsData = settingsRes.data || {};
             const liveRate = settingsData.rexTokenPrice ? Number(settingsData.rexTokenPrice) : 12;
             const phaseDisplay = settingsData.currentPhase !== undefined && settingsData.currentPhase !== null
                 ? (typeof settingsData.currentPhase === 'number' || !isNaN(settingsData.currentPhase)
@@ -254,7 +245,7 @@ export default function Dashboard() {
             }));
 
             const calculatedSponsorIncome = incomeBreakdown.sponsorIncome;
-            const levelIncomeTokens = Number(levelIncomeRes.data?.available || 0);
+            const levelIncomeTokens = Number(levelIncomeData.available || 0);
             const levelIncomeRupees = levelIncomeTokens * liveRate;
             const yearlyBonusRupees = Number(userData.anual_bonus || 0) * liveRate;
 

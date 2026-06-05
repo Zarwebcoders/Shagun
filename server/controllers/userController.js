@@ -451,6 +451,115 @@ const getDashboardSummary = async (req, res) => {
     }
 };
 
+// @desc    Get all consolidated dashboard data in one single request
+// @route   GET /api/users/dashboard-data
+// @access  Private
+const getDashboardData = async (req, res) => {
+    try {
+        const User = require('../models/User');
+        const ReferralIncomes = require('../models/ReferralIncomes');
+        const Product = require('../models/Product');
+        const MiningBonus = require('../models/MiningBonus');
+        const Wallet = require('../models/Wallet');
+        const MonthlyTokenDistribution = require('../models/MonthlyTokenDistribution');
+        const Withdrawal = require('../models/Withdrawal');
+
+        const user = req.user;
+        const userId = user._id;
+        const queryIds = [user.id, user.user_id, user.referral_id, user._id.toString()].filter(Boolean);
+
+        // 1. Direct Team Count
+        const directTeamCount = await User.countDocuments({ sponsor_id: user.referral_id });
+
+        // 2. Referral Income Sum
+        const referralIncomes = await ReferralIncomes.aggregate([
+            { $match: { earner_user_id: { $in: queryIds } } },
+            { $group: { _id: null, total: { $sum: "$referral_amount" } } }
+        ]);
+        const calculatedSponsorIncome = referralIncomes.length > 0 ? referralIncomes[0].total : 0;
+
+        // 3. Approved Product Check
+        const hasApprovedProduct = await Product.exists({
+            user_id: { $in: queryIds },
+            $or: [
+                { approve: 1 },
+                { approve: '1' }
+            ]
+        });
+
+        // 4. Mining History
+        const wallet = await Wallet.findOne({ user_id: { $in: queryIds }, approve: 1 }).lean();
+        const activeWalletAddress = wallet ? wallet.wallet_add : "N/A";
+        const history = await MiningBonus.find({ 
+            user_id: { $in: queryIds.concat([user.referral_id]) }
+        }).sort({ created_at: -1 }).lean();
+        
+        const populatedHistory = history.map(record => {
+            if (!record.wallet_address || record.wallet_address === "N/A") {
+                record.wallet_address = activeWalletAddress;
+            }
+            return record;
+        });
+
+        // 5. Available Withdrawal
+        const distributions = await MonthlyTokenDistribution.find({ user_id: userId }).lean();
+        const approvedWithdrawals = await Withdrawal.find({
+            user_id: { $in: queryIds },
+            approve: "1"
+        }).lean();
+
+        const withdrawnLevel = approvedWithdrawals
+            .filter(w => w.withdraw_type === 'level_income')
+            .reduce((sum, w) => sum + w.amount, 0);
+        
+        const withdrawnMining = approvedWithdrawals
+            .filter(w => w.withdraw_type === 'mining_bonus')
+            .reduce((sum, w) => sum + w.amount, 0);
+
+        const now = new Date();
+        const totalMaturedLevel = distributions.reduce((sum, dist) => {
+            if (dist.scheduled_date <= now && dist.level > 0) return sum + dist.monthly_amount;
+            return sum;
+        }, 0);
+
+        const totalMaturedMining = distributions.reduce((sum, dist) => {
+            if (dist.scheduled_date <= now && dist.level === 0) return sum + dist.monthly_amount;
+            return sum;
+        }, 0);
+
+        const available = Math.max(0, totalMaturedLevel - withdrawnLevel);
+        const availableROI = Math.max(0, totalMaturedMining - withdrawnMining);
+        const canWithdraw = (available + availableROI) >= 100;
+
+        // 6. Settings (directly call setting controller's logic or read from DB)
+        const Setting = require('../models/Setting');
+        const settings = await Setting.find({}).lean();
+        const settingsObj = {};
+        settings.forEach(s => {
+            settingsObj[s.key] = s.value;
+        });
+
+        res.json({
+            user,
+            summary: {
+                directTeamCount,
+                calculatedSponsorIncome,
+                hasApprovedProduct: !!hasApprovedProduct
+            },
+            miningHistory: populatedHistory,
+            availableWithdrawal: {
+                available: Math.round(available * 100) / 100,
+                availableROI: Math.round(availableROI * 100) / 100,
+                canWithdraw,
+                reason: !canWithdraw ? 'Insufficient matured balance (Minimum ₹100)' : null
+            },
+            settings: settingsObj
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 // @desc    Mine tokens (Daily Claim)
 // @route   POST /api/users/mine
 // @access  Private
@@ -665,5 +774,6 @@ module.exports = {
     getMiningHistory,
     checkSponsor,
     impersonateUser,
-    getDashboardSummary
+    getDashboardSummary,
+    getDashboardData
 };

@@ -10,13 +10,15 @@ const {
     getMiningHistory,
     checkSponsor,
     impersonateUser,
-    getDashboardSummary
+    getDashboardSummary,
+    getDashboardData
 } = require('../controllers/userController');
 const { protect, admin } = require('../middleware/authMiddleware');
 
 router.get('/check-sponsor/:referralId', checkSponsor);
 router.get('/', protect, admin, getUsers);
 router.get('/dashboard-summary', protect, getDashboardSummary);
+router.get('/dashboard-data', protect, getDashboardData);
 router.get('/downline', protect, getDownline);
 router.post('/mine', protect, mineTokens);
 router.get('/mining-history', protect, getMiningHistory);
