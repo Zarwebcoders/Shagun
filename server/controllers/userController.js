@@ -485,47 +485,75 @@ const getDashboardData = async (req, res) => {
             }
         }
 
-        const queryIds = [user.id, user.user_id, user.referral_id, user._id.toString()].filter(Boolean);
+        const queryIds = [
+            user.id, 
+            user.user_id, 
+            user.referral_id, 
+            user._id.toString(),
+            user._id
+        ].filter(Boolean);
 
-        // 1. Direct Team Count
-        const directTeamCount = await User.countDocuments({ sponsor_id: user.referral_id });
+        const Setting = require('../models/Setting');
 
-        // 2. Referral Income Sum
-        const referralIncomes = await ReferralIncomes.aggregate([
-            { $match: { earner_user_id: { $in: queryIds } } },
-            { $group: { _id: null, total: { $sum: "$referral_amount" } } }
+        // Fetch all query dependencies in parallel
+        const [
+            directTeamCount,
+            referralIncomes,
+            hasApprovedProduct,
+            wallet,
+            history,
+            distributions,
+            approvedWithdrawals,
+            settings
+        ] = await Promise.all([
+            // 1. Direct Team Count
+            User.countDocuments({ sponsor_id: user.referral_id }),
+
+            // 2. Referral Income Sum
+            ReferralIncomes.aggregate([
+                { $match: { earner_user_id: { $in: queryIds } } },
+                { $group: { _id: null, total: { $sum: "$referral_amount" } } }
+            ]),
+
+            // 3. Approved Product Check
+            Product.exists({
+                user_id: { $in: queryIds },
+                $or: [
+                    { approve: 1 },
+                    { approve: '1' }
+                ]
+            }),
+
+            // 4. Wallet Address
+            Wallet.findOne({ user_id: { $in: queryIds }, approve: 1 }).lean(),
+
+            // 5. Mining History (latest 20 records)
+            MiningBonus.find({ 
+                user_id: { $in: queryIds.concat([user.referral_id]) }
+            }).sort({ created_at: -1 }).limit(20).lean(),
+
+            // 6. Distributions
+            MonthlyTokenDistribution.find({ user_id: user._id }).lean(),
+
+            // 7. Approved Withdrawals
+            Withdrawal.find({
+                user_id: { $in: queryIds },
+                approve: "1"
+            }).lean(),
+
+            // 8. Settings
+            Setting.find({}).lean()
         ]);
+
         const calculatedSponsorIncome = referralIncomes.length > 0 ? referralIncomes[0].total : 0;
-
-        // 3. Approved Product Check
-        const hasApprovedProduct = await Product.exists({
-            user_id: { $in: queryIds },
-            $or: [
-                { approve: 1 },
-                { approve: '1' }
-            ]
-        });
-
-        // 4. Mining History
-        const wallet = await Wallet.findOne({ user_id: { $in: queryIds }, approve: 1 }).lean();
         const activeWalletAddress = wallet ? wallet.wallet_add : "N/A";
-        const history = await MiningBonus.find({ 
-            user_id: { $in: queryIds.concat([user.referral_id]) }
-        }).sort({ created_at: -1 }).limit(20).lean();
-        
+
         const populatedHistory = history.map(record => {
             if (!record.wallet_address || record.wallet_address === "N/A") {
                 record.wallet_address = activeWalletAddress;
             }
             return record;
         });
-
-        // 5. Available Withdrawal
-        const distributions = await MonthlyTokenDistribution.find({ user_id: user._id }).lean();
-        const approvedWithdrawals = await Withdrawal.find({
-            user_id: { $in: queryIds },
-            approve: "1"
-        }).lean();
 
         const withdrawnLevel = approvedWithdrawals
             .filter(w => w.withdraw_type === 'level_income')
@@ -550,9 +578,6 @@ const getDashboardData = async (req, res) => {
         const availableROI = Math.max(0, totalMaturedMining - withdrawnMining);
         const canWithdraw = (available + availableROI) >= 100;
 
-        // 6. Settings (directly call setting controller's logic or read from DB)
-        const Setting = require('../models/Setting');
-        const settings = await Setting.find({}).lean();
         const settingsObj = {};
         settings.forEach(s => {
             settingsObj[s.key] = s.value;
