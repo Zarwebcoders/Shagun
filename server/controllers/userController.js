@@ -492,7 +492,7 @@ const getDashboardData = async (req, res) => {
         const activeWalletAddress = wallet ? wallet.wallet_add : "N/A";
         const history = await MiningBonus.find({ 
             user_id: { $in: queryIds.concat([user.referral_id]) }
-        }).sort({ created_at: -1 }).lean();
+        }).sort({ created_at: -1 }).limit(20).lean();
         
         const populatedHistory = history.map(record => {
             if (!record.wallet_address || record.wallet_address === "N/A") {

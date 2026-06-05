@@ -1,6 +1,9 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
+const userCache = new Map(); // userId -> { user, expiry }
+const CACHE_TTL = 3000; // 3 seconds TTL
+
 const protect = async (req, res, next) => {
     let token;
 
@@ -18,16 +21,40 @@ const protect = async (req, res, next) => {
 
             console.log(`Auth request for user ID: ${decoded.id}`);
 
-            if (mongoose.isValidObjectId(decoded.id)) {
-                req.user = await User.findById(decoded.id).select('-password');
+            // Prune cache if it grows too large
+            if (userCache.size > 1000) {
+                const now = Date.now();
+                for (const [key, val] of userCache.entries()) {
+                    if (now > val.expiry) {
+                        userCache.delete(key);
+                    }
+                }
+            }
+
+            const now = Date.now();
+            const cached = userCache.get(decoded.id);
+
+            if (cached && now < cached.expiry) {
+                req.user = cached.user;
             } else {
-                // Handle legacy string IDs
-                req.user = await User.findOne({
-                    $or: [
-                        { user_id: decoded.id },
-                        { id: decoded.id }
-                    ]
-                }).select('-password');
+                if (mongoose.isValidObjectId(decoded.id)) {
+                    req.user = await User.findById(decoded.id).select('-password');
+                } else {
+                    // Handle legacy string IDs
+                    req.user = await User.findOne({
+                        $or: [
+                            { user_id: decoded.id },
+                            { id: decoded.id }
+                        ]
+                    }).select('-password');
+                }
+
+                if (req.user) {
+                    userCache.set(decoded.id, {
+                        user: req.user,
+                        expiry: Date.now() + CACHE_TTL
+                    });
+                }
             }
 
             if (!req.user) {
