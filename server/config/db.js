@@ -11,13 +11,15 @@ const connectDB = async () => {
 
     try {
         const conn = await mongoose.connect(process.env.MONGO_URI, {
-            autoIndex: false,           // Never rebuild indexes on boot
-            maxPoolSize: 10,            // Reuse up to 10 connections per Lambda
-            minPoolSize: 1,             // Always keep 1 connection warm
+            autoIndex: false,               // Never rebuild indexes on boot
+            maxPoolSize: 10,                // Reuse up to 10 connections per Lambda
+            minPoolSize: 1,                 // Always keep 1 connection warm
             serverSelectionTimeoutMS: 5000, // Fail fast if Atlas unreachable
-            socketTimeoutMS: 45000,     // Drop idle sockets after 45s
-            connectTimeoutMS: 10000,    // Max time to establish a connection
-            bufferCommands: false,      // Don't queue commands; fail fast on disconnect
+            socketTimeoutMS: 45000,         // Drop idle sockets after 45s
+            connectTimeoutMS: 10000,        // Max time to establish a connection
+            // bufferCommands: true (Mongoose default) — allows queries to queue while
+            // the connection is being established on Vercel cold-starts.
+            // Setting this to false would cause immediate failures before the DB connects.
         });
 
         cachedConn = conn;
