@@ -146,7 +146,7 @@ export default function Profile() {
         toast.success("Referral link copied to clipboard!");
     }
 
-    if (loading) return <div className="text-white">Loading profile...</div>
+
 
     return (
         <div className="w-full space-y-6 md:space-y-8">

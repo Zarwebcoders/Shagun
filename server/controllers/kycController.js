@@ -4,10 +4,19 @@ const User = require('../models/User');
 const MyAccount = require('../models/MyAccount');
 const Notification = require('../models/Notification');
 
+// In-memory cache for /kyc/me responses (5 second TTL)
+const kycMeCache = new Map(); // userId -> { data, expiry }
+const KYC_CACHE_TTL = 5000;
+
+const clearKycCache = (userId) => {
+    if (userId) kycMeCache.delete(userId.toString());
+};
+
 // @desc    Submit KYC
 // @route   POST /api/kyc
 // @access  Private
 const submitKYC = async (req, res) => {
+    clearKycCache(req.user?._id);
     // Expecting flat structure or mapped from frontend
     // Frontend sends: aadharNumber, panNumber, documents: { aadharFront, aadharBack, panCard, agreement, profilePhoto, chequePassbook }, bankDetails: { ... }
     const {
@@ -46,6 +55,7 @@ const submitKYC = async (req, res) => {
 
             kycExists.approval = 2; // Set back to pending review
             await kycExists.save();
+            clearKycCache(req.user._id);
 
             // Update user status back to pending
             await User.findByIdAndUpdate(req.user._id, { kycStatus: 'pending' });
@@ -147,11 +157,21 @@ const getPendingKYC = async (req, res) => {
 // @access  Private
 const getMyKYC = async (req, res) => {
     try {
-        const kyc = await KYC.findOne({ user_id: req.user._id });
-        if (!kyc) {
-            return res.status(200).json(null);
+        const userId = req.user._id.toString();
+        const now = Date.now();
+
+        // Serve from cache if still fresh
+        const cached = kycMeCache.get(userId);
+        if (cached && now < cached.expiry) {
+            return res.json(cached.data);
         }
-        res.json(kyc);
+
+        const kyc = await KYC.findOne({ user_id: req.user._id }).lean();
+        const result = kyc || null;
+
+        kycMeCache.set(userId, { data: result, expiry: now + KYC_CACHE_TTL });
+
+        res.json(result);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

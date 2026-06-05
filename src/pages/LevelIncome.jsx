@@ -93,7 +93,7 @@ export default function LevelIncome() {
         }
     };
 
-    if (loading) return <div className="text-white">Loading level income...</div>
+
 
     return (
         <div className="w-full space-y-6 md:space-y-8">

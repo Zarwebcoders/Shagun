@@ -153,7 +153,7 @@ export default function Downline() {
         });
     };
 
-    if (loading) return <div className="text-white p-6">Loading network data...</div>
+
 
     return (
         <div className="w-full space-y-6 md:space-y-8">
