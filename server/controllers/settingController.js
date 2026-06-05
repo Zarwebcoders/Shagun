@@ -1,16 +1,22 @@
 const Setting = require('../models/Setting');
 
+let settingsCache = null;
+
 // @desc    Get all settings
 // @route   GET /api/settings
 // @access  Public (Some settings might be public) / Private usually
 const getSettings = async (req, res) => {
     try {
+        if (settingsCache) {
+            return res.json(settingsCache);
+        }
         const settings = await Setting.find({});
         // Transform array to object for easier frontend consumption
         const settingsObj = {};
         settings.forEach(s => {
             settingsObj[s.key] = s.value;
         });
+        settingsCache = settingsObj;
         res.json(settingsObj);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -32,6 +38,8 @@ const updateSettings = async (req, res) => {
                 { upsert: true, new: true }
             );
         }
+        // Invalidate settings cache
+        settingsCache = null;
         res.json({ message: 'Settings updated' });
     } catch (error) {
         res.status(500).json({ message: error.message });

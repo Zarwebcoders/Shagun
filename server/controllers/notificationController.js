@@ -1,12 +1,21 @@
 const mongoose = require('mongoose');
 const Notification = require('../models/Notification');
 
+let adminNotificationsCache = null;
+let adminNotificationsCacheTime = 0;
+let adminCountCache = null;
+let adminCountCacheTime = 0;
+
 // @desc    Get user notifications (today only, sorted by newest)
 // @route   GET /api/notifications
 // @access  Private
 const getMyNotifications = async (req, res) => {
     try {
         if (req.user.is_admin === 1 || req.user.is_admin === "1") {
+            const now = Date.now();
+            if (adminNotificationsCache && (now - adminNotificationsCacheTime < 5000)) {
+                return res.json(adminNotificationsCache);
+            }
             const startOfToday = new Date();
             startOfToday.setHours(0, 0, 0, 0);
 
@@ -242,6 +251,9 @@ const getMyNotifications = async (req, res) => {
             // Sort all by createdAt descending
             adminNotifications.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
+            adminNotificationsCache = adminNotifications;
+            adminNotificationsCacheTime = now;
+
             return res.json(adminNotifications);
         }
 
@@ -265,6 +277,10 @@ const getMyNotifications = async (req, res) => {
 const getUnseenCount = async (req, res) => {
     try {
         if (req.user.is_admin === 1 || req.user.is_admin === "1") {
+            const now = Date.now();
+            if (adminCountCache !== null && (now - adminCountCacheTime < 5000)) {
+                return res.json({ count: adminCountCache });
+            }
             const KYC = require('../models/KYC');
             const Withdrawal = require('../models/Withdrawal');
             const MyAccount = require('../models/MyAccount');
@@ -298,6 +314,8 @@ const getUnseenCount = async (req, res) => {
             ]);
 
             const count = kycCount + withdrawalCount + bankCount + paymentCount + walletCount + vendorKycCount + vendorWithdrawCount + vendorWalletCount + vendorAccountCount;
+            adminCountCache = count;
+            adminCountCacheTime = now;
             return res.json({ count });
         }
 
@@ -316,6 +334,8 @@ const getUnseenCount = async (req, res) => {
 // @access  Private
 const markAllAsSeen = async (req, res) => {
     try {
+        adminNotificationsCache = null;
+        adminCountCache = null;
         await Notification.updateMany(
             { user_id: req.user._id, is_seen: false },
             { is_seen: true }
@@ -331,6 +351,8 @@ const markAllAsSeen = async (req, res) => {
 // @access  Private
 const markAsRead = async (req, res) => {
     try {
+        adminNotificationsCache = null;
+        adminCountCache = null;
         const notification = await Notification.findOneAndUpdate(
             { _id: req.params.id, user_id: req.user._id },
             { is_read: true, is_seen: true },
@@ -358,6 +380,8 @@ const sendNotification = async (req, res) => {
     }
 
     try {
+        adminNotificationsCache = null;
+        adminCountCache = null;
         const User = require('../models/User');
 
         if (target === 'all') {
