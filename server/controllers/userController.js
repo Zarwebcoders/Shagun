@@ -485,37 +485,21 @@ const getDashboardData = async (req, res) => {
             }
         }
 
-        const queryIds = [
-            user.id, 
-            user.user_id, 
-            user.referral_id, 
-            user._id.toString(),
-            user._id
-        ].filter(Boolean);
+        const queryIds = [user.id, user.user_id, user.referral_id, user._id.toString()].filter(Boolean);
 
+        // Fetch all data in parallel to reduce database waiting time
+        const now = new Date();
         const Setting = require('../models/Setting');
-
-        // Fetch all query dependencies in parallel
         const [
             directTeamCount,
-            referralIncomes,
             hasApprovedProduct,
             wallet,
             history,
-            distributions,
+            maturedSummaries,
             approvedWithdrawals,
             settings
         ] = await Promise.all([
-            // 1. Direct Team Count
             User.countDocuments({ sponsor_id: user.referral_id }),
-
-            // 2. Referral Income Sum
-            ReferralIncomes.aggregate([
-                { $match: { earner_user_id: { $in: queryIds } } },
-                { $group: { _id: null, total: { $sum: "$referral_amount" } } }
-            ]),
-
-            // 3. Approved Product Check
             Product.exists({
                 user_id: { $in: queryIds },
                 $or: [
@@ -523,31 +507,36 @@ const getDashboardData = async (req, res) => {
                     { approve: '1' }
                 ]
             }),
-
-            // 4. Wallet Address
             Wallet.findOne({ user_id: { $in: queryIds }, approve: 1 }).lean(),
-
-            // 5. Mining History (latest 20 records)
             MiningBonus.find({ 
                 user_id: { $in: queryIds.concat([user.referral_id]) }
             }).sort({ created_at: -1 }).limit(20).lean(),
-
-            // 6. Distributions
-            MonthlyTokenDistribution.find({ user_id: user._id }).lean(),
-
-            // 7. Approved Withdrawals
+            MonthlyTokenDistribution.aggregate([
+                {
+                    $match: {
+                        user_id: user._id,
+                        scheduled_date: { $lte: now }
+                    }
+                },
+                {
+                    $group: {
+                        _id: {
+                            isLevel: { $gt: ["$level", 0] }
+                        },
+                        totalMatured: { $sum: "$monthly_amount" }
+                    }
+                }
+            ]),
             Withdrawal.find({
                 user_id: { $in: queryIds },
                 approve: "1"
             }).lean(),
-
-            // 8. Settings
             Setting.find({}).lean()
         ]);
 
-        const calculatedSponsorIncome = referralIncomes.length > 0 ? referralIncomes[0].total : 0;
+        const calculatedSponsorIncome = user.sponsor_income || 0;
         const activeWalletAddress = wallet ? wallet.wallet_add : "N/A";
-
+        
         const populatedHistory = history.map(record => {
             if (!record.wallet_address || record.wallet_address === "N/A") {
                 record.wallet_address = activeWalletAddress;
@@ -563,16 +552,15 @@ const getDashboardData = async (req, res) => {
             .filter(w => w.withdraw_type === 'mining_bonus')
             .reduce((sum, w) => sum + w.amount, 0);
 
-        const now = new Date();
-        const totalMaturedLevel = distributions.reduce((sum, dist) => {
-            if (dist.scheduled_date <= now && dist.level > 0) return sum + dist.monthly_amount;
-            return sum;
-        }, 0);
-
-        const totalMaturedMining = distributions.reduce((sum, dist) => {
-            if (dist.scheduled_date <= now && dist.level === 0) return sum + dist.monthly_amount;
-            return sum;
-        }, 0);
+        let totalMaturedLevel = 0;
+        let totalMaturedMining = 0;
+        maturedSummaries.forEach(item => {
+            if (item._id && item._id.isLevel) {
+                totalMaturedLevel = item.totalMatured;
+            } else {
+                totalMaturedMining = item.totalMatured;
+            }
+        });
 
         const available = Math.max(0, totalMaturedLevel - withdrawnLevel);
         const availableROI = Math.max(0, totalMaturedMining - withdrawnMining);
