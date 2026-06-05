@@ -1,0 +1,258 @@
+"use client"
+
+import { useEffect, useState } from "react"
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from "react-router-dom"
+import { Toaster } from "react-hot-toast"
+import Layout from "./components/Layout"
+import Login from "./pages/Login"
+import Signup from "./pages/Signup"
+import Dashboard from "./pages/Dashboard"
+import Packages from "./pages/Packages"
+import KYC from "./pages/KYC"
+import Shopping from "./pages/Shopping"
+import Withdrawal from "./pages/Withdrawal"
+import BankAccountManagement from "./admin/components/BankAccountManagement"
+import ForgotPassword from "./pages/ForgotPassword"
+import ResetPassword from "./pages/ResetPassword"
+import { Web3Provider } from "./context/Web3Context"
+
+import BankDetails from "./pages/BankDetails"
+import BankRequests from "./admin/components/BankRequests"
+import MiningHistory from "./pages/MiningHistory"
+import MiningBonus from "./pages/MiningBonus"
+import Downline from "./pages/Downline"
+import ReferralIncome from "./pages/ReferralIncome"
+import LevelIncome from "./pages/LevelIncome"
+import Commissions from "./pages/Commissions"
+import Profile from "./pages/Profile"
+import TransactionHistory from "./pages/TransactionHistory"
+import Home from "./components/Home"
+import Products from "./pages/Products"
+import VendorWithdrawal from "./pages/VendorWithdrawal"
+import VendorWithdrawalRequests from "./admin/components/VendorWithdrawalRequests"
+import VendorWallet from "./pages/VendorWallet"
+import VendorWallets from "./admin/components/VendorWallets"
+import VendorKYC from "./pages/VendorKYC"
+import VendorKYCRequests from "./admin/components/VendorKYCRequests"
+import VendorAccount from "./pages/VendorAccount"
+import VendorAccounts from "./admin/components/VendorAccounts"
+import VendorProfile from "./pages/VendorProfile"
+import VendorList from "./admin/components/VendorList"
+import TokenRateManagement from "./admin/components/TokenRateManagement"
+import SystemMigrations from "./admin/components/SystemMigrations"
+import ContractUpdateQueue from "./admin/components/ContractUpdateQueue"
+import AdminDashboard from "./admin/components/AdminDashboard"
+import AdminLayout from "./admin/components/AdminLayout"
+import UserManagement from "./admin/components/UserManagement"
+import KYCApprovals from "./admin/components/KYCApprovals"
+import WithdrawalRequests from "./admin/components/WidthrawalRequest"
+import PaymentRequests from "./admin/components/PaymentRequests"
+import ManageWallet from "./admin/components/ManageWallet"
+import TokenRateHistory from "./pages/TokenRateHistory"
+
+import PackageManagement from "./admin/components/PackageManagement"
+import TransactionMonitor from "./admin/components/TransactionMonitor"
+import SystemSettings from "./admin/components/SystemSetting"
+import TokenManagement from "./admin/components/TokenManagement"
+import Reports from "./admin/components/Reports"
+import NotificationManagement from "./admin/components/NotificationManagement"
+import WalletInspector from "./admin/components/WalletInspector"
+
+// Impersonation Session Storage redirection helper
+if (typeof window !== 'undefined' && (sessionStorage.getItem('user') || new URLSearchParams(window.location.search).has('impersonate'))) {
+    const urlParams = new URLSearchParams(window.location.search);
+    const impersonateData = urlParams.get('impersonate');
+    if (impersonateData) {
+        try {
+            const decodedData = JSON.parse(decodeURIComponent(impersonateData));
+            // Write ONLY to sessionStorage to keep it tab-specific and avoid logging admin out of the other tab
+            sessionStorage.setItem('user', JSON.stringify(decodedData));
+            // Remove the query parameter from URL bar for clean UX
+            window.history.replaceState({}, document.title, window.location.pathname);
+        } catch (e) {
+            console.error("Failed to parse impersonate data:", e);
+        }
+    }
+
+    // Override localStorage for 'user' key to redirect to sessionStorage
+    const originalGet = localStorage.getItem;
+    const originalSet = localStorage.setItem;
+    const originalRemove = localStorage.removeItem;
+
+    localStorage.getItem = function(key) {
+        if (key === 'user') {
+            return sessionStorage.getItem('user');
+        }
+        return originalGet.apply(this, arguments);
+    };
+
+    localStorage.setItem = function(key, value) {
+        if (key === 'user') {
+            sessionStorage.setItem('user', value);
+            return;
+        }
+        originalSet.apply(this, arguments);
+    };
+
+    localStorage.removeItem = function(key) {
+        if (key === 'user') {
+            sessionStorage.removeItem('user');
+            return;
+        }
+        originalRemove.apply(this, arguments);
+    };
+}
+
+export default function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false)
+  const [isAuthChecking, setIsAuthChecking] = useState(true)
+
+  useEffect(() => {
+    const user = localStorage.getItem("user")
+    if (user) {
+      const userData = JSON.parse(user)
+      if (userData.is_admin === 1 || userData.is_admin === "1") {
+        setIsAdminAuthenticated(true)
+      } else {
+        setIsAuthenticated(true)
+      }
+    }
+    setIsAuthChecking(false)
+  }, [])
+
+  if (isAuthChecking) {
+    return <div className="min-h-screen bg-[#050505] flex items-center justify-center text-teal-500">Loading...</div>
+  }
+
+  // Layout wrapper component for protected routes
+  const ProtectedLayout = () => {
+    return (
+      <Layout setIsAuthenticated={setIsAuthenticated}>
+        <Outlet />
+      </Layout>
+    )
+  }
+
+  return (
+    <Web3Provider>
+      <Router>
+        <Toaster position="top-right" reverseOrder={false} />
+        <Routes>
+          <Route path="/" element={<Products />} />
+
+          <Route path="/login" element={
+            isAuthenticated ? <Navigate to="/dashboard" /> :
+              isAdminAuthenticated ? <Navigate to="/admin/dashboard" /> :
+                <Login
+                  setIsAuthenticated={setIsAuthenticated}
+                  setIsAdminAuthenticated={setIsAdminAuthenticated}
+                />
+          } />
+
+          <Route path="/signup" element={
+            isAuthenticated ? <Navigate to="/dashboard" /> :
+              <Signup setIsAuthenticated={setIsAuthenticated} />
+          } />
+
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password/:token" element={<ResetPassword />} />
+
+          {/* User Protected Routes with Layout */}
+          <Route element={<ProtectedLayout />}>
+            <Route path="/dashboard" element={
+              isAuthenticated ? <Dashboard /> : <Navigate to="/login" />
+            } />
+            <Route path="/packages" element={
+              isAuthenticated ? <Packages /> : <Navigate to="/login" />
+            } />
+            <Route path="/kyc" element={
+              isAuthenticated ? <KYC /> : <Navigate to="/login" />
+            } />
+            <Route path="/withdrawal" element={
+              isAuthenticated ? <Withdrawal /> : <Navigate to="/login" />
+            } />
+            <Route path="/vendor-withdrawal" element={
+              isAuthenticated ? <VendorWithdrawal /> : <Navigate to="/login" />
+            } />
+            <Route path="/vendor-wallet" element={
+              isAuthenticated ? <VendorWallet /> : <Navigate to="/login" />
+            } />
+            <Route path="/vendor-kyc" element={
+              isAuthenticated ? <VendorKYC /> : <Navigate to="/login" />
+            } />
+            <Route path="/vendor-account" element={
+              isAuthenticated ? <VendorAccount /> : <Navigate to="/login" />
+            } />
+            <Route path="/vendor-profile" element={
+              isAuthenticated ? <VendorProfile /> : <Navigate to="/login" />
+            } />
+            <Route path="/downline" element={
+              isAuthenticated ? <Downline /> : <Navigate to="/login" />
+            } />
+            <Route path="/referral-income" element={
+              isAuthenticated ? <ReferralIncome /> : <Navigate to="/login" />
+            } />
+            <Route path="/bank-details" element={
+              isAuthenticated ? <BankDetails /> : <Navigate to="/login" />
+            } />
+            <Route path="/level-income" element={
+              isAuthenticated ? <LevelIncome /> : <Navigate to="/login" />
+            } />
+            <Route path="/mining-history" element={
+              isAuthenticated ? <MiningHistory /> : <Navigate to="/login" />
+            } />
+            <Route path="/mining-bonus" element={
+              isAuthenticated ? <MiningBonus /> : <Navigate to="/login" />
+            } />
+            <Route path="/profile" element={
+              isAuthenticated ? <Profile /> : <Navigate to="/login" />
+            } />
+            <Route path="/transactions" element={
+              isAuthenticated ? <TransactionHistory /> : <Navigate to="/login" />
+            } />
+            <Route path="/token-rate-history" element={
+              isAuthenticated ? <TokenRateHistory /> : <Navigate to="/login" />
+            } />
+          </Route>
+
+          {/* Admin Protected Routes */}
+          <Route path="/admin" element={
+            isAdminAuthenticated ? <AdminLayout setIsAdminAuthenticated={setIsAdminAuthenticated} /> : <Navigate to="/login" />
+          }>
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<AdminDashboard />} />
+            <Route path="users" element={<UserManagement />} />
+            <Route path="kyc-approvals" element={<KYCApprovals />} />
+            <Route path="withdrawals" element={<WithdrawalRequests />} />
+            <Route path="bank-accounts" element={<BankAccountManagement />} />
+            <Route path="manage-wallet" element={<ManageWallet />} />
+            <Route path="vendor-withdrawals" element={<VendorWithdrawalRequests />} />
+            <Route path="vendor-wallets" element={<VendorWallets />} />
+            <Route path="vendor-kyc" element={<VendorKYCRequests />} />
+            <Route path="level-income" element={<LevelIncome />} />
+            <Route path="commissions" element={<Commissions />} />
+            <Route path="mining-bonus" element={<MiningBonus />} />
+            <Route path="vendor-accounts" element={<VendorAccounts />} />
+            <Route path="vendors" element={<VendorList />} />
+            <Route path="token-rates" element={<TokenRateManagement />} />
+            <Route path="payments" element={<PaymentRequests />} />
+            <Route path="bank-requests" element={<BankRequests />} />
+            <Route path="packages" element={<PackageManagement />} />
+            <Route path="transactions" element={<TransactionMonitor />} />
+            <Route path="referral-earnings" element={<TransactionMonitor defaultType="referral_income" />} />
+            <Route path="settings" element={<SystemSettings />} />
+            <Route path="migrations" element={<SystemMigrations />} />
+            <Route path="contract-queue" element={<ContractUpdateQueue />} />
+            <Route path="token-management" element={<TokenManagement />} />
+            <Route path="reports" element={<Reports />} />
+            <Route path="notifications" element={<NotificationManagement />} />
+            <Route path="wallet-inspector" element={<WalletInspector />} />
+          </Route>
+
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      </Router>
+    </Web3Provider>
+  )
+}

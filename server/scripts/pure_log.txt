@@ -1,0 +1,7 @@
+[dotenv@17.2.3] injecting env (4) from ..\.env -- tip: 🔐 prevent building .env in docker: https://dotenvx.com/prebuild
+TESTING SINGLE PRODUCT: new ObjectId('696df8b28686995ab38f9815') USER: SGN004
+Found User. Calling distributeLevelIncome25...
+distributeLevelIncome: Base amounts calculated: 10000
+distributeLevelIncome: Current User Found: shpatel35@gmail.com
+Starting 25-level distribution for product 696df8b28686995ab38f9815, base amount: ₹10000, token rate: ₹1
+Function returned.
