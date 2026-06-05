@@ -110,6 +110,10 @@ const userSchema = new mongoose.Schema({
         type: Number,
         default: 0,
     },
+    unreadNotificationsCount: {
+        type: Number,
+        default: 0
+    },
 
 
     // created_at and updated_at are handled by timestamps: true, but mongoose default is createdAt/updatedAt.

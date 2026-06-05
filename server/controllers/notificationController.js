@@ -6,6 +6,19 @@ let adminNotificationsCacheTime = 0;
 let adminCountCache = null;
 let adminCountCacheTime = 0;
 
+const userNotificationsCache = new Map(); // cacheKey -> { data, expiry }
+const userCountCache = new Map(); // userId -> { count, expiry }
+
+const clearUserNotificationCache = (userId) => {
+    const userIdStr = userId.toString();
+    userCountCache.delete(userIdStr);
+    for (const key of userNotificationsCache.keys()) {
+        if (key.startsWith(userIdStr)) {
+            userNotificationsCache.delete(key);
+        }
+    }
+};
+
 // @desc    Get user notifications (today only, sorted by newest)
 // @route   GET /api/notifications
 // @access  Private
@@ -257,13 +270,31 @@ const getMyNotifications = async (req, res) => {
             return res.json(adminNotifications);
         }
 
-        const startOfToday = new Date();
-        startOfToday.setHours(0, 0, 0, 0);
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
 
-        const notifications = await Notification.find({
-            user_id: req.user._id,
-            createdAt: { $gte: startOfToday }
-        }).sort({ createdAt: -1 });
+        const userId = req.user._id.toString();
+        const cacheKey = `${userId}_p${page}_l${limit}`;
+        const now = Date.now();
+
+        if (userNotificationsCache.has(cacheKey)) {
+            const cached = userNotificationsCache.get(cacheKey);
+            if (now < cached.expiry) {
+                return res.json(cached.data);
+            }
+        }
+
+        const notifications = await Notification.find({ user_id: req.user._id })
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .lean();
+
+        userNotificationsCache.set(cacheKey, {
+            data: notifications,
+            expiry: now + 5000
+        });
 
         res.json(notifications);
     } catch (error) {
@@ -319,10 +350,25 @@ const getUnseenCount = async (req, res) => {
             return res.json({ count });
         }
 
-        const count = await Notification.countDocuments({
-            user_id: req.user._id,
-            is_seen: false
+        const userId = req.user._id.toString();
+        const now = Date.now();
+
+        if (userCountCache.has(userId)) {
+            const cached = userCountCache.get(userId);
+            if (now < cached.expiry) {
+                return res.json({ count: cached.count });
+            }
+        }
+
+        const User = require('../models/User');
+        const user = await User.findById(req.user._id).select('unreadNotificationsCount');
+        const count = user ? (user.unreadNotificationsCount || 0) : 0;
+
+        userCountCache.set(userId, {
+            count,
+            expiry: now + 5000
         });
+
         res.json({ count });
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -336,10 +382,17 @@ const markAllAsSeen = async (req, res) => {
     try {
         adminNotificationsCache = null;
         adminCountCache = null;
+        
         await Notification.updateMany(
             { user_id: req.user._id, is_seen: false },
             { is_seen: true }
         );
+
+        const User = require('../models/User');
+        await User.findByIdAndUpdate(req.user._id, { unreadNotificationsCount: 0 });
+
+        clearUserNotificationCache(req.user._id);
+
         res.json({ message: 'All notifications marked as seen' });
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -353,15 +406,24 @@ const markAsRead = async (req, res) => {
     try {
         adminNotificationsCache = null;
         adminCountCache = null;
-        const notification = await Notification.findOneAndUpdate(
-            { _id: req.params.id, user_id: req.user._id },
-            { is_read: true, is_seen: true },
-            { new: true }
-        );
+
+        const notification = await Notification.findOne({ _id: req.params.id, user_id: req.user._id });
 
         if (!notification) {
             return res.status(404).json({ message: 'Notification not found' });
         }
+
+        const wasUnseen = !notification.is_seen;
+        notification.is_read = true;
+        notification.is_seen = true;
+        await notification.save();
+
+        if (wasUnseen) {
+            const User = require('../models/User');
+            await User.findByIdAndUpdate(req.user._id, { $inc: { unreadNotificationsCount: -1 } });
+        }
+
+        clearUserNotificationCache(req.user._id);
 
         res.json(notification);
     } catch (error) {

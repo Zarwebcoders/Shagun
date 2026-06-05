@@ -6,6 +6,15 @@ const Transaction = require('../models/Transaction');
 const Wallet = require('../models/Wallet');
 const Product = require('../models/Product');
 
+const dashboardCache = new Map(); // userId -> { data, expiry }
+const DASHBOARD_CACHE_TTL = 5000; // 5 seconds cache
+
+const clearDashboardCache = (userId) => {
+    if (userId) {
+        dashboardCache.delete(userId.toString());
+    }
+};
+
 // @desc    Get all users (Admin)
 // @route   GET /api/users
 // @access  Private/Admin
@@ -465,7 +474,17 @@ const getDashboardData = async (req, res) => {
         const Withdrawal = require('../models/Withdrawal');
 
         const user = req.user;
-        const userId = user._id;
+        const userId = user._id.toString();
+        const nowTime = Date.now();
+
+        if (dashboardCache.has(userId)) {
+            const cached = dashboardCache.get(userId);
+            if (nowTime < cached.expiry) {
+                cached.data.user = user;
+                return res.json(cached.data);
+            }
+        }
+
         const queryIds = [user.id, user.user_id, user.referral_id, user._id.toString()].filter(Boolean);
 
         // 1. Direct Team Count
@@ -502,7 +521,7 @@ const getDashboardData = async (req, res) => {
         });
 
         // 5. Available Withdrawal
-        const distributions = await MonthlyTokenDistribution.find({ user_id: userId }).lean();
+        const distributions = await MonthlyTokenDistribution.find({ user_id: user._id }).lean();
         const approvedWithdrawals = await Withdrawal.find({
             user_id: { $in: queryIds },
             approve: "1"
@@ -539,7 +558,7 @@ const getDashboardData = async (req, res) => {
             settingsObj[s.key] = s.value;
         });
 
-        res.json({
+        const responseData = {
             user,
             summary: {
                 directTeamCount,
@@ -554,7 +573,14 @@ const getDashboardData = async (req, res) => {
                 reason: !canWithdraw ? 'Insufficient matured balance (Minimum ₹100)' : null
             },
             settings: settingsObj
+        };
+
+        dashboardCache.set(userId, {
+            data: responseData,
+            expiry: nowTime + DASHBOARD_CACHE_TTL
         });
+
+        res.json(responseData);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -649,6 +675,8 @@ const mineTokens = async (req, res) => {
             description: `Mining Reward Claimed - Cycle ${currentCycle}/24`,
             status: 'completed'
         });
+
+        clearDashboardCache(user._id);
 
         res.json({
             message: "Mining successful!",
