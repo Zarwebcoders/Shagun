@@ -76,7 +76,89 @@ export default function AdminDashboard() {
         { label: "Total Transactions", value: stats.totalTransactions, icon: "🔄", color: "from-teal-500 to-purple-500" },
     ];
 
-    if (loading) return <div className="text-white">Loading dashboard...</div>;
+    const Skeleton = ({ className }) => (
+        <div className={`animate-pulse rounded-lg bg-white/5 ${className}`} />
+    );
+
+    if (loading) return (
+        <div className="space-y-6">
+            <style>{`
+                @keyframes shimmer {
+                    0% { background-position: -400px 0; }
+                    100% { background-position: 400px 0; }
+                }
+                .animate-pulse {
+                    background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.10) 50%, rgba(255,255,255,0.04) 75%);
+                    background-size: 800px 100%;
+                    animation: shimmer 1.5s infinite linear;
+                }
+            `}</style>
+
+            {/* Header skeleton */}
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div className="space-y-2">
+                    <Skeleton className="h-9 w-56" />
+                    <Skeleton className="h-4 w-72" />
+                </div>
+            </div>
+
+            {/* Stats grid skeleton — 8 cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {Array.from({ length: 8 }).map((_, i) => (
+                    <div key={i} className="bg-[#0f0f1a] rounded-xl p-6 border border-teal-500/20">
+                        <div className="flex items-start justify-between">
+                            <div className="flex-1 space-y-3">
+                                <Skeleton className="h-3 w-28" />
+                                <Skeleton className="h-8 w-20" />
+                            </div>
+                            <Skeleton className="w-14 h-14 rounded-xl flex-shrink-0" />
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* Bottom section skeleton */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Recent Activity skeleton */}
+                <div className="lg:col-span-2 bg-[#0f0f1a] rounded-xl p-6 border border-teal-500/20">
+                    <Skeleton className="h-6 w-36 mb-5" />
+                    <div className="space-y-3">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                            <div key={i} className="flex items-center justify-between p-4 bg-[#1a1a2e] rounded-lg">
+                                <div className="flex items-center gap-4">
+                                    <Skeleton className="w-10 h-10 rounded-lg flex-shrink-0" />
+                                    <div className="space-y-2">
+                                        <Skeleton className="h-4 w-40" />
+                                        <Skeleton className="h-3 w-28" />
+                                    </div>
+                                </div>
+                                <Skeleton className="h-3 w-16" />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Top Investors skeleton */}
+                <div className="bg-[#0f0f1a] rounded-xl p-6 border border-teal-500/20">
+                    <Skeleton className="h-6 w-32 mb-5" />
+                    <div className="space-y-3">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                            <div key={i} className="p-3 bg-[#1a1a2e] rounded-lg">
+                                <div className="flex items-center gap-2 mb-3">
+                                    <Skeleton className="w-8 h-8 rounded-full flex-shrink-0" />
+                                    <div className="space-y-1.5 flex-1">
+                                        <Skeleton className="h-3.5 w-28" />
+                                        <Skeleton className="h-3 w-16" />
+                                    </div>
+                                </div>
+                                <Skeleton className="h-3 w-full" />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
 
     return (
         <div className="space-y-6 animate-fadeIn">

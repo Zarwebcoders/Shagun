@@ -69,5 +69,8 @@ const investmentSchema = new mongoose.Schema({
 });
 
 investmentSchema.index({ createdAt: -1 });
+// Index for all admin dashboard status-based aggregates
+investmentSchema.index({ status: 1 });
+investmentSchema.index({ status: 1, user: 1 });
 
 module.exports = mongoose.model('Investment', investmentSchema);

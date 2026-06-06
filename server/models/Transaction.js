@@ -43,4 +43,9 @@ const transactionSchema = new mongoose.Schema({
     timestamps: true,
 });
 
+// Index for recent-activity sort (GET /api/admin/stats)
+transactionSchema.index({ createdAt: -1 });
+// Compound index for reports aggregate (status + type filter + date range sort)
+transactionSchema.index({ status: 1, type: 1, createdAt: -1 });
+
 module.exports = mongoose.model('Transaction', transactionSchema);

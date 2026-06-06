@@ -91,6 +91,17 @@ export default function KYCApprovals() {
         loadAll();
     }, []);
 
+    const handleSelectKYC = async (id) => {
+        try {
+            setSelectedKYC({ _id: id, loadingDetails: true });
+            const { data } = await client.get(`/kyc/${id}`);
+            setSelectedKYC(data);
+        } catch (err) {
+            toast.error("Failed to load KYC document details");
+            setSelectedKYC(null);
+        }
+    };
+
     const handleApprove = async (id) => {
         try {
             await client.put(`/kyc/${id}`, { status: 'approved' });
@@ -228,7 +239,7 @@ export default function KYCApprovals() {
                                 filteredRequests.map((request) => (
                                     <button
                                         key={request._id}
-                                        onClick={() => setSelectedKYC(request)}
+                                        onClick={() => handleSelectKYC(request._id)}
                                         className={`w-full text-left p-3 rounded-lg border transition-all duration-200 group relative overflow-hidden ${selectedKYC?._id === request._id
                                             ? "bg-teal-500/10 border-teal-500/50 shadow-[0_0_15px_rgba(20,184,166,0.15)]"
                                             : "bg-[#1a1a2e]/40 border-transparent hover:bg-[#1a1a2e]/80 hover:border-teal-500/30"
@@ -273,6 +284,11 @@ export default function KYCApprovals() {
                                     <FileText className="w-8 h-8 opacity-40" />
                                 </div>
                                 <p className="text-sm">Select a request to view details</p>
+                            </div>
+                        ) : selectedKYC.loadingDetails ? (
+                            <div className="flex-1 flex flex-col items-center justify-center text-teal-500 gap-4">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-500"></div>
+                                <p className="text-sm">Fetching document files...</p>
                             </div>
                         ) : (
                             <div className="flex flex-col h-full">
@@ -446,19 +462,28 @@ export default function KYCApprovals() {
                                                         { key: 'agreement', label: 'AGR' },
                                                         { key: 'cheque_passbook', label: 'CHQ' }
                                                     ].map((doc, i) => (
-                                                        item[doc.key] ? (
+                                                        item['has_' + doc.key] ? (
                                                             <div 
                                                                 key={i} 
                                                                 className="group relative w-10 h-10 rounded-lg border border-white/10 overflow-hidden bg-[#0f0f1a] hover:border-teal-500/50 transition-all cursor-zoom-in"
-                                                                onClick={() => setSelectedDoc({ 
-                                                                    url: item[doc.key], 
-                                                                    title: doc.key === 'aadharcard' ? 'Aadhar Front' 
-                                                                         : doc.key === 'pancard' ? 'PAN Card' 
-                                                                         : doc.key === 'agreement' ? 'Agreement' 
-                                                                         : 'Cheque / Passbook' 
-                                                                })}
+                                                                onClick={async () => {
+                                                                    const loadingToast = toast.loading("Downloading document file...");
+                                                                    try {
+                                                                        const { data } = await client.get(`/kyc/${item._id}`);
+                                                                        toast.dismiss(loadingToast);
+                                                                        setSelectedDoc({ 
+                                                                            url: data[doc.key], 
+                                                                            title: doc.key === 'aadharcard' ? 'Aadhar Front' 
+                                                                                 : doc.key === 'pancard' ? 'PAN Card' 
+                                                                                 : doc.key === 'agreement' ? 'Agreement' 
+                                                                                 : 'Cheque / Passbook' 
+                                                                        });
+                                                                    } catch (err) {
+                                                                        toast.error("Failed to load document file", { id: loadingToast });
+                                                                    }
+                                                                }}
                                                             >
-                                                                <KYCImage src={item[doc.key]} alt={doc.label} />
+                                                                <KYCImage src={null} alt={doc.label} />
                                                                 <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                                                     <span className="text-[8px] font-bold text-teal-400">{doc.label}</span>
                                                                 </div>

@@ -134,16 +134,24 @@ const submitKYC = async (req, res) => {
 // @access  Private/Admin
 const getPendingKYC = async (req, res) => {
     try {
-        // approval: 2 is Pending
-        const kycs = await KYC.find({ approval: 2 }).populate('user_id', 'full_name email');
+        // approval: 2 is Pending. Exclude base64 image fields for fast listing.
+        const kycs = await KYC.find({ approval: 2 })
+            .select('-aadharcard -aadhar_back -pancard -agreement -profile_photo -cheque_passbook')
+            .populate('user_id', 'full_name email');
         const enrichedKycs = kycs.map(doc => {
             const user = doc.user_id;
             return {
-                ...doc._doc,
+                ...doc._doc || doc,
                 user_id: user ? {
                     name: user.full_name,
                     email: user.email
-                } : null
+                } : null,
+                has_aadharcard: !!doc.aadharcard,
+                has_aadhar_back: !!doc.aadhar_back,
+                has_pancard: !!doc.pancard,
+                has_agreement: !!doc.agreement,
+                has_profile_photo: !!doc.profile_photo,
+                has_cheque_passbook: !!doc.cheque_passbook
             };
         });
         res.json(enrichedKycs);
@@ -258,32 +266,75 @@ const getKYCStats = async (req, res) => {
 // @access  Private/Admin
 const getKYCHistory = async (req, res) => {
     try {
-        // Fetch history records
+        // Fetch history records. Exclude base64 image fields for fast listing.
         const historyDocs = await KYC.find({ approval: { $ne: 2 } })
+            .select('-aadharcard -aadhar_back -pancard -agreement -profile_photo -cheque_passbook')
             .sort({ updatedAt: -1 })
             .lean();
 
-        // Provide User details manually via id lookup (supporting both legacy string ID and MongoDB _id)
-        const enrichedHistory = await Promise.all(historyDocs.map(async (doc) => {
-            // Try searching by legacy numeric 'id' first, then by MongoDB '_id' if no user found
-            let user = await User.findOne({ id: doc.user_id }).select('full_name email');
-            
-            if (!user && mongoose.isValidObjectId(doc.user_id)) {
-                user = await User.findById(doc.user_id).select('full_name email');
-            }
+        const userIds = [...new Set(historyDocs.map(doc => doc.user_id).filter(Boolean))];
+        const validObjectIds = userIds.filter(id => mongoose.Types.ObjectId.isValid(id));
 
+        const users = await User.find({
+            $or: [
+                { id: { $in: userIds } },
+                { user_id: { $in: userIds } },
+                { _id: { $in: validObjectIds } }
+            ]
+        }).select('_id id user_id full_name email').lean();
+
+        const userMap = {};
+        users.forEach(u => {
+            if (u.id) userMap[String(u.id)] = u;
+            if (u.user_id) userMap[String(u.user_id)] = u;
+            userMap[u._id.toString()] = u;
+        });
+
+        const enrichedHistory = historyDocs.map((doc) => {
+            const user = userMap[doc.user_id];
             return {
                 ...doc,
                 user_id: user ? {
-                    name: user.full_name, // Map full_name to name for frontend display
+                    name: user.full_name,
                     email: user.email
-                } : null
+                } : null,
+                has_aadharcard: !!doc.aadharcard,
+                has_aadhar_back: !!doc.aadhar_back,
+                has_pancard: !!doc.pancard,
+                has_agreement: !!doc.agreement,
+                has_profile_photo: !!doc.profile_photo,
+                has_cheque_passbook: !!doc.cheque_passbook
             };
-        }));
+        });
 
         res.json(enrichedHistory);
     } catch (error) {
         console.error("KYC History Error:", error);
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Get single KYC details (including base64 documents) (Admin)
+// @route   GET /api/kyc/:id
+// @access  Private/Admin
+const getKYCDetails = async (req, res) => {
+    try {
+        const kyc = await KYC.findById(req.params.id).populate('user_id', 'full_name email');
+        if (!kyc) {
+            return res.status(404).json({ message: 'KYC request not found' });
+        }
+
+        const user = kyc.user_id;
+        const enriched = {
+            ...kyc._doc || kyc,
+            user_id: user ? {
+                name: user.full_name,
+                email: user.email
+            } : null
+        };
+
+        res.json(enriched);
+    } catch (error) {
         res.status(500).json({ message: error.message });
     }
 };
@@ -295,4 +346,5 @@ module.exports = {
     updateKYCStatus,
     getKYCStats,
     getKYCHistory,
+    getKYCDetails,
 };

@@ -136,16 +136,30 @@ const getAllProducts = async (req, res) => {
     try {
         const products = await Product.find({}).sort({ cereate_at: -1 }).lean();
 
-        // Enrich with User details
-        const enrichedProducts = await Promise.all(products.map(async (product) => {
-            const user = await User.findOne({ 
-                $or: [
-                    { id: product.user_id },
-                    { user_id: product.user_id },
-                    { _id: mongoose.Types.ObjectId.isValid(product.user_id) ? product.user_id : null }
-                ].filter(q => q._id !== null || q.id || q.user_id)
-            }).select('full_name email referral_id');
-            
+        // Collect unique user_id values
+        const userIds = [...new Set(products.map(p => p.user_id).filter(Boolean))];
+        const validObjectIds = userIds.filter(id => mongoose.Types.ObjectId.isValid(id));
+
+        // Fetch all matching users in a single query
+        const users = await User.find({
+            $or: [
+                { id: { $in: userIds } },
+                { user_id: { $in: userIds } },
+                { _id: { $in: validObjectIds } }
+            ]
+        }).select('_id id user_id full_name email referral_id').lean();
+
+        // Build a lookup map of user_id -> user
+        const userMap = {};
+        users.forEach(user => {
+            if (user.id) userMap[user.id] = user;
+            if (user.user_id) userMap[user.user_id] = user;
+            if (user._id) userMap[user._id.toString()] = user;
+        });
+
+        // Map products to their enriched user details in O(1) time
+        const enrichedProducts = products.map(product => {
+            const user = userMap[product.user_id];
             return {
                 ...product,
                 user: user ? {
@@ -154,7 +168,7 @@ const getAllProducts = async (req, res) => {
                     referral_id: user.referral_id
                 } : { name: 'Unknown', email: '', referral_id: 'N/A' }
             };
-        }));
+        });
 
         res.json(enrichedProducts);
     } catch (error) {
