@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react"
 import client from "../api/client"
+import DateRangePicker from "../components/DateRangePicker.jsx"
+import ExportButtons from "../components/ExportButtons.jsx"
 
 export default function LevelIncome() {
     const [selectedLevel, setSelectedLevel] = useState("all")
@@ -9,6 +11,8 @@ export default function LevelIncome() {
     const [withdrawals, setWithdrawals] = useState([])
     const [loading, setLoading] = useState(true)
     const [expandedLevel, setExpandedLevel] = useState(null)
+    const [startDate, setStartDate] = useState("")
+    const [endDate, setEndDate] = useState("")
 
     useEffect(() => {
         const fetchLevelIncome = async () => {
@@ -18,7 +22,6 @@ export default function LevelIncome() {
                     client.get('/withdrawals/me').catch(() => ({ data: [] }))
                 ]);
 
-                // Process level income data
                 const processed = incomeRes.data.map(income => ({
                     level: income.level,
                     members: 1,
@@ -47,21 +50,33 @@ export default function LevelIncome() {
         fetchLevelIncome();
     }, [])
 
+    // ── Date filter applied to raw data before grouping ──────────────────────
+    const filteredData = levelData.filter(item => {
+        const d = item.originalDate;
+        if (startDate && d < new Date(startDate)) return false;
+        if (endDate) {
+            const end = new Date(endDate);
+            end.setHours(23, 59, 59, 999);
+            if (d > end) return false;
+        }
+        return true;
+    });
+
     // Group by level
-    const groupedData = levelData.reduce((acc, curr) => {
+    const groupedData = filteredData.reduce((acc, curr) => {
         const existing = acc.find(item => item.level === curr.level);
         if (existing) {
             existing.income += Number(curr.income);
             existing.uniqueMembers.add(curr.referralId || curr.email);
             existing.totalInvestment += curr.totalInvestment;
-            existing.details.push(curr); // Add to details array
+            existing.details.push(curr);
         } else {
             acc.push({
                 level: curr.level,
                 income: Number(curr.income),
                 uniqueMembers: new Set([curr.referralId || curr.email]),
                 totalInvestment: curr.totalInvestment,
-                details: [curr] // Initialize details array
+                details: [curr]
             });
         }
         return acc;
@@ -86,27 +101,50 @@ export default function LevelIncome() {
     const totalMembers = displayData.reduce((sum, item) => sum + item.members, 0);
 
     const toggleExpand = (level) => {
-        if (expandedLevel === level) {
-            setExpandedLevel(null);
-        } else {
-            setExpandedLevel(level);
-        }
+        setExpandedLevel(expandedLevel === level ? null : level);
     };
 
-
+    const handleExport = (format) => {
+        const params = new URLSearchParams({
+            format,
+            ...(startDate && { startDate }),
+            ...(endDate && { endDate })
+        });
+        window.open(`/api/export/level-income?${params.toString()}`, '_blank');
+    };
 
     return (
         <div className="w-full space-y-6 md:space-y-8">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-2">Level Income</h2>
-                    <p className="text-[#b0b0b0] text-sm md:text-lg">View your income from network levels</p>
+            {/* Header row */}
+            <div className="flex flex-col gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                    <div>
+                        <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-1">Level Income</h2>
+                        <p className="text-[#b0b0b0] text-sm md:text-base">View your income from network levels</p>
+                    </div>
+                    <ExportButtons onExport={handleExport} />
                 </div>
 
-                {/* Dropdown removed as per request */}
-
+                {/* Date filter bar */}
+                <div className="flex flex-wrap items-center justify-between gap-3 bg-[#0a0a12] border border-[#2a2a3a] rounded-2xl px-4 py-3">
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-500 uppercase tracking-wider font-medium">Filter by date</span>
+                        {(startDate || endDate) && (
+                            <span className="text-xs text-teal-400 bg-teal-500/10 border border-teal-500/20 rounded-full px-2 py-0.5">
+                                {filteredData.length} results
+                            </span>
+                        )}
+                    </div>
+                    <DateRangePicker
+                        startDate={startDate}
+                        endDate={endDate}
+                        setStartDate={setStartDate}
+                        setEndDate={setEndDate}
+                    />
+                </div>
             </div>
 
+            {/* Stats cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                 <div className="bg-gradient-to-br from-[#040408] to-[#1f1f1f] p-4 md:p-6 rounded-lg border border-[#444]">
                     <h3 className="text-[#b0b0b0] text-xs md:text-sm mb-2">Released Tokens</h3>
@@ -118,20 +156,23 @@ export default function LevelIncome() {
                 </div>
                 <div className="bg-gradient-to-br from-[#040408] to-[#1f1f1f] p-4 md:p-6 rounded-lg border border-[#444]">
                     <h3 className="text-[#b0b0b0] text-xs md:text-sm mb-2">Active Levels</h3>
-                    <p className="text-2xl md:text-3xl font-bold text-green-400">
-                        {groupedData.length}
-                    </p>
+                    <p className="text-2xl md:text-3xl font-bold text-green-400">{groupedData.length}</p>
                 </div>
             </div>
 
+            {/* Table */}
             <div className="space-y-4 md:space-y-6">
                 <h3 className="text-xl md:text-2xl font-bold text-teal-400">
                     Level Income Breakdown {selectedLevel !== "all" && `- Level ${selectedLevel}`}
                 </h3>
-                {displayData.length === 0 ? (
+                {loading ? (
                     <div className="bg-gradient-to-br from-[#040408] to-[#1f1f1f] p-8 rounded-lg border border-[#444] text-center">
-                        <p className="text-gray-400">No level income data available yet.</p>
-                        <p className="text-gray-500 text-sm mt-2">Build your network to start earning level income!</p>
+                        <p className="text-gray-400">Loading income data...</p>
+                    </div>
+                ) : displayData.length === 0 ? (
+                    <div className="bg-gradient-to-br from-[#040408] to-[#1f1f1f] p-8 rounded-lg border border-[#444] text-center">
+                        <p className="text-gray-400">{(startDate || endDate) ? "No results for selected date range." : "No level income data available yet."}</p>
+                        <p className="text-gray-500 text-sm mt-2">{!(startDate || endDate) && "Build your network to start earning level income!"}</p>
                     </div>
                 ) : (
                     <div className="space-y-4">
@@ -176,28 +217,16 @@ export default function LevelIncome() {
                                             <tbody className="text-center">
                                                 {item.details.map((detail, idx) => (
                                                     <tr key={idx} className="border-b border-[#333] hover:bg-[#1f1f2e]">
-                                                        <td className="px-4 py-3 font-medium text-white">
-                                                            {detail.fromUser}
-                                                        </td>
-                                                        <td className="px-4 py-3 text-teal-400 font-mono">
-                                                            {detail.referralId}
-                                                        </td>
-                                                        <td className="px-4 py-3 text-gray-300">
-                                                            {detail.email}
-                                                        </td>
+                                                        <td className="px-4 py-3 font-medium text-white">{detail.fromUser}</td>
+                                                        <td className="px-4 py-3 text-teal-400 font-mono">{detail.referralId}</td>
+                                                        <td className="px-4 py-3 text-gray-300">{detail.email}</td>
                                                         <td className="px-4 py-3">
                                                             {detail.pending ? (
-                                                                <span className="text-blue-400 text-xs font-medium px-2 py-1 rounded bg-blue-400/10 border border-blue-400/30">
-                                                                    Pending Approval
-                                                                </span>
+                                                                <span className="text-blue-400 text-xs font-medium px-2 py-1 rounded bg-blue-400/10 border border-blue-400/30">Pending Approval</span>
                                                             ) : detail.noPurchase ? (
-                                                                <span className="text-amber-400 text-xs font-medium px-2 py-1 rounded bg-amber-400/10 border border-amber-400/30">
-                                                                    No Purchase Yet
-                                                                </span>
+                                                                <span className="text-amber-400 text-xs font-medium px-2 py-1 rounded bg-amber-400/10 border border-amber-400/30">No Purchase Yet</span>
                                                             ) : (
-                                                                <span className="text-gray-300">
-                                                                    SGN {detail.income.toLocaleString(undefined, { maximumFractionDigits: 3 })}
-                                                                </span>
+                                                                <span className="text-gray-300">SGN {detail.income.toLocaleString(undefined, { maximumFractionDigits: 3 })}</span>
                                                             )}
                                                         </td>
                                                         <td className="px-4 py-3">
@@ -207,12 +236,8 @@ export default function LevelIncome() {
                                                                 </span>
                                                             )}
                                                         </td>
-                                                        <td className="px-4 py-3 text-gray-400">
-                                                            {detail.date}
-                                                        </td>
-                                                        <td className="px-4 py-3 text-gray-400">
-                                                            {detail.time}
-                                                        </td>
+                                                        <td className="px-4 py-3 text-gray-400">{detail.date}</td>
+                                                        <td className="px-4 py-3 text-gray-400">{detail.time}</td>
                                                     </tr>
                                                 ))}
                                             </tbody>

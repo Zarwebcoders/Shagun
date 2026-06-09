@@ -265,11 +265,10 @@ export default function WithdrawalForm({ onSubmit, userData, kycData, bankAccoun
 
                         {/* Icon + Title */}
                         <div className="flex items-center justify-center mb-4">
-                            <div className={`w-16 h-16 rounded-full flex items-center justify-center border ${
-                                pinMode === "verify"
+                            <div className={`w-16 h-16 rounded-full flex items-center justify-center border ${pinMode === "verify"
                                     ? "bg-teal-500/20 border-teal-500/40"
                                     : "bg-orange-500/20 border-orange-500/40"
-                            }`}>
+                                }`}>
                                 <svg className={`w-8 h-8 ${pinMode === "verify" ? "text-teal-400" : "text-orange-400"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                                 </svg>
@@ -357,16 +356,15 @@ export default function WithdrawalForm({ onSubmit, userData, kycData, bankAccoun
                             <button
                                 onClick={pinMode === "set" ? handleSetPin : pinMode === "set_confirm" ? handleConfirmSetPin : handleVerifyPin}
                                 disabled={pinLoading || (pinMode !== "set_confirm" ? pin.join("").length !== 6 : confirmPin.join("").length !== 6)}
-                                className={`flex-1 px-4 py-3 font-bold rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-lg flex items-center justify-center gap-2 ${
-                                    pinMode === "verify"
+                                className={`flex-1 px-4 py-3 font-bold rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-lg flex items-center justify-center gap-2 ${pinMode === "verify"
                                         ? "bg-gradient-to-r from-teal-500 to-teal-600 text-white hover:from-teal-400 hover:to-teal-500 shadow-teal-500/20"
                                         : "bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:from-orange-400 hover:to-orange-500 shadow-orange-500/20"
-                                }`}
+                                    }`}
                             >
                                 {pinLoading && (
                                     <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                                     </svg>
                                 )}
                                 {pinLoading ? "Please wait..." : pinMode === "set" ? "Next →" : pinMode === "set_confirm" ? "Save PIN" : "Confirm Withdrawal"}
@@ -653,7 +651,7 @@ export default function WithdrawalForm({ onSubmit, userData, kycData, bankAccoun
                     </button>
 
                     <p className="text-center text-xs text-gray-500">
-                        ⚡ Processed within 24–48 hours &nbsp;·&nbsp; 1% processing fee applies
+                        ⚡ Processed within 24–48 hours &nbsp;·&nbsp; 15% processing fee applies
                     </p>
                 </form>
             </div>

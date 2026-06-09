@@ -10,7 +10,8 @@ const isLocal =
     window.location.hostname.endsWith('.local') ||
     window.location.hostname.endsWith('.ngrok-free.dev') || 
     window.location.hostname.endsWith('.loca.lt') || 
-    window.location.hostname.endsWith('.lhr.life');
+    window.location.hostname.endsWith('.lhr.life') ||
+    window.location.hostname.endsWith('.tunnelmole.net');
 
 const client = axios.create({
     baseURL: isLocal ? '/api' : 'https://shagunbackend.vercel.app/api',

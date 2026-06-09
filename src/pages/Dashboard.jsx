@@ -159,7 +159,7 @@ export default function Dashboard() {
                     dailyMiningRewards: 0, 
                     yearlyBonus: yearlyBonusRupees, // Show in Rupees
                     sponsorIncome: calculatedSponsorIncome,
-                    levelIncome: levelIncomeRupees, // Show in Rupees
+                    levelIncome: levelIncomeTokens, // Show in Tokens
                     totalIncome: totalCalculatedIncome, // now calculated correctly in Rupees
                 });
 
@@ -259,7 +259,7 @@ export default function Dashboard() {
                 dailyMiningRewards: 0,
                 yearlyBonus: yearlyBonusRupees,
                 sponsorIncome: calculatedSponsorIncome,
-                levelIncome: levelIncomeRupees,
+                levelIncome: levelIncomeTokens, // Show in Tokens
                 totalIncome: totalCalculatedIncome,
             });
 
@@ -439,18 +439,12 @@ export default function Dashboard() {
                     </div>
 
                     <div className="bg-[#1a1a2e]/40 backdrop-blur-xl border border-teal-500/20 rounded-3xl p-6">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <StatsCard
                                 title="Level Income"
-                                amount={`₹${incomeBreakdown.levelIncome.toFixed(2)}`}
+                                amount={`SGN ${incomeBreakdown.levelIncome.toFixed(2)}`}
                                 color="#2196f3"
                                 icon={ArrowTrendingUpIcon}
-                            />
-                            <StatsCard
-                                title="- Holding Commission"
-                                amount={`₹${incomeBreakdown.yearlyBonus.toFixed(2)}`}
-                                color="#a855f7"
-                                icon={GiftIcon}
                             />
                             <StatsCard
                                 title="Referral Income"
@@ -459,10 +453,10 @@ export default function Dashboard() {
                                 icon={UsersIcon}
                             />
                             <StatsCard
-                                title="Total Income"
-                                amount={`₹${incomeBreakdown.totalIncome.toFixed(2)}`}
-                                color="#00bcd4"
-                                icon={ChartBarIcon}
+                                title="- Holding Commission"
+                                amount={`₹${incomeBreakdown.yearlyBonus.toFixed(2)}`}
+                                color="#a855f7"
+                                icon={GiftIcon}
                             />
                         </div>
                     </div>
@@ -494,8 +488,8 @@ export default function Dashboard() {
                             </button>
                         </div>
 
-                        <div className="space-y-4 flex-1">
-                            <div className="flex justify-between items-center p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors">
+                        <div className="grid grid-cols-2 gap-4 flex-1">
+                            <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors">
                                 <div className="flex items-center gap-3">
                                     <div className="p-2 rounded-lg bg-[#2196f3]/10 text-[#2196f3]"><BriefcaseIcon className="w-5 h-5" /></div>
                                     <div>
@@ -505,12 +499,12 @@ export default function Dashboard() {
                                 </div>
                             </div>
 
-                            <div className="flex justify-between items-center p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors">
+                            <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors">
                                 <div className="flex items-center gap-3">
                                     <div className="p-2 rounded-lg bg-[#4caf50]/10 text-[#4caf50]"><ShieldCheckIcon className="w-5 h-5" /></div>
                                     <div>
                                         <p className="text-gray-400 text-xs">Sponsor</p>
-                                        <p className="text-white font-bold truncate max-w-[120px]">{referralProgram.sponsor}</p>
+                                        <p className="text-white font-bold truncate max-w-[80px] sm:max-w-[120px]">{referralProgram.sponsor}</p>
                                     </div>
                                 </div>
                             </div>

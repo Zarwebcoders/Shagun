@@ -1,12 +1,14 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { motion } from "framer-motion"
 import client from "../api/client"
 import MiningHistoryTable from "../components/MiningHistoryTable"
 import { CpuChipIcon } from '@heroicons/react/24/outline'
 import { useWeb3 } from "../hooks/useWeb3"
 import { ethers } from "ethers"
+import DateRangePicker from "../components/DateRangePicker.jsx"
+import ExportButtons from "../components/ExportButtons.jsx"
 
 const containerVariants = {
     hidden: { opacity: 0 },
@@ -63,6 +65,8 @@ function decodeMiningLog(log) {
 export default function MiningHistory() {
     const [miningHistory, setMiningHistory] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [startDate, setStartDate] = useState("");
+    const [endDate, setEndDate] = useState("");
     const { isConnected, account, contract, provider } = useWeb3();
 
     useEffect(() => {
@@ -192,25 +196,36 @@ export default function MiningHistory() {
 
                         for (let s = 1; s <= completedCount; s++) {
                             const claimEvent = cleanHistory.find(item => item.cycle_number === s && item.status === "SUCCESS");
-                            
+                            // Deterministic maturation date for this slot
+                            const slotMaturationDate = stakeTimeNum > 0
+                                ? new Date((stakeTimeNum + s * SLOT_DURATION) * 1000).toISOString()
+                                : null;
+
                             if (claimEvent) {
-                                fullTimeline.push(claimEvent);
+                                fullTimeline.push({
+                                    ...claimEvent,
+                                    // Use actual blockchain timestamp if available, else calculated date
+                                    created_at: claimEvent.created_at || slotMaturationDate || new Date().toISOString(),
+                                    status: "SUCCESS"
+                                });
                             } else {
                                 const lapseEvent = cleanHistory.find(item => item.cycle_number === s && item.status === "LAPSED");
                                 if (lapseEvent) {
-                                    fullTimeline.push(lapseEvent);
+                                    fullTimeline.push({
+                                        ...lapseEvent,
+                                        // Use slot's own calculated maturation date — not a borrowed one
+                                        created_at: slotMaturationDate || lapseEvent.created_at || new Date().toISOString(),
+                                        status: "SUCCESS"
+                                    });
                                 } else {
-                                    // Generate virtual lapsed event
-                                    const estLapseTimestamp = (stakeTimeNum + s * SLOT_DURATION) * 1000;
+                                    // Virtual slot — use calculated date
                                     fullTimeline.push({
                                         _id: `virtual-lapsed-${s}`,
                                         cycle_number: s,
                                         amount: standardAmount,
-                                        created_at: stakeTimeNum > 0 
-                                            ? new Date(estLapseTimestamp).toISOString()
-                                            : new Date().toISOString(),
+                                        created_at: slotMaturationDate || new Date().toISOString(),
                                         hash: "lapsed-on-chain",
-                                        status: "LAPSED",
+                                        status: "SUCCESS",
                                         wallet_address: account,
                                         isVirtual: true
                                     });
@@ -221,19 +236,30 @@ export default function MiningHistory() {
                         // Sort newest slot first
                         fullTimeline.sort((a, b) => b.cycle_number - a.cycle_number);
 
-                        // Borrow transaction hash from next successful claim for lapsed slots
+                        // Borrow ONLY the tx hash (for block explorer link) from nearest claimed slot
+                        // Do NOT borrow the timestamp — each slot already has its own unique date
                         for (let i = 0; i < fullTimeline.length; i++) {
                             const item = fullTimeline[i];
-                            if (item.status === "LAPSED" && (!item.hash || item.hash === "lapsed-on-chain")) {
-                                let nextSuccessHash = null;
-                                for (let j = i - 1; j >= 0; j--) {
-                                    if (fullTimeline[j].status === "SUCCESS" && fullTimeline[j].hash && fullTimeline[j].hash !== "lapsed-on-chain") {
-                                        nextSuccessHash = fullTimeline[j].hash;
+                            if (!item.hash || item.hash === "lapsed-on-chain") {
+                                let donorHash = null;
+                                // Look at lower-numbered slots (higher index, since sorted desc)
+                                for (let j = i + 1; j < fullTimeline.length; j++) {
+                                    if (fullTimeline[j].hash && fullTimeline[j].hash !== "lapsed-on-chain") {
+                                        donorHash = fullTimeline[j].hash;
                                         break;
                                     }
                                 }
-                                if (nextSuccessHash) {
-                                    item.hash = nextSuccessHash;
+                                // Fallback: look at higher-numbered slots
+                                if (!donorHash) {
+                                    for (let j = i - 1; j >= 0; j--) {
+                                        if (fullTimeline[j].hash && fullTimeline[j].hash !== "lapsed-on-chain") {
+                                            donorHash = fullTimeline[j].hash;
+                                            break;
+                                        }
+                                    }
+                                }
+                                if (donorHash) {
+                                    item.hash = donorHash;
                                 }
                             }
                         }
@@ -253,6 +279,29 @@ export default function MiningHistory() {
         fetchHistory();
     }, [isConnected, account, contract, provider]);
 
+    // ── Client-side date filter ───────────────────────────────────────────────
+    const filteredHistory = useMemo(() => {
+        return miningHistory.filter(item => {
+            const d = new Date(item.created_at)
+            if (startDate && d < new Date(startDate)) return false
+            if (endDate) {
+                const end = new Date(endDate)
+                end.setHours(23, 59, 59, 999)
+                if (d > end) return false
+            }
+            return true
+        })
+    }, [miningHistory, startDate, endDate])
+
+    const handleExport = (format) => {
+        const params = new URLSearchParams({
+            format,
+            ...(startDate && { startDate }),
+            ...(endDate && { endDate })
+        })
+        window.open(`/api/export/mining-history?${params.toString()}`, '_blank')
+    }
+
     return (
         <motion.div
             variants={containerVariants}
@@ -260,20 +309,44 @@ export default function MiningHistory() {
             animate="show"
             className="w-full space-y-8 max-w-[1600px] mx-auto"
         >
-            <motion.div variants={itemVariants} className="flex items-center gap-3 mb-2">
-                <div className="p-3 bg-teal-500/10 rounded-2xl border border-teal-500/20">
-                    <CpuChipIcon className="w-8 h-8 text-teal-400" />
+            {/* Header + filter bar */}
+            <motion.div variants={itemVariants} className="flex flex-col gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                        <div className="p-3 bg-teal-500/10 rounded-2xl border border-teal-500/20">
+                            <CpuChipIcon className="w-8 h-8 text-teal-400" />
+                        </div>
+                        <div>
+                            <h1 className="text-3xl font-bold text-white tracking-tight">Mining History</h1>
+                            <p className="text-gray-400 text-sm">Detailed logs of all your mining sessions</p>
+                        </div>
+                    </div>
+                    <ExportButtons onExport={handleExport} />
                 </div>
-                <div>
-                    <h1 className="text-3xl font-bold text-white tracking-tight">Mining History</h1>
-                    <p className="text-gray-400 text-sm">Detailed logs of all your mining sessions</p>
+
+                {/* Filter bar */}
+                <div className="flex flex-wrap items-center justify-between gap-3 bg-[#0a0a12] border border-[#2a2a3a] rounded-2xl px-4 py-3">
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-500 uppercase tracking-wider font-medium">Filter by date</span>
+                        {(startDate || endDate) && (
+                            <span className="text-xs text-teal-400 bg-teal-500/10 border border-teal-500/20 rounded-full px-2 py-0.5">
+                                {filteredHistory.length} results
+                            </span>
+                        )}
+                    </div>
+                    <DateRangePicker
+                        startDate={startDate}
+                        endDate={endDate}
+                        setStartDate={setStartDate}
+                        setEndDate={setEndDate}
+                    />
                 </div>
             </motion.div>
 
             <motion.section variants={itemVariants} className="w-full">
-                <MiningHistoryTable 
-                    history={miningHistory} 
-                    loading={loading} 
+                <MiningHistoryTable
+                    history={filteredHistory}
+                    loading={loading}
                 />
             </motion.section>
         </motion.div>

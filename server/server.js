@@ -31,7 +31,10 @@ const corsOptions = {
                           origin.startsWith('http://localhost:') || 
                           origin.startsWith('http://127.0.0.1:') || 
                           origin.endsWith('.ngrok-free.dev') ||
-                          origin.endsWith('.ngrok.io');
+                          origin.endsWith('.ngrok.io') ||
+                          origin.endsWith('.lhr.life') ||
+                          origin.endsWith('.loca.lt') ||
+                          origin.endsWith('.tunnelmole.net');
                           
         if (isAllowed) {
             callback(null, true);
@@ -122,6 +125,7 @@ app.use('/api/commissions', require('./routes/commissionRoutes'));
 app.use('/api/reports', require('./routes/reportRoutes'));
 app.use('/api/monthly-tokens', require('./routes/monthlyTokenRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
+app.use('/api/export', require('./routes/exportRoutes'));
 
 
 const PORT = process.env.PORT || 5000;
