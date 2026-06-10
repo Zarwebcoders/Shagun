@@ -104,8 +104,7 @@ const createWithdrawal = async (req, res) => {
                     { user_id: user.id },
                     { user_id: user.user_id },
                     { user_id: String(user._id) }
-                ],
-                status: 'pending'
+                ]
             }).toArray();
 
             let availableMatured = 0;
@@ -121,8 +120,16 @@ const createWithdrawal = async (req, res) => {
                 }, 0);
             }
 
+            // Fetch approved withdrawals to deduct from matured balance
+            const approvedWithdrawals = await Withdrawal.find({
+                user_id: user.id || user.user_id || user._id.toString(),
+                withdraw_type,
+                approve: "1" // Approved
+            });
+            const totalWithdrawn = approvedWithdrawals.reduce((sum, w) => sum + w.amount, 0);
+
             // Round to 2 decimal places for comparison to handle floating point issues
-            const availableMaturedNet = Math.round((availableMatured - totalPending) * 100) / 100;
+            const availableMaturedNet = Math.round((availableMatured - totalWithdrawn - totalPending) * 100) / 100;
             const requestedAmount = Math.round(Number(amount) * 100) / 100;
 
             if (requestedAmount > availableMaturedNet) {
