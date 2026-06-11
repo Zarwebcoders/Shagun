@@ -4,12 +4,13 @@ import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import client from "../api/client"
 import { motion } from "framer-motion"
-import { Mail, Lock, ArrowRight, Loader2 } from "lucide-react"
+import { Mail, Lock, ArrowRight, Loader2, Eye, EyeOff } from "lucide-react"
 import logo from "../../public/removedbg.png"
 
 export default function Login({ setIsAuthenticated, setIsAdminAuthenticated }) {
     const [email, setEmail] = useState("")
     const [password, setPassword] = useState("")
+    const [showPassword, setShowPassword] = useState(false)
     const [error, setError] = useState("")
     const [isLoading, setIsLoading] = useState(false)
     const navigate = useNavigate()
@@ -105,12 +106,23 @@ export default function Login({ setIsAuthenticated, setIsAdminAuthenticated }) {
                                 </div>
                                 <input
                                     id="password"
-                                    type="password"
+                                    type={showPassword ? "text" : "password"}
                                     placeholder="••••••••"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full pl-12 pr-4 py-3.5 bg-black/40 border border-white/10 rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-teal-500/50 focus:ring-2 focus:ring-teal-500/20 transition-all duration-300 hover:border-white/20"
+                                    className="w-full pl-12 pr-12 py-3.5 bg-black/40 border border-white/10 rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-teal-500/50 focus:ring-2 focus:ring-teal-500/20 transition-all duration-300 hover:border-white/20"
                                 />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-500 hover:text-teal-400 transition-colors"
+                                >
+                                    {showPassword ? (
+                                        <EyeOff className="w-5 h-5" />
+                                    ) : (
+                                        <Eye className="w-5 h-5" />
+                                    )}
+                                </button>
                             </div>
                             <div className="flex justify-end p-1">
                                 <button

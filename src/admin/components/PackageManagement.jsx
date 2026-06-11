@@ -1,6 +1,6 @@
 "use client"
 import { useState, useEffect } from "react"
-import { Package, Search, Calendar, User, CheckCircle, Trash2 } from "lucide-react"
+import { Package, Search, Calendar, User, CheckCircle, Trash2, Eye, X, ExternalLink } from "lucide-react"
 import client from "../../api/client"
 
 import { ChevronLeft, ChevronRight } from "lucide-react"
@@ -21,6 +21,10 @@ export default function PackageManagement() {
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1)
     const [itemsPerPage] = useState(10)
+
+    // Modal State
+    const [selectedProduct, setSelectedProduct] = useState(null)
+    const [isModalOpen, setIsModalOpen] = useState(false)
 
     useEffect(() => {
         fetchProducts()
@@ -103,7 +107,8 @@ export default function PackageManagement() {
             (p.user?.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
             (p.user?.referral_id || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
             (p.packag_type || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (p.transcation_id || "").toLowerCase().includes(searchTerm.toLowerCase());
+            (p.transcation_id || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (p.wallet_address || "").toLowerCase().includes(searchTerm.toLowerCase());
 
         // Status Filter
         let matchesStatus = true;
@@ -385,20 +390,35 @@ export default function PackageManagement() {
                                         <td className="px-6 py-4 whitespace-nowrap text-right">
                                             <div className="flex items-center justify-end gap-2">
                                                 <button
-                                                    onClick={() => handleStatusUpdate(item, 1)}
-                                                    className="p-1.5 rounded-lg bg-green-500/20 text-green-500 hover:bg-green-500 hover:text-white transition-all border border-green-500/30"
-                                                    title="Approve on Blockchain"
+                                                    onClick={() => {
+                                                        setSelectedProduct(item);
+                                                        setIsModalOpen(true);
+                                                    }}
+                                                    className="p-1.5 rounded-lg bg-teal-500/20 text-teal-400 hover:bg-teal-500 hover:text-white transition-all border border-teal-500/30"
+                                                    title="View Details"
                                                 >
-                                                    <CheckCircle className="w-4 h-4" />
+                                                    <Eye className="w-4 h-4" />
                                                 </button>
 
-                                                <button
-                                                    onClick={() => handleStatusUpdate(item, 2)}
-                                                    className="p-1.5 rounded-lg bg-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-all border border-red-500/30"
-                                                    title="Reject"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
+                                                {(item.approve === 0 || item.approve === "0") && (
+                                                    <>
+                                                        <button
+                                                            onClick={() => handleStatusUpdate(item, 1)}
+                                                            className="p-1.5 rounded-lg bg-green-500/20 text-green-500 hover:bg-green-500 hover:text-white transition-all border border-green-500/30"
+                                                            title="Approve on Blockchain"
+                                                        >
+                                                            <CheckCircle className="w-4 h-4" />
+                                                        </button>
+
+                                                        <button
+                                                            onClick={() => handleStatusUpdate(item, 2)}
+                                                            className="p-1.5 rounded-lg bg-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-all border border-red-500/30"
+                                                            title="Reject"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    </>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
@@ -452,6 +472,221 @@ export default function PackageManagement() {
                     </div>
                 )}
             </div>
+
+            {/* Transaction Details Modal */}
+            {isModalOpen && selectedProduct && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
+                    <div 
+                        className="absolute inset-0" 
+                        onClick={() => {
+                            setIsModalOpen(false);
+                            setSelectedProduct(null);
+                        }}
+                    />
+                    <div className="bg-[#0f0f1c] border border-teal-500/30 rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl relative z-10 flex flex-col max-h-[90vh]">
+                        {/* Header */}
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-teal-500/20 bg-[#16162e]">
+                            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                                <Package className="w-5 h-5 text-teal-400" />
+                                Transaction Details
+                            </h3>
+                            <button
+                                onClick={() => {
+                                    setIsModalOpen(false);
+                                    setSelectedProduct(null);
+                                }}
+                                className="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* Content (Scrollable) */}
+                        <div className="p-6 overflow-y-auto space-y-6 flex-1 text-sm">
+                            {/* Status and Summary Banner */}
+                            <div className={`p-4 rounded-xl border flex justify-between items-center ${
+                                (selectedProduct.approve === 1 || selectedProduct.approve === "1")
+                                    ? 'bg-green-500/10 border-green-500/20 text-green-400'
+                                    : (selectedProduct.approve === 2 || selectedProduct.approve === "2")
+                                        ? 'bg-red-500/10 border-red-500/20 text-red-400'
+                                        : 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400'
+                            }`}>
+                                <div>
+                                    <p className="text-xs uppercase font-semibold tracking-wider opacity-75">Current Status</p>
+                                    <p className="text-lg font-bold">
+                                        {(selectedProduct.approve === 1 || selectedProduct.approve === "1") ? 'Active / Approved' : (selectedProduct.approve === 2 || selectedProduct.approve === "2") ? 'Rejected' : 'Pending Verification'}
+                                    </p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-xs uppercase font-semibold tracking-wider opacity-75">Date Submitted</p>
+                                    <p className="font-semibold text-white">
+                                        {new Date(selectedProduct.cereate_at).toLocaleString()}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* User & Package Grid */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {/* Left Side: User Info */}
+                                <div className="bg-[#16162e]/40 p-4 rounded-xl border border-teal-500/10 space-y-3">
+                                    <h4 className="font-bold text-teal-400 border-b border-teal-500/10 pb-1.5 mb-2">User Information</h4>
+                                    <div>
+                                        <label className="text-xs text-gray-500 block">Name</label>
+                                        <span className="text-white font-medium">{selectedProduct.user?.name || "Unknown"}</span>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-gray-500 block">Email</label>
+                                        <span className="text-white font-mono break-all">{selectedProduct.user?.email || "N/A"}</span>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-gray-500 block">Referral ID</label>
+                                        <span className="text-teal-400 font-mono font-bold bg-teal-500/10 px-2 py-0.5 rounded border border-teal-500/20 text-xs inline-block mt-0.5">
+                                            {selectedProduct.user?.referral_id || "N/A"}
+                                        </span>
+                                    </div>
+                                    {selectedProduct.wallet_address && (
+                                        <div>
+                                            <label className="text-xs text-gray-500 block">Wallet Address</label>
+                                            <span className="text-white font-mono text-xs break-all block">{selectedProduct.wallet_address}</span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Right Side: Package Info */}
+                                <div className="bg-[#16162e]/40 p-4 rounded-xl border border-teal-500/10 space-y-3">
+                                    <h4 className="font-bold text-teal-400 border-b border-teal-500/10 pb-1.5 mb-2">Package Information</h4>
+                                    <div>
+                                        <label className="text-xs text-gray-500 block">Product Package</label>
+                                        <span className="text-white font-bold">{selectedProduct.packag_type || "N/A"}</span>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <label className="text-xs text-gray-500 block">Quantity</label>
+                                            <span className="text-white font-medium">{selectedProduct.quantity || 1}</span>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-gray-500 block">Amount (INR)</label>
+                                            <span className="text-teal-400 font-bold">
+                                                ₹{(selectedProduct.business_volume || (Number(selectedProduct.amount) * (selectedProduct.quantity || 1))).toLocaleString()}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    {selectedProduct.token_amount && (
+                                        <div>
+                                            <label className="text-xs text-gray-500 block">Tokens Allocated</label>
+                                            <span className="text-teal-400 font-bold font-mono">
+                                                {Number(selectedProduct.token_amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })} SGN
+                                            </span>
+                                        </div>
+                                    )}
+                                    {selectedProduct.onchain_tx_hash && (
+                                        <div>
+                                            <label className="text-xs text-gray-500 block">Onchain TX Hash</label>
+                                            <span className="text-teal-400 font-mono text-xs break-all block">{selectedProduct.onchain_tx_hash}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Transaction Details */}
+                            <div className="bg-[#16162e]/40 p-4 rounded-xl border border-teal-500/10 space-y-3">
+                                <h4 className="font-bold text-teal-400 border-b border-teal-500/10 pb-1.5 mb-2">Transaction Details</h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-xs text-gray-500 block">UTR / Transaction ID</label>
+                                        <span className="text-white font-mono font-bold bg-white/5 border border-white/10 px-2 py-1 rounded inline-block mt-1">
+                                            {selectedProduct.transcation_id || "N/A"}
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-gray-500 block">Database Record ID</label>
+                                        <span className="text-gray-400 font-mono text-xs">{selectedProduct._id}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Payment Slip Display */}
+                            <div className="bg-[#16162e]/40 p-4 rounded-xl border border-teal-500/10 space-y-3">
+                                <h4 className="font-bold text-teal-400 border-b border-teal-500/10 pb-1.5 mb-2">Payment Slip / Proof</h4>
+                                {selectedProduct.paymentSlip ? (
+                                    <div className="space-y-3">
+                                        <div className="border border-teal-500/20 rounded-lg overflow-hidden bg-black/40 flex justify-center p-2 max-h-[300px]">
+                                            <img
+                                                src={selectedProduct.paymentSlip}
+                                                alt="Payment Proof"
+                                                className="max-w-full max-h-[280px] object-contain rounded hover:scale-[1.02] transition-transform duration-300 cursor-pointer"
+                                                onClick={() => {
+                                                    const w = window.open();
+                                                    w.document.write(`<img src="${selectedProduct.paymentSlip}" style="max-width:100%; max-height:100vh; display:block; margin:auto;" />`);
+                                                    w.document.title = "Payment Proof Slip";
+                                                }}
+                                            />
+                                        </div>
+                                        <div className="flex justify-end">
+                                            <button
+                                                onClick={() => {
+                                                    const w = window.open();
+                                                    w.document.write(`<img src="${selectedProduct.paymentSlip}" style="max-width:100%; max-height:100vh; display:block; margin:auto;" />`);
+                                                    w.document.title = "Payment Proof Slip";
+                                                }}
+                                                className="flex items-center gap-1.5 text-xs text-teal-400 hover:text-teal-300 font-bold transition-colors"
+                                            >
+                                                <ExternalLink className="w-3.5 h-3.5" />
+                                                View Full Size
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="p-8 text-center bg-[#1a1a38]/30 rounded-lg border border-dashed border-red-500/20 text-gray-500">
+                                        No payment proof image uploaded for this transaction.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Footer (Actions) */}
+                        <div className="px-6 py-4 border-t border-teal-500/20 bg-[#16162e] flex justify-between items-center gap-4">
+                            <button
+                                onClick={() => {
+                                    setIsModalOpen(false);
+                                    setSelectedProduct(null);
+                                }}
+                                className="px-4 py-2 border border-gray-700 hover:border-gray-500 text-gray-300 hover:text-white rounded-lg text-sm font-medium transition-colors"
+                            >
+                                Close
+                            </button>
+
+                            {(selectedProduct.approve === 0 || selectedProduct.approve === "0") && (
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        onClick={async () => {
+                                            const p = selectedProduct;
+                                            setIsModalOpen(false);
+                                            setSelectedProduct(null);
+                                            await handleStatusUpdate(p, 2); // Reject
+                                        }}
+                                        className="px-4 py-2 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/30 hover:border-red-500 rounded-lg text-sm font-bold transition-all"
+                                    >
+                                        Reject Transaction
+                                    </button>
+                                    <button
+                                        onClick={async () => {
+                                            const p = selectedProduct;
+                                            setIsModalOpen(false);
+                                            setSelectedProduct(null);
+                                            await handleStatusUpdate(p, 1); // Approve
+                                        }}
+                                        className="px-4 py-2 bg-green-500/10 hover:bg-green-500 text-green-500 hover:text-white border border-green-500/30 hover:border-green-500 rounded-lg text-sm font-bold transition-all flex items-center gap-1.5"
+                                    >
+                                        <CheckCircle className="w-4 h-4" />
+                                        Approve & Mint
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

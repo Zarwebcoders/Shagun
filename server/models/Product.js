@@ -70,7 +70,6 @@ const productSchema = new mongoose.Schema({
         type: Number,
         default: 24
     },
-    // Keeping logic fields that might be useful but are not in JSON explicitly or mapped
     business_volume: {
         type: Number,
         default: 0
@@ -89,6 +88,10 @@ const productSchema = new mongoose.Schema({
     },
     end_date: {
         type: Date
+    },
+    paymentSlip: {
+        type: String,
+        default: ""
     }
 }, {
     timestamps: false // We use cereate_at and update_at

@@ -14,7 +14,8 @@ const createProduct = async (req, res) => {
         product_id,
         quantity,
         transactionId,
-        walletAddress
+        walletAddress,
+        paymentSlip
     } = req.body;
 
     try {
@@ -65,7 +66,8 @@ const createProduct = async (req, res) => {
             start_date: new Date(),
             end_date: null,
             cereate_at: new Date(),
-            update_at: new Date()
+            update_at: new Date(),
+            paymentSlip: paymentSlip || ""
         });
 
         console.log("DEBUG: Product Created:", newProduct._id);
