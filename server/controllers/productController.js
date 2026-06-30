@@ -148,13 +148,13 @@ const getAllProducts = async (req, res) => {
         // ── 1. Build the base filter ────────────────────────────────────────
         const filter = {};
 
-        // Status filter
+        // Status filter — approve field is mixed (number 0/1/2 OR string '0'/'1'/'2')
         if (status === 'approved') {
-            filter.approve = 1;
+            filter.approve = { $in: [1, '1'] };
         } else if (status === 'pending') {
-            filter.approve = 0;
+            filter.approve = { $in: [0, '0'] };
         } else if (status === 'rejected') {
-            filter.approve = 2;
+            filter.approve = { $in: [2, '2'] };
         }
 
         // Package type filter
@@ -246,11 +246,13 @@ const getAllProducts = async (req, res) => {
             };
         });
 
-        // ── 6. Stats counts (computed separately so filters don't skew them) ─
-        const [approvedCount, pendingCount] = await Promise.all([
-            Product.countDocuments({ approve: 1 }),
-            Product.countDocuments({ approve: 0 })
+        // ── 6. Stats counts — global (unfiltered), handle mixed number/string types ─
+        const [approvedCount, pendingCount, rejectedCount] = await Promise.all([
+            Product.countDocuments({ approve: { $in: [1, '1'] } }),
+            Product.countDocuments({ approve: { $in: [0, '0'] } }),
+            Product.countDocuments({ approve: { $in: [2, '2'] } })
         ]);
+        const totalAll = approvedCount + pendingCount + rejectedCount;
 
         // ── 7. Distinct package types for the filter dropdown ────────────────
         const packageTypes = await Product.distinct('packag_type');
@@ -265,7 +267,9 @@ const getAllProducts = async (req, res) => {
             },
             stats: {
                 approved: approvedCount,
-                pending:  pendingCount
+                pending:  pendingCount,
+                rejected: rejectedCount,
+                total:    totalAll
             },
             packageTypes: packageTypes.filter(Boolean).sort()
         });

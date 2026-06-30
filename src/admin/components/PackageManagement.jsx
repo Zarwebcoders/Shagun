@@ -12,7 +12,7 @@ export default function PackageManagement() {
     // ── Data ────────────────────────────────────────────────────────────────
     const [products, setProducts]           = useState([])
     const [packageTypes, setPackageTypes]   = useState([])
-    const [stats, setStats]                 = useState({ approved: 0, pending: 0 })
+    const [stats, setStats] = useState({ approved: 0, pending: 0, rejected: 0, total: 0 })
     const [loading, setLoading]             = useState(true)
 
     // ── Filters ─────────────────────────────────────────────────────────────
@@ -65,6 +65,8 @@ export default function PackageManagement() {
             setStats({
                 approved: data.stats?.approved ?? 0,
                 pending:  data.stats?.pending  ?? 0,
+                rejected: data.stats?.rejected ?? 0,
+                total:    data.stats?.total    ?? 0,
             })
             if (data.packageTypes?.length) {
                 setPackageTypes(data.packageTypes)
@@ -172,26 +174,97 @@ export default function PackageManagement() {
                     </p>
                 </div>
 
-                <div className="flex gap-4">
-                    <div className="px-4 py-2 bg-green-500/10 border border-green-500/20 rounded-lg flex items-center gap-3">
+                <div className="flex flex-wrap gap-3">
+
+                    {/* Total All */}
+                    <button
+                        onClick={() => applyFilter(setStatusFilter)("all")}
+                        className={`px-4 py-2 border rounded-lg flex items-center gap-3 transition-all cursor-pointer hover:scale-105 ${
+                            statusFilter === "all"
+                                ? "bg-teal-500/20 border-teal-400/60 ring-2 ring-teal-400/40"
+                                : "bg-teal-500/10 border-teal-500/20 hover:bg-teal-500/20"
+                        }`}
+                        title="Show all records"
+                    >
+                        <div className="p-2 bg-teal-500/20 rounded-full text-teal-400">
+                            <Package className="w-4 h-4" />
+                        </div>
+                        <div className="text-left">
+                            <p className="text-xs text-gray-400">Total Requests</p>
+                            <p className="text-xl font-bold text-white">{stats.total.toLocaleString()}</p>
+                            {statusFilter === "all" && (
+                                <p className="text-[10px] text-teal-400 font-semibold">● All</p>
+                            )}
+                        </div>
+                    </button>
+
+                    {/* Total Approved */}
+                    <button
+                        onClick={() => applyFilter(setStatusFilter)(statusFilter === "approved" ? "all" : "approved")}
+                        className={`px-4 py-2 border rounded-lg flex items-center gap-3 transition-all cursor-pointer hover:scale-105 ${
+                            statusFilter === "approved"
+                                ? "bg-green-500/20 border-green-400/60 ring-2 ring-green-400/40"
+                                : "bg-green-500/10 border-green-500/20 hover:bg-green-500/20"
+                        }`}
+                        title="Click to show only approved records"
+                    >
                         <div className="p-2 bg-green-500/20 rounded-full text-green-500">
                             <CheckCircle className="w-4 h-4" />
                         </div>
-                        <div>
-                            <p className="text-xs text-gray-400">Total Approved</p>
+                        <div className="text-left">
+                            <p className="text-xs text-gray-400">Approved</p>
                             <p className="text-xl font-bold text-white">{stats.approved.toLocaleString()}</p>
+                            {statusFilter === "approved" && (
+                                <p className="text-[10px] text-green-400 font-semibold">● Filtered</p>
+                            )}
                         </div>
-                    </div>
-                    <div className="px-4 py-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg flex items-center gap-3">
+                    </button>
+
+                    {/* Total Pending */}
+                    <button
+                        onClick={() => applyFilter(setStatusFilter)(statusFilter === "pending" ? "all" : "pending")}
+                        className={`px-4 py-2 border rounded-lg flex items-center gap-3 transition-all cursor-pointer hover:scale-105 ${
+                            statusFilter === "pending"
+                                ? "bg-yellow-500/20 border-yellow-400/60 ring-2 ring-yellow-400/40"
+                                : "bg-yellow-500/10 border-yellow-500/20 hover:bg-yellow-500/20"
+                        }`}
+                        title="Click to show only pending records"
+                    >
                         <div className="p-2 bg-yellow-500/20 rounded-full text-yellow-500">
                             <Trash2 className="w-4 h-4" />
                         </div>
-                        <div>
-                            <p className="text-xs text-gray-400">Total Pending</p>
+                        <div className="text-left">
+                            <p className="text-xs text-gray-400">Pending</p>
                             <p className="text-xl font-bold text-white">{stats.pending.toLocaleString()}</p>
+                            {statusFilter === "pending" && (
+                                <p className="text-[10px] text-yellow-400 font-semibold">● Filtered</p>
+                            )}
                         </div>
-                    </div>
+                    </button>
+
+                    {/* Rejected */}
+                    <button
+                        onClick={() => applyFilter(setStatusFilter)(statusFilter === "rejected" ? "all" : "rejected")}
+                        className={`px-4 py-2 border rounded-lg flex items-center gap-3 transition-all cursor-pointer hover:scale-105 ${
+                            statusFilter === "rejected"
+                                ? "bg-red-500/20 border-red-400/60 ring-2 ring-red-400/40"
+                                : "bg-red-500/10 border-red-500/20 hover:bg-red-500/20"
+                        }`}
+                        title="Click to show only rejected records"
+                    >
+                        <div className="p-2 bg-red-500/20 rounded-full text-red-400">
+                            <X className="w-4 h-4" />
+                        </div>
+                        <div className="text-left">
+                            <p className="text-xs text-gray-400">Rejected</p>
+                            <p className="text-xl font-bold text-white">{stats.rejected.toLocaleString()}</p>
+                            {statusFilter === "rejected" && (
+                                <p className="text-[10px] text-red-400 font-semibold">● Filtered</p>
+                            )}
+                        </div>
+                    </button>
                 </div>
+
             </div>
 
             {/* ── Filters ── */}
