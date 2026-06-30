@@ -31,17 +31,24 @@ export default function WithdrawalRequests() {
         }
     };
 
+    const [pages, setPages] = useState(1);
+    const [total, setTotal] = useState(0);
+
     const fetchRequests = async () => {
         try {
             setLoading(true);
             const params = {
+                page,
+                limit: itemsPerPage,
                 status: filter,
                 type: typeFilter,
                 startDate,
                 endDate
             };
             const { data } = await client.get('/withdrawals/all', { params });
-            setRequests(data);
+            setRequests(data.withdrawals || []);
+            setPages(data.pages || 1);
+            setTotal(data.total || 0);
             setLoading(false);
         } catch (error) {
             console.error("Error fetching withdrawals:", error);
@@ -63,14 +70,13 @@ export default function WithdrawalRequests() {
 
     const filteredRequests = requests;
 
-    // Calculate pagination
-    const totalPages = Math.ceil(filteredRequests.length / itemsPerPage);
-    const paginatedRequests = filteredRequests.slice((page - 1) * itemsPerPage, page * itemsPerPage);
+    // Pagination now driven by server
+    const paginatedRequests = requests;
 
-    // Fetch requests whenever any filter changes
+    // Fetch requests whenever page, filter, type or dates change
     useEffect(() => {
         fetchRequests();
-    }, [filter, typeFilter, startDate, endDate]);
+    }, [page, filter, typeFilter, startDate, endDate]);
 
     // Reset page when any filter changes
     useEffect(() => {
@@ -341,15 +347,17 @@ export default function WithdrawalRequests() {
                 </div>
 
                 {/* Pagination */}
-                {filteredRequests.length > itemsPerPage && (
-                    <Pagination
-                        currentPage={page}
-                        totalPages={totalPages}
-                        onPageChange={setPage}
-                        totalResults={filteredRequests.length}
-                        itemsPerPage={itemsPerPage}
-                        itemName="requests"
-                    />
+                {pages > 1 && (
+                    <div className="p-4 border-t border-white/5 flex justify-end">
+                        <Pagination
+                            currentPage={page}
+                            totalPages={pages}
+                            onPageChange={setPage}
+                            totalResults={total}
+                            itemsPerPage={itemsPerPage}
+                            itemName="requests"
+                        />
+                    </div>
                 )}
             </div>
         </div>

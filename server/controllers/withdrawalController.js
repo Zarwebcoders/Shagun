@@ -198,6 +198,10 @@ const getMyWithdrawals = async (req, res) => {
 // @access  Private/Admin
 const getAllWithdrawals = async (req, res) => {
     try {
+        const page = Math.max(1, parseInt(req.query.page) || 1);
+        const limit = Math.min(100, parseInt(req.query.limit) || 10);
+        const skip = (page - 1) * limit;
+
         const query = {};
 
         // Datewise filter (by create_at)
@@ -231,7 +235,12 @@ const getAllWithdrawals = async (req, res) => {
             else if (req.query.status === 'rejected') query.approve = "0";
         }
 
-        const withdrawals = await Withdrawal.find(query).sort({ create_at: -1 }).lean();
+        const total = await Withdrawal.countDocuments(query);
+        const withdrawals = await Withdrawal.find(query)
+            .sort({ create_at: -1 })
+            .skip(skip)
+            .limit(limit)
+            .lean();
 
         // Fetch token rates for dynamic resolution of historical rate if missing
         const dbRates = await TokenRate.find({}).sort({ created_at: 1 }).lean();
@@ -247,7 +256,7 @@ const getAllWithdrawals = async (req, res) => {
         ];
         const allRates = [...dbRates, ...historicalRates].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
-        // Get unique user_ids from withdrawals
+        // Get unique user_ids from withdrawals on the CURRENT page
         const userIds = [...new Set(withdrawals.map(w => w.user_id))];
 
         // Find users with these custom user_ids
@@ -269,7 +278,7 @@ const getAllWithdrawals = async (req, res) => {
             userMap[user._id.toString()] = user;
         });
 
-        // Query MyAccount records for these users to populate bank details dynamically if missing
+        // Query MyAccount records for these users on the CURRENT page
         const MyAccount = require('../models/MyAccount');
         const myAccountUserIds = [];
         users.forEach(user => {
@@ -347,7 +356,12 @@ const getAllWithdrawals = async (req, res) => {
             };
         });
 
-        res.status(200).json(populatedWithdrawals);
+        res.status(200).json({
+            withdrawals: populatedWithdrawals,
+            page,
+            pages: Math.ceil(total / limit),
+            total
+        });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
