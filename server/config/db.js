@@ -14,9 +14,9 @@ const connectDB = async () => {
             autoIndex: false,               // Never rebuild indexes on boot
             maxPoolSize: 10,                // Reuse up to 10 connections per Lambda
             minPoolSize: 1,                 // Always keep 1 connection warm
-            serverSelectionTimeoutMS: 3000, // Fail fast in 3s if Atlas unreachable
-            socketTimeoutMS: 30000,         // Drop idle sockets after 30s
-            connectTimeoutMS: 3000,         // Max 3s to establish a connection
+            serverSelectionTimeoutMS: 10000, // 10s timeout to select server
+            socketTimeoutMS: 45000,         // Keep sockets active
+            connectTimeoutMS: 10000,        // 10s timeout to connect
         });
 
         cachedConn = conn;
