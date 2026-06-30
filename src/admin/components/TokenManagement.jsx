@@ -25,7 +25,7 @@ export default function TokenManagement() {
     const fetchProducts = async () => {
         try {
             setPvLoading(true);
-            const { data } = await client.get('/products/all');
+            const { data } = await client.get('/products/all?limit=all');
             const productsList = Array.isArray(data) ? data : (data.products || []);
             setProducts(productsList);
         } catch (error) {

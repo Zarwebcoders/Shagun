@@ -138,7 +138,12 @@ const getProducts = async (req, res) => {
 const getAllProducts = async (req, res) => {
     try {
         const page       = Math.max(1, parseInt(req.query.page)  || 1);
-        const limit      = Math.min(100, parseInt(req.query.limit) || 10);
+        let limit        = parseInt(req.query.limit) || 10;
+        if (req.query.limit === 'all') {
+            limit = 100000;
+        } else {
+            limit = Math.min(5000, limit);
+        }
         const search     = (req.query.search     || '').trim();
         const status     = req.query.status      || 'all';   // 'all' | 'approved' | 'pending' | 'rejected'
         const pkgType    = req.query.packageType || 'all';
