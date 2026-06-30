@@ -1,0 +1,68 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+:root {
+  font-family: 'Outfit', sans-serif;
+  color-scheme: dark;
+}
+
+body {
+  background-color: #050505;
+  color: white;
+  overflow-x: hidden;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+.absolute.top-0.right-0.w-64.h-64.bg-green-500\/5.rounded-full.blur-\[80px\] {
+    width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #050505;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #7c3aed;
+}
+
+/* Global Selection Color */
+::selection {
+  background-color: #7c3aed;
+  color: white;
+}
+
+/* Custom Utilities - Replaced @apply to avoid lint warnings */
+.bg-gradient-brand {
+  background-image: linear-gradient(to right, #2dd4bf, #3b82f6, #9333ea);
+}
+
+.text-gradient-brand {
+  background-image: linear-gradient(to right, #2dd4bf, #3b82f6, #9333ea);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.border-gradient-brand {
+  border-color: transparent;
+  background-image: linear-gradient(to right, #2dd4bf, #3b82f6, #9333ea);
+  background-clip: border-box;
+}
+
+/* ─── Mobile: Kill ALL decorative glow divs so they never block taps ─── */
+@media (max-width: 767px) {
+  div[class*="blur-"][class*="absolute"][class*="rounded-full"] {
+    width: 1px !important;
+    height: 1px !important;
+    pointer-events: none !important;
+    opacity: 0 !important;
+  }
+}
