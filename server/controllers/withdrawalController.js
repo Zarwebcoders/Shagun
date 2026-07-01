@@ -6,6 +6,19 @@ const Transaction = require('../models/Transaction');
 const Notification = require('../models/Notification');
 const TokenRate = require('../models/TokenRate');
 
+// In-memory TTL cache for the admin withdrawal list
+// Key: serialised query params  Value: { data, expiry }
+const withdrawalsCache = new Map();
+const CACHE_TTL_MS = 60 * 1000; // 60 seconds
+
+function buildCacheKey(query) {
+    return JSON.stringify(query);
+}
+
+function invalidateWithdrawalsCache() {
+    withdrawalsCache.clear();
+}
+
 // @desc    Create new withdrawal request
 // @route   POST /api/withdrawals
 // @access  Private
@@ -235,134 +248,161 @@ const getAllWithdrawals = async (req, res) => {
             else if (req.query.status === 'rejected') query.approve = "0";
         }
 
-        const total = await Withdrawal.countDocuments(query);
-        const withdrawals = await Withdrawal.find(query)
-            .sort({ create_at: -1 })
-            .skip(skip)
-            .limit(limit)
-            .lean();
+        // ── Server-side in-memory cache ────────────────────────────────────────
+        // Check cache before touching the database
+        const cacheKey = buildCacheKey({ page, limit, query: JSON.stringify(query) });
+        const cached = withdrawalsCache.get(cacheKey);
+        if (cached && cached.expiry > Date.now()) {
+            return res.status(200).json(cached.data);
+        }
+
+        // Use Promise.all to fetch total and withdrawals concurrently
+        const [total, withdrawals] = await Promise.all([
+            Withdrawal.countDocuments(query),
+            Withdrawal.find(query)
+                .select('user_id amount payable_amount withdraw_type method source bankDetails approve onchain_tx_hash token_rate remark create_at')
+                .sort({ create_at: -1 })
+                .skip(skip)
+                .limit(limit)
+                .lean()
+        ]);
+
+        if (withdrawals.length === 0) {
+            const emptyResult = { withdrawals: [], page, pages: Math.ceil(total / limit) || 1, total };
+            withdrawalsCache.set(cacheKey, { data: emptyResult, expiry: Date.now() + CACHE_TTL_MS });
+            return res.status(200).json(emptyResult);
+        }
 
         // Fetch token rates for dynamic resolution of historical rate if missing
-        const dbRates = await TokenRate.find({}).sort({ created_at: 1 }).lean();
-        const historicalRates = [
-            {
-                _id: 'hist_1',
-                phase: 1,
-                phase_number: null,
-                rate: 4,
-                source: 'Historical',
-                created_at: new Date('2025-10-01T00:00:00.000Z')
+        // Load all rates once into memory if needed to avoid N+1 query problem
+        let allRates = [];
+        if (withdrawals.some(w => !w.token_rate)) {
+            allRates = await TokenRate.find({}).sort({ created_at: -1 }).lean();
+        }
+
+        const historicalDate = new Date('2025-10-01T00:00:00.000Z');
+        for (let w of withdrawals) {
+            if (!w.token_rate) {
+                const wDate = new Date(w.create_at || w.createdAt);
+                const activeRateObj = allRates.find(r => new Date(r.created_at || r.createdAt) <= wDate);
+                if (activeRateObj) {
+                    w.token_rate = activeRateObj.rate;
+                } else if (wDate >= historicalDate) {
+                    w.token_rate = 4;
+                } else {
+                    w.token_rate = 14.40;
+                }
             }
-        ];
-        const allRates = [...dbRates, ...historicalRates].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        }
 
         // Get unique user_ids from withdrawals on the CURRENT page
-        const userIds = [...new Set(withdrawals.map(w => w.user_id))];
+        const userIds = [...new Set(withdrawals.map(w => w.user_id))].filter(Boolean);
 
         // Find users with these custom user_ids
-        const users = await User.find({
-            $or: [
-                { user_id: { $in: userIds } },
-                { id: { $in: userIds } },
-                { _id: { $in: userIds.filter(id => mongoose.Types.ObjectId.isValid(id)) } }
-            ]
-        })
-            .select('user_id id referral_id full_name email mobile')
-            .lean();
+        const validObjIds = userIds.filter(id => mongoose.Types.ObjectId.isValid(id));
+        const userOrConditions = [];
+        if (userIds.length > 0) {
+            userOrConditions.push({ user_id: { $in: userIds } });
+            userOrConditions.push({ id: { $in: userIds } });
+        }
+        if (validObjIds.length > 0) {
+            userOrConditions.push({ _id: { $in: validObjIds } });
+        }
 
-        // Create a map for quick lookup - mapping BOTH user_id and id to the user object
+        const users = userOrConditions.length > 0
+            ? await User.find({ $or: userOrConditions }).select('user_id id referral_id full_name email').lean()
+            : [];
+
+        // Create a map for quick lookup
         const userMap = {};
         users.forEach(user => {
             if (user.user_id) userMap[user.user_id] = user;
             if (user.id) userMap[user.id] = user;
-            userMap[user._id.toString()] = user;
+            if (user._id) userMap[user._id.toString()] = user;
         });
 
-        // Query MyAccount records for these users on the CURRENT page
+        // Query MyAccount records for bank details
         const MyAccount = require('../models/MyAccount');
         const myAccountUserIds = [];
         users.forEach(user => {
             if (user.id) myAccountUserIds.push(user.id);
             if (user.user_id) myAccountUserIds.push(user.user_id);
-            myAccountUserIds.push(user._id.toString());
+            if (user._id) myAccountUserIds.push(user._id.toString());
         });
-        userIds.forEach(id => {
-            myAccountUserIds.push(id);
-        });
-        const uniqueMyAccountUserIds = [...new Set(myAccountUserIds)];
+        userIds.forEach(id => myAccountUserIds.push(id));
+        const uniqueMyAccountUserIds = [...new Set(myAccountUserIds)].filter(Boolean);
 
-        const accounts = await MyAccount.find({
-            user_id: { $in: uniqueMyAccountUserIds }
-        }).lean();
+        const accounts = uniqueMyAccountUserIds.length > 0
+            ? await MyAccount.find({ user_id: { $in: uniqueMyAccountUserIds } }).select('user_id acc_num acc_name back_code back_name branch').lean()
+            : [];
 
         const accountMap = {};
-        accounts.forEach(acc => {
-            accountMap[acc.user_id] = acc;
-        });
+        accounts.forEach(acc => { accountMap[acc.user_id] = acc; });
 
-        // Attach user details, dynamic bank details and token_rate to withdrawals
+        // Build flat, lean response rows (no nested user_id object)
         const populatedWithdrawals = withdrawals.map(w => {
-            const user = userMap[w.user_id] || { full_name: 'Unknown User', email: 'N/A' };
-            
-            // Resolve bank details
+            const user = userMap[w.user_id] || {};
+
+            // Resolve bank details from embedded record or MyAccount fallback
             let finalBankDetails = w.bankDetails;
             if (!finalBankDetails) {
-                const possibleUserIds = [
-                    w.user_id,
-                    user.id,
-                    user.user_id,
+                const possibleIds = [
+                    w.user_id, user.id, user.user_id,
                     user._id ? user._id.toString() : null
                 ].filter(Boolean);
-                
-                let foundAccount = null;
-                for (const id of possibleUserIds) {
+                for (const id of possibleIds) {
                     if (accountMap[id]) {
-                        foundAccount = accountMap[id];
+                        const acc = accountMap[id];
+                        finalBankDetails = {
+                            accountHolderName: acc.acc_name,
+                            accountNumber: acc.acc_num,
+                            ifscCode: acc.back_code,
+                            bankName: acc.back_name
+                        };
                         break;
                     }
                 }
-                
-                if (foundAccount) {
-                    finalBankDetails = {
-                        accountNumber: foundAccount.acc_num,
-                        accountHolderName: foundAccount.acc_name,
-                        ifscCode: foundAccount.back_code,
-                        bankName: foundAccount.back_name,
-                        branchName: foundAccount.branch
-                    };
-                }
-            }
-
-            // Resolve token_rate when request was raised
-            let rateWhenRaised = w.token_rate;
-            if (!rateWhenRaised) {
-                const wDate = new Date(w.create_at || w.createdAt);
-                let activeRateObj = null;
-                for (const rateObj of allRates) {
-                    if (new Date(rateObj.created_at) <= wDate) {
-                        activeRateObj = rateObj;
-                    } else {
-                        break;
-                    }
-                }
-                rateWhenRaised = activeRateObj ? activeRateObj.rate : 14.40;
+            } else {
+                // Trim embedded bankDetails to only necessary fields for the UI
+                finalBankDetails = {
+                    accountHolderName: w.bankDetails.accountHolderName || w.bankDetails.account_holder_name,
+                    accountNumber: w.bankDetails.accountNumber || w.bankDetails.account_number,
+                    ifscCode: w.bankDetails.ifscCode || w.bankDetails.ifsc_code,
+                    bankName: w.bankDetails.bankName || w.bankDetails.bank_name
+                };
             }
 
             return {
-                ...w,
-                user_id: user,
-                bankDetails: finalBankDetails,
-                token_rate: rateWhenRaised
+                _id: w._id,
+                // Flat user fields instead of nested object
+                userName: user.full_name || 'Unknown User',
+                referralId: user.referral_id || 'N/A',
+                // Core withdrawal fields
+                amount: w.amount,
+                payable_amount: w.payable_amount,
+                withdraw_type: w.withdraw_type,
+                method: w.method,
+                approve: w.approve,
+                token_rate: w.token_rate || 14.40,
+                remark: w.remark,
+                create_at: w.create_at,
+                bankDetails: finalBankDetails
             };
         });
 
-        res.status(200).json({
+        const result = {
             withdrawals: populatedWithdrawals,
             page,
             pages: Math.ceil(total / limit),
             total
-        });
+        };
+
+        // Store in cache
+        withdrawalsCache.set(cacheKey, { data: result, expiry: Date.now() + CACHE_TTL_MS });
+
+        res.status(200).json(result);
     } catch (error) {
+        console.error("GetAllWithdrawals Error:", error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -372,6 +412,8 @@ const getAllWithdrawals = async (req, res) => {
 // @access  Private/Admin
 const updateWithdrawalStatus = async (req, res) => {
     const { approve } = req.body; // 1: Approve, 0: Reject
+    // Invalidate the admin list cache so the next load reflects the change
+    invalidateWithdrawalsCache();
 
     try {
         const withdrawal = await Withdrawal.findById(req.params.id);

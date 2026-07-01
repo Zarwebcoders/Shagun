@@ -50,6 +50,9 @@ const withdrawalSchema = new mongoose.Schema({
 });
 
 withdrawalSchema.index({ user_id: 1 });
-withdrawalSchema.index({ approve: 1 });
+// Equality-first compound indexes: status → sort, type+status → sort
+withdrawalSchema.index({ approve: 1, create_at: -1 });
+withdrawalSchema.index({ withdraw_type: 1, approve: 1, create_at: -1 });
+withdrawalSchema.index({ create_at: -1 }); // fallback for unfiltered sorts
 
 module.exports = mongoose.model('Withdrawal', withdrawalSchema);

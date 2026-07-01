@@ -88,7 +88,7 @@ app.get('/', (req, res) => {
 // 'private' ensures CDNs / shared caches do NOT store user-specific responses.
 app.use('/api', (req, res, next) => {
     if (req.method === 'GET') {
-        res.set('Cache-Control', 'private, max-age=10');
+        res.set('Cache-Control', 'private, max-age=60');
     } else {
         // Mutations must never be cached
         res.set('Cache-Control', 'no-store');

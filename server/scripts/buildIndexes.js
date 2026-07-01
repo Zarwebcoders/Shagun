@@ -103,6 +103,29 @@ async function buildIndexes() {
     }
     console.log('✓ notifications indexes done');
 
+    // ── Withdrawals ───────────────────────────────────────────────────────────
+    const withdrawals = db.collection('withdrawals');
+    console.log('Building withdrawals indexes...');
+    const withdrawalIndexes = [
+        { key: { user_id: 1 } },
+        // Equality-first compound indexes for admin filtering + sort
+        { key: { approve: 1, create_at: -1 } },
+        { key: { withdraw_type: 1, approve: 1, create_at: -1 } },
+        { key: { create_at: -1 } },
+    ];
+    const existingWithdrawalIndexes = await withdrawals.listIndexes().toArray();
+    const existingWithdrawalKeys = existingWithdrawalIndexes.map(i => JSON.stringify(Object.keys(i.key)));
+    for (const idx of withdrawalIndexes) {
+        const keyName = JSON.stringify(Object.keys(idx.key));
+        if (existingWithdrawalKeys.includes(keyName)) {
+            console.log(`  - Skipping (exists): ${keyName}`);
+        } else {
+            await withdrawals.createIndex(idx.key, { background: true });
+            console.log(`  + Created: ${keyName}`);
+        }
+    }
+    console.log('✓ withdrawals indexes done');
+
     console.log('\n✅ All indexes built successfully!');
     await mongoose.disconnect();
     process.exit(0);

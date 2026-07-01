@@ -43,7 +43,8 @@ export default function WithdrawalRequests() {
                 status: filter,
                 type: typeFilter,
                 startDate,
-                endDate
+                endDate,
+                _t: Date.now() // cache-bust so stale browser/client cache is bypassed
             };
             const { data } = await client.get('/withdrawals/all', { params });
             setRequests(data.withdrawals || []);
@@ -51,7 +52,7 @@ export default function WithdrawalRequests() {
             setTotal(data.total || 0);
             setLoading(false);
         } catch (error) {
-            console.error("Error fetching withdrawals:", error);
+            console.error("Error fetching withdrawals:", error?.response?.data || error.message);
             toast.error("Failed to load withdrawal requests");
             setLoading(false);
         }
@@ -226,10 +227,10 @@ export default function WithdrawalRequests() {
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="flex flex-col">
                                                     <span className="text-white font-normal">
-                                                        {req.user_id?.full_name ? req.user_id.full_name : 'User Not Found'}
+                                                        {req.userName || 'User Not Found'}
                                                     </span>
                                                     <span className="text-xs text-teal-400 font-mono">
-                                                        ID: {req.user_id?.referral_id || 'N/A'}
+                                                        ID: {req.referralId || 'N/A'}
                                                     </span>
                                                 </div>
                                             </td>
