@@ -338,11 +338,16 @@ export default function Packages() {
                                     {PRODUCTS.map((prod) => (
                                         <div
                                             key={prod.id}
-                                            onClick={() => setFormData({
-                                                ...formData,
-                                                product: prod.name,
-                                                amount: prod.minAmount * formData.quantity
-                                            })}
+                                            onClick={() => {
+                                                const isEV = prod.name === "Shagun EV";
+                                                const newQty = isEV ? (formData.quantity === 2 ? 2 : 1) : formData.quantity;
+                                                setFormData({
+                                                    ...formData,
+                                                    product: prod.name,
+                                                    quantity: newQty,
+                                                    amount: prod.minAmount * newQty
+                                                });
+                                            }}
                                             className={`relative rounded-xl border-2 p-3 cursor-pointer transition-all duration-300 group overflow-hidden ${formData.product === prod.name
                                                 ? 'border-teal-500 bg-teal-500/10'
                                                 : 'border-white/5 bg-[#0f0f1a] hover:border-teal-500/30'
@@ -369,84 +374,112 @@ export default function Packages() {
                                 </div>
                             </div>
 
-                            {/* Quantity and Total Amount in one row */}
-                            <div className="grid grid-cols-2 gap-3 sm:gap-4 md:gap-6">
-                                {/* Quantity Selector */}
+                            {/* Quantity and Total Amount (Conditional for Shagun EV) */}
+                            {formData.product === "Shagun EV" ? (
                                 <div>
-                                    <label className="block text-sm font-bold text-transparent bg-gradient-brand bg-clip-text mb-3 pl-1 text-base">🔢 Quantity</label>
+                                    <label className="block text-sm font-bold text-transparent bg-gradient-brand bg-clip-text mb-3 pl-1 text-base">📦 Select PV Option</label>
                                     <div className="relative group">
-                                        <div className="flex items-center gap-2">
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    const newQty = Math.max(1, formData.quantity - 1);
-                                                    const selectedProduct = PRODUCTS.find(p => p.name === formData.product);
-                                                    setFormData({
-                                                        ...formData,
-                                                        quantity: newQty,
-                                                        amount: selectedProduct ? selectedProduct.minAmount * newQty : formData.amount
-                                                    });
-                                                }}
-                                                className="w-10 h-10 sm:w-12 sm:h-12 bg-[#0f0f1a] border border-white/10 rounded-xl text-white font-bold text-xl hover:bg-teal-500/10 hover:border-teal-500 transition-all active:scale-95 flex-shrink-0"
-                                            >
-                                                −
-                                            </button>
-                                            <input
-                                                type="number"
-                                                name="quantity"
-                                                value={formData.quantity}
-                                                onChange={(e) => {
-                                                    const newQty = Math.max(1, parseInt(e.target.value) || 1);
-                                                    const selectedProduct = PRODUCTS.find(p => p.name === formData.product);
-                                                    setFormData({
-                                                        ...formData,
-                                                        quantity: newQty,
-                                                        amount: selectedProduct ? selectedProduct.minAmount * newQty : formData.amount
-                                                    });
-                                                }}
-                                                min="1"
-                                                className="w-14 sm:w-20 text-center py-3 sm:py-4 bg-[#0f0f1a] border border-white/10 rounded-xl text-white text-base sm:text-lg font-bold focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all"
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    const newQty = formData.quantity + 1;
-                                                    const selectedProduct = PRODUCTS.find(p => p.name === formData.product);
-                                                    setFormData({
-                                                        ...formData,
-                                                        quantity: newQty,
-                                                        amount: selectedProduct ? selectedProduct.minAmount * newQty : formData.amount
-                                                    });
-                                                }}
-                                                className="w-10 h-10 sm:w-12 sm:h-12 bg-[#0f0f1a] border border-white/10 rounded-xl text-white font-bold text-xl hover:bg-teal-500/10 hover:border-teal-500 transition-all active:scale-95 flex-shrink-0"
-                                            >
-                                                +
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <p className="text-gray-500 text-xs mt-2 pl-1 hidden sm:block">Select how many units to purchase</p>
-                                </div>
-
-                                {/* Total Amount */}
-                                <div>
-                                    <label className="block text-sm font-bold text-transparent bg-gradient-brand bg-clip-text mb-3 pl-1 text-base">💰 Total Amount</label>
-                                    <div className="relative group">
-                                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                            <CurrencyRupeeIcon className="h-5 w-5 text-teal-400" />
-                                        </div>
-                                        <input
-                                            type="number"
-                                            name="amount"
-                                            value={formData.amount}
-                                            readOnly
-                                            className="w-full pl-11 pr-4 py-4 bg-gradient-to-r from-teal-500/10 to-purple-500/10 border border-teal-500/30 rounded-xl text-white text-xl font-bold placeholder-gray-600 focus:outline-none cursor-not-allowed"
-                                        />
+                                        <select
+                                            name="quantity"
+                                            value={formData.quantity}
+                                            onChange={(e) => {
+                                                const newQty = parseInt(e.target.value) || 1;
+                                                setFormData({
+                                                    ...formData,
+                                                    quantity: newQty,
+                                                    amount: 90000 * newQty
+                                                });
+                                            }}
+                                            className="w-full px-4 py-4 bg-[#0f0f1a] border border-white/10 rounded-xl text-white text-lg font-bold focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all appearance-none cursor-pointer"
+                                            style={{ backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '1.5em' }}
+                                        >
+                                            <option value={1} className="bg-[#0f0f1a] text-white">1 PV</option>
+                                            <option value={2} className="bg-[#0f0f1a] text-white">2 PV</option>
+                                        </select>
                                     </div>
                                     <p className="text-teal-400 text-xs mt-2 pl-1 font-medium">
-                                        ₹{PRODUCTS.find(p => p.name === formData.product)?.minAmount || 0} × {formData.quantity} = ₹{formData.amount}
+                                        Selected: {formData.quantity} PV Package (Total: ₹{(90000 * formData.quantity).toLocaleString('en-IN')})
                                     </p>
                                 </div>
-                            </div>
+                            ) : (
+                                <div className="grid grid-cols-2 gap-3 sm:gap-4 md:gap-6">
+                                    {/* Quantity Selector */}
+                                    <div>
+                                        <label className="block text-sm font-bold text-transparent bg-gradient-brand bg-clip-text mb-3 pl-1 text-base">🔢 Quantity</label>
+                                        <div className="relative group">
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const newQty = Math.max(1, formData.quantity - 1);
+                                                        const selectedProduct = PRODUCTS.find(p => p.name === formData.product);
+                                                        setFormData({
+                                                            ...formData,
+                                                            quantity: newQty,
+                                                            amount: selectedProduct ? selectedProduct.minAmount * newQty : formData.amount
+                                                        });
+                                                    }}
+                                                    className="w-10 h-10 sm:w-12 sm:h-12 bg-[#0f0f1a] border border-white/10 rounded-xl text-white font-bold text-xl hover:bg-teal-500/10 hover:border-teal-500 transition-all active:scale-95 flex-shrink-0"
+                                                >
+                                                    −
+                                                </button>
+                                                <input
+                                                    type="number"
+                                                    name="quantity"
+                                                    value={formData.quantity}
+                                                    onChange={(e) => {
+                                                        const newQty = Math.max(1, parseInt(e.target.value) || 1);
+                                                        const selectedProduct = PRODUCTS.find(p => p.name === formData.product);
+                                                        setFormData({
+                                                            ...formData,
+                                                            quantity: newQty,
+                                                            amount: selectedProduct ? selectedProduct.minAmount * newQty : formData.amount
+                                                        });
+                                                    }}
+                                                    min="1"
+                                                    className="w-14 sm:w-20 text-center py-3 sm:py-4 bg-[#0f0f1a] border border-white/10 rounded-xl text-white text-base sm:text-lg font-bold focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const newQty = formData.quantity + 1;
+                                                        const selectedProduct = PRODUCTS.find(p => p.name === formData.product);
+                                                        setFormData({
+                                                            ...formData,
+                                                            quantity: newQty,
+                                                            amount: selectedProduct ? selectedProduct.minAmount * newQty : formData.amount
+                                                        });
+                                                    }}
+                                                    className="w-10 h-10 sm:w-12 sm:h-12 bg-[#0f0f1a] border border-white/10 rounded-xl text-white font-bold text-xl hover:bg-teal-500/10 hover:border-teal-500 transition-all active:scale-95 flex-shrink-0"
+                                                >
+                                                    +
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <p className="text-gray-500 text-xs mt-2 pl-1 hidden sm:block">Select how many units to purchase</p>
+                                    </div>
+
+                                    {/* Total Amount */}
+                                    <div>
+                                        <label className="block text-sm font-bold text-transparent bg-gradient-brand bg-clip-text mb-3 pl-1 text-base">💰 Total Amount</label>
+                                        <div className="relative group">
+                                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                                <CurrencyRupeeIcon className="h-5 w-5 text-teal-400" />
+                                            </div>
+                                            <input
+                                                type="number"
+                                                name="amount"
+                                                value={formData.amount}
+                                                readOnly
+                                                className="w-full pl-11 pr-4 py-4 bg-gradient-to-r from-teal-500/10 to-purple-500/10 border border-teal-500/30 rounded-xl text-white text-xl font-bold placeholder-gray-600 focus:outline-none cursor-not-allowed"
+                                            />
+                                        </div>
+                                        <p className="text-teal-400 text-xs mt-2 pl-1 font-medium">
+                                            ₹{PRODUCTS.find(p => p.name === formData.product)?.minAmount || 0} × {formData.quantity} = ₹{formData.amount}
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Wallet Address */}
                             <div>
