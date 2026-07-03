@@ -397,8 +397,11 @@ export default function Packages() {
                                             <option value={2} className="bg-[#0f0f1a] text-white">2 PV</option>
                                         </select>
                                     </div>
-                                    <p className="text-teal-400 text-xs mt-2 pl-1 font-medium">
+                                    {/* <p className="text-teal-400 text-xs mt-2 pl-1 font-medium">
                                         Selected: {formData.quantity} PV Package (Total: ₹{(90000 * formData.quantity).toLocaleString('en-IN')})
+                                    </p> */}
+                                    <p className="text-teal-400 text-xs mt-2 pl-1 font-medium">
+                                        Selected: {formData.quantity} PV Package
                                     </p>
                                 </div>
                             ) : (
@@ -690,7 +693,7 @@ export default function Packages() {
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-right">
                                                     {(item.approve === 1 || item.approve === "1") ? (
-                                                        <button 
+                                                        <button
                                                             onClick={() => {
                                                                 const qty2 = item.quantity || 1;
                                                                 const hasBV2 = item.business_volume && item.business_volume > 0;
@@ -739,7 +742,7 @@ export default function Packages() {
                 </div>
             </motion.div>
 
-            <InvoiceModal 
+            <InvoiceModal
                 isOpen={isInvoiceModalOpen}
                 onClose={() => setIsInvoiceModalOpen(false)}
                 invoiceData={selectedInvoice}
