@@ -103,12 +103,23 @@ export default function PackageManagement() {
 
             const loadingToast = toast.loading("Initiating blockchain approval...")
             try {
-                console.log("Approving on chain:", productRecord.wallet_address, productRecord.product_id, productRecord.quantity)
+                // Map product ID for blockchain since contract only allows 1 or 2
+                let onchainProductId = Number(productRecord.product_id);
+                let onchainQuantity = Number(productRecord.quantity) || 1;
+
+                if (onchainProductId === 3) {
+                    onchainProductId = 1; // Map to product 1, same 10,000 token value
+                } else if (onchainProductId === 4) {
+                    onchainProductId = 1; // Map to product 1
+                    onchainQuantity = onchainQuantity * 2; // Double quantity because token value is 20,000 (double of 10,000)
+                }
+
+                console.log("Approving on chain:", productRecord.wallet_address, onchainProductId, onchainQuantity)
 
                 const tx = await contract.approveProductPurchase(
                     productRecord.wallet_address,
-                    productRecord.product_id,
-                    productRecord.quantity
+                    onchainProductId,
+                    onchainQuantity
                 )
 
                 toast.loading("Waiting for network confirmation...", { id: loadingToast })
