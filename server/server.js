@@ -34,6 +34,8 @@ const corsOptions = {
         const isAllowed = allowedOrigins.includes(origin) || 
                           origin.startsWith('http://localhost:') || 
                           origin.startsWith('http://127.0.0.1:') || 
+                          origin.endsWith('.shagunpro.com') ||
+                          origin.endsWith('.vercel.app') ||
                           origin.endsWith('.ngrok-free.dev') ||
                           origin.endsWith('.ngrok.io') ||
                           origin.endsWith('.lhr.life') ||
@@ -43,7 +45,8 @@ const corsOptions = {
         if (isAllowed) {
             callback(null, true);
         } else {
-            callback(new Error('Not allowed by CORS'));
+            console.warn(`CORS blocked for origin: ${origin}`);
+            callback(null, false);
         }
     },
     credentials: true,
