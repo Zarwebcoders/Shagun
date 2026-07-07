@@ -700,9 +700,19 @@ export default function Packages() {
                                                 </td>
                                                 {(() => {
                                                     const qty = item.quantity || 1;
-                                                    // business_volume always stores unitPrice * qty correctly
-                                                    // Old records: amount = unitPrice * qty (total baked in)
-                                                    // New records: amount = unitPrice, business_volume = unitPrice * qty
+                                                    const isEV = item.packag_type && item.packag_type.toLowerCase().includes("ev");
+                                                    if (isEV) {
+                                                        return (
+                                                            <>
+                                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                                    <div className="text-white font-bold">1 PV</div>
+                                                                </td>
+                                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                                    <div className="text-teal-400 font-bold text-lg">{qty} PV</div>
+                                                                </td>
+                                                            </>
+                                                        );
+                                                    }
                                                     const hasBV = item.business_volume && item.business_volume > 0;
                                                     const totalAmount = hasBV ? item.business_volume : Number(item.amount);
                                                     const unitPrice = Math.round(totalAmount / qty);

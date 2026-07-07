@@ -107,11 +107,8 @@ export default function PackageManagement() {
                 let onchainProductId = Number(productRecord.product_id);
                 let onchainQuantity = Number(productRecord.quantity) || 1;
 
-                if (onchainProductId === 3) {
-                    onchainProductId = 1; // Map to product 1, same 10,000 token value
-                } else if (onchainProductId === 4) {
-                    onchainProductId = 1; // Map to product 1
-                    onchainQuantity = onchainQuantity * 2; // Double quantity because token value is 20,000 (double of 10,000)
+                if (onchainProductId === 3 || onchainProductId === 4) {
+                    onchainProductId = 1; // Map to product 1, same 10,000 token value per unit
                 }
 
                 console.log("Approving on chain:", productRecord.wallet_address, onchainProductId, onchainQuantity)
@@ -434,6 +431,12 @@ export default function PackageManagement() {
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             {(() => {
+                                                const isEV = item.packag_type && item.packag_type.toLowerCase().includes("ev");
+                                                if (isEV) {
+                                                    return (
+                                                        <span className="text-teal-400 font-bold">{item.quantity || 1} PV</span>
+                                                    )
+                                                }
                                                 const hasBV = item.business_volume && item.business_volume > 0
                                                 const totalAmount = hasBV ? item.business_volume : Number(item.amount)
                                                 return (
@@ -634,9 +637,12 @@ export default function PackageManagement() {
                                             <span className="text-white font-medium">{selectedProduct.quantity || 1}</span>
                                         </div>
                                         <div>
-                                            <label className="text-xs text-gray-500 block">Amount (INR)</label>
+                                            <label className="text-xs text-gray-500 block">{selectedProduct.packag_type?.toLowerCase().includes("ev") ? "Amount (PV)" : "Amount (INR)"}</label>
                                             <span className="text-teal-400 font-bold">
-                                                ₹{(selectedProduct.business_volume || (Number(selectedProduct.amount) * (selectedProduct.quantity || 1))).toLocaleString()}
+                                                {selectedProduct.packag_type?.toLowerCase().includes("ev")
+                                                    ? `${selectedProduct.quantity || 1} PV`
+                                                    : `₹${(selectedProduct.business_volume || (Number(selectedProduct.amount) * (selectedProduct.quantity || 1))).toLocaleString()}`
+                                                }
                                             </span>
                                         </div>
                                     </div>

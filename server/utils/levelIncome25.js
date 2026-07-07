@@ -11,7 +11,7 @@ const PRODUCT_DEFINITIONS = {
     1: { name: 'Milkish Herbal', price: 15000, tokenValue: 10000 },
     2: { name: 'Petro', price: 12500, tokenValue: 10000 },
     3: { name: 'Smart Home', price: 20000, tokenValue: 10000 },
-    4: { name: 'Shagun EV', price: 90000, tokenValue: 20000 }
+    4: { name: 'Shagun EV', price: 90000, tokenValue: 10000 }
 };
 
 /**
