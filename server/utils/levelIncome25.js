@@ -318,8 +318,80 @@ const distributeReferralIncome = async (buyerUserId, productAmount, productId = 
         // Find the product to check if it's the 15k Milkish
         const productDoc = await Product.findById(productId);
         const isMilkish15k = productDoc && productDoc.packag_type?.includes('Milkish') && productAmount >= 15000;
+        const isEV = productDoc && (
+            (productDoc.packag_type && productDoc.packag_type.toLowerCase().includes('ev')) ||
+            productDoc.product_id === 4
+        );
 
-        if (isMilkish15k) {
+        if (isEV) {
+            const qty = productDoc?.quantity || 1;
+            console.log(`SHAGUN EV DETECTED: Starting multi-level referral distribution. Quantity (PV): ${qty}`);
+            const EV_LEVELS = qty >= 2
+                ? [2000, 1000, 900, 800, 700, 700, 500]
+                : [1000, 500, 400, 400, 300, 300];
+
+            let currentUplineTracker = buyer;
+            let levelDistributed = 0;
+
+            while (levelDistributed < EV_LEVELS.length) {
+                if (!currentUplineTracker.sponsor_id) break;
+
+                let sponsor = await findUserRobustly(currentUplineTracker.sponsor_id);
+                if (!sponsor) break;
+
+                const eligible = await isUserEligible(sponsor._id);
+                if (eligible) {
+                    const commission = EV_LEVELS[levelDistributed];
+                    
+                    sponsor.sponsor_income = (Number(sponsor.sponsor_income || 0)) + commission;
+                    sponsor.total_income = (Number(sponsor.total_income || 0)) + commission;
+                    await sponsor.save();
+
+                    console.log(`Level ${levelDistributed + 1} Referral (EV): ₹${commission} credited to ${sponsor.email}`);
+
+                    // Create notification for sponsor
+                    try {
+                        const Notification = require('../models/Notification');
+                        await Notification.create({
+                            user_id: sponsor._id,
+                            message: `You received Referral Income of ₹${commission.toFixed(2)} (Level ${levelDistributed + 1}) from ${buyer.full_name}'s purchase.`,
+                            type: 'income',
+                            path: '/referral-income'
+                        });
+                    } catch (err) {
+                        console.error("Failed to create EV referral income notification:", err.message);
+                    }
+
+                    const Transaction = require('../models/Transaction');
+                    await Transaction.create({
+                        user: sponsor._id,
+                        relatedUser: buyer._id,
+                        type: 'referral_income',
+                        amount: commission,
+                        description: `EV Referral Income (Level ${levelDistributed + 1})`,
+                        status: 'completed',
+                        hash: `REFEV_${Date.now()}_L${levelDistributed + 1}`
+                    });
+
+                    const ReferralIncomes = require('../models/ReferralIncomes');
+                    await ReferralIncomes.create({
+                        earner_user_id: String(sponsor.user_id || sponsor._id),
+                        referred_user_id: String(buyer.user_id || buyer._id),
+                        product_id: String(productId),
+                        product_transcation_id: txnId || `REFEV_${Date.now()}`,
+                        amount: productAmount,
+                        percentage: 0, // Fixed amount
+                        referral_amount: commission,
+                        status: 'credited'
+                    });
+                } else {
+                    console.log(`Level ${levelDistributed + 1} Sponsor ${sponsor.email} is inactive/ineligible. Referral skipped.`);
+                }
+
+                levelDistributed++;
+                currentUplineTracker = sponsor;
+            }
+        } else if (isMilkish15k) {
             const qty = productDoc?.quantity || 1;
             console.log(`MILKISH 15K DETECTED: Starting 10-level referral distribution (Option 2: No shifting, check eligibility). Quantity: ${qty}`);
             const MILKISH_LEVELS = [1200, 600, 400, 400, 400, 400, 300, 300, 300, 300];
