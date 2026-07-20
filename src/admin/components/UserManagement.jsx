@@ -7,7 +7,7 @@ import client from "../../api/client"
 import Pagination from "../../components/common/Pagination"
 import * as XLSX from "xlsx"
 import { jsPDF } from "jspdf"
-import "jspdf-autotable"
+import autoTable from "jspdf-autotable"
 
 export default function UserManagement() {
     const [searchTerm, setSearchTerm] = useState("")
@@ -129,9 +129,11 @@ export default function UserManagement() {
 
 
     const toggleUserSelection = (userId) => {
-        setSelectedUsers(prev =>
-            prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]
-        );
+        setSelectedUsers(prev => {
+            const next = prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId];
+            setExportSelectedOnly(next.length > 0);
+            return next;
+        });
     };
 
     const toggleSelectAll = () => {
@@ -139,11 +141,17 @@ export default function UserManagement() {
         const allIdsOnPage = users.map(u => u._id);
         const allSelected = allIdsOnPage.every(id => selectedUsers.includes(id));
         if (allSelected) {
-            setSelectedUsers(prev => prev.filter(id => !allIdsOnPage.includes(id)));
+            setSelectedUsers(prev => {
+                const next = prev.filter(id => !allIdsOnPage.includes(id));
+                setExportSelectedOnly(next.length > 0);
+                return next;
+            });
         } else {
             setSelectedUsers(prev => {
                 const uniqueNewIds = allIdsOnPage.filter(id => !prev.includes(id));
-                return [...prev, ...uniqueNewIds];
+                const next = [...prev, ...uniqueNewIds];
+                setExportSelectedOnly(next.length > 0);
+                return next;
             });
         }
     };
@@ -252,7 +260,7 @@ export default function UserManagement() {
             u.is_deleted == 0 || u.is_deleted === "0" ? "Active" : "Inactive"
         ]);
 
-        doc.autoTable({
+        autoTable(doc, {
             startY: 20,
             head: headers,
             body: rows,

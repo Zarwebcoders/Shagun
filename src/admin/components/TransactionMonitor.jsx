@@ -23,7 +23,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import Pagination from "../../components/common/Pagination"
 import * as XLSX from "xlsx"
 import { jsPDF } from "jspdf"
-import "jspdf-autotable"
+import autoTable from "jspdf-autotable"
 
 const TypeBadge = ({ type }) => {
     const styles = {
@@ -147,9 +147,11 @@ export default function TransactionMonitor({ defaultType = "all" }) {
 
     // Selection handlers
     const toggleTxSelection = (txId) => {
-        setSelectedTxs(prev => 
-            prev.includes(txId) ? prev.filter(id => id !== txId) : [...prev, txId]
-        );
+        setSelectedTxs(prev => {
+            const next = prev.includes(txId) ? prev.filter(id => id !== txId) : [...prev, txId];
+            setExportSelectedOnly(next.length > 0);
+            return next;
+        });
     };
 
     const toggleSelectAll = () => {
@@ -157,11 +159,17 @@ export default function TransactionMonitor({ defaultType = "all" }) {
         const allIdsOnPage = transactions.map(t => t._id);
         const allSelected = allIdsOnPage.every(id => selectedTxs.includes(id));
         if (allSelected) {
-            setSelectedTxs(prev => prev.filter(id => !allIdsOnPage.includes(id)));
+            setSelectedTxs(prev => {
+                const next = prev.filter(id => !allIdsOnPage.includes(id));
+                setExportSelectedOnly(next.length > 0);
+                return next;
+            });
         } else {
             setSelectedTxs(prev => {
                 const uniqueNewIds = allIdsOnPage.filter(id => !prev.includes(id));
-                return [...prev, ...uniqueNewIds];
+                const next = [...prev, ...uniqueNewIds];
+                setExportSelectedOnly(next.length > 0);
+                return next;
             });
         }
     };
@@ -286,7 +294,7 @@ export default function TransactionMonitor({ defaultType = "all" }) {
             t.description || ''
         ]);
 
-        doc.autoTable({
+        autoTable(doc, {
             startY: 20,
             head: headers,
             body: rows,
