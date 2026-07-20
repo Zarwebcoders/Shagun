@@ -244,25 +244,107 @@ const updateTransactionStatus = async (req, res) => {
         const transaction = await Transaction.findById(req.params.id);
 
         if (transaction) {
+            const isTransitionToCompleted = transaction.status !== 'completed' && status === 'completed';
             transaction.status = status;
             await transaction.save();
 
-            // If approved/completed, update balance logic here
-            // This is a simplified example
-            if (status === 'completed') {
+            if (isTransitionToCompleted) {
                 const user = await User.findById(transaction.user);
-                if (transaction.type === 'deposit') {
-                    user.balance += transaction.amount;
-                } else if (transaction.type === 'withdrawal') {
-                    user.balance -= transaction.amount;
+                if (user) {
+                    if (transaction.type === 'deposit') {
+                        user.balance = (user.balance || 0) + transaction.amount;
+                        await user.save();
+                    } else if (transaction.type === 'withdrawal') {
+                        user.balance = (user.balance || 0) - transaction.amount;
+                        await user.save();
+                    } else if (transaction.type === 'referral_income') {
+                        user.sponsor_income = (Number(user.sponsor_income || 0)) + Number(transaction.amount);
+                        user.total_income = (Number(user.total_income || 0)) + Number(transaction.amount);
+                        await user.save();
+
+                        // Also update corresponding ReferralIncomes status
+                        const ReferralIncomes = require('../models/ReferralIncomes');
+                        await ReferralIncomes.updateOne(
+                            { 
+                                $or: [
+                                    { transaction_id: transaction._id },
+                                    { 
+                                        earner_user_id: String(user.user_id || user._id), 
+                                        referred_user_id: String(transaction.relatedUser), 
+                                        referral_amount: transaction.amount, 
+                                        status: 'pending' 
+                                    }
+                                ] 
+                            },
+                            { $set: { status: 'credited' } }
+                        );
+                    }
                 }
-                await user.save();
             }
 
             res.json(transaction);
         } else {
             res.status(404).json({ message: 'Transaction not found' });
         }
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Bulk Update transaction status (Admin)
+// @route   PUT /api/transactions/bulk/status
+// @access  Private/Admin
+const bulkUpdateTransactionStatus = async (req, res) => {
+    const { ids, status } = req.body;
+    if (!Array.isArray(ids) || !status) {
+        return res.status(400).json({ message: "Invalid request parameters" });
+    }
+
+    try {
+        const results = [];
+        for (const id of ids) {
+            const transaction = await Transaction.findById(id);
+            if (transaction) {
+                const isTransitionToCompleted = transaction.status !== 'completed' && status === 'completed';
+                transaction.status = status;
+                await transaction.save();
+
+                if (isTransitionToCompleted) {
+                    const user = await User.findById(transaction.user);
+                    if (user) {
+                        if (transaction.type === 'deposit') {
+                            user.balance = (user.balance || 0) + transaction.amount;
+                            await user.save();
+                        } else if (transaction.type === 'withdrawal') {
+                            user.balance = (user.balance || 0) - transaction.amount;
+                            await user.save();
+                        } else if (transaction.type === 'referral_income') {
+                            user.sponsor_income = (Number(user.sponsor_income || 0)) + Number(transaction.amount);
+                            user.total_income = (Number(user.total_income || 0)) + Number(transaction.amount);
+                            await user.save();
+
+                            const ReferralIncomes = require('../models/ReferralIncomes');
+                            await ReferralIncomes.updateOne(
+                                { 
+                                    $or: [
+                                        { transaction_id: transaction._id },
+                                        { 
+                                            earner_user_id: String(user.user_id || user._id), 
+                                            referred_user_id: String(transaction.relatedUser), 
+                                            referral_amount: transaction.amount, 
+                                            status: 'pending' 
+                                        }
+                                    ] 
+                                },
+                                { $set: { status: 'credited' } }
+                            );
+                        }
+                    }
+                }
+                results.push(transaction._id);
+            }
+        }
+        res.json({ message: `Successfully updated ${results.length} transactions`, updatedIds: results });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -280,15 +362,13 @@ const getTransactionStats = async (req, res) => {
             Transaction.countDocuments({}),
             Transaction.countDocuments({ status: 'pending' }),
             Transaction.countDocuments({ status: 'failed' }),
-            Transaction.countDocuments({ createdAt: { $gte: todayAtMidnight } })
+            Transaction.aggregate([
+                { $match: { createdAt: { $gte: todayAtMidnight } } },
+                { $group: { _id: null, total: { $sum: '$amount' } } }
+            ])
         ]);
 
-        const totalVolumeResult = await Transaction.aggregate([
-            { $match: { status: 'completed' } },
-            { $group: { _id: null, total: { $sum: "$amount" } } }
-        ]);
-
-        const totalVolume = totalVolumeResult.length > 0 ? totalVolumeResult[0].total : 0;
+        const totalVolume = today[0] ? today[0].total : 0;
 
         res.json({
             totalTransactions,

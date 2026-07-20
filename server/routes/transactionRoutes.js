@@ -5,6 +5,7 @@ const {
     createTransaction,
     updateTransactionStatus,
     getTransactionStats,
+    bulkUpdateTransactionStatus
 } = require('../controllers/transactionController');
 const { protect, admin } = require('../middleware/authMiddleware');
 
@@ -14,6 +15,8 @@ router.route('/')
 
 router.route('/:id')
     .put(protect, admin, updateTransactionStatus);
+
+router.put('/bulk/status', protect, admin, bulkUpdateTransactionStatus);
 
 router.get('/stats', protect, admin, getTransactionStats);
 

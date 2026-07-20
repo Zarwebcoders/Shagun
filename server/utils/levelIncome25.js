@@ -343,11 +343,11 @@ const distributeReferralIncome = async (buyerUserId, productAmount, productId = 
                 if (eligible) {
                     const commission = EV_LEVELS[levelDistributed];
                     
-                    sponsor.sponsor_income = (Number(sponsor.sponsor_income || 0)) + commission;
-                    sponsor.total_income = (Number(sponsor.total_income || 0)) + commission;
-                    await sponsor.save();
+                    // sponsor.sponsor_income = (Number(sponsor.sponsor_income || 0)) + commission;
+                    // sponsor.total_income = (Number(sponsor.total_income || 0)) + commission;
+                    // await sponsor.save();
 
-                    console.log(`Level ${levelDistributed + 1} Referral (EV): ₹${commission} credited to ${sponsor.email}`);
+                    console.log(`Level ${levelDistributed + 1} Referral (EV): ₹${commission} pending for ${sponsor.email}`);
 
                     // Create notification for sponsor
                     try {
@@ -363,13 +363,13 @@ const distributeReferralIncome = async (buyerUserId, productAmount, productId = 
                     }
 
                     const Transaction = require('../models/Transaction');
-                    await Transaction.create({
+                    const tx = await Transaction.create({
                         user: sponsor._id,
                         relatedUser: buyer._id,
                         type: 'referral_income',
                         amount: commission,
                         description: `EV Referral Income (Level ${levelDistributed + 1})`,
-                        status: 'completed',
+                        status: 'pending',
                         hash: `REFEV_${Date.now()}_L${levelDistributed + 1}`
                     });
 
@@ -382,7 +382,8 @@ const distributeReferralIncome = async (buyerUserId, productAmount, productId = 
                         amount: productAmount,
                         percentage: 0, // Fixed amount
                         referral_amount: commission,
-                        status: 'credited'
+                        status: 'pending',
+                        transaction_id: tx._id
                     });
                 } else {
                     console.log(`Level ${levelDistributed + 1} Sponsor ${sponsor.email} is inactive/ineligible. Referral skipped.`);
@@ -409,11 +410,11 @@ const distributeReferralIncome = async (buyerUserId, productAmount, productId = 
                 if (eligible) {
                     const commission = MILKISH_LEVELS[levelDistributed] * qty;
                     
-                    sponsor.sponsor_income = (Number(sponsor.sponsor_income || 0)) + commission;
-                    sponsor.total_income = (Number(sponsor.total_income || 0)) + commission;
-                    await sponsor.save();
+                    // sponsor.sponsor_income = (Number(sponsor.sponsor_income || 0)) + commission;
+                    // sponsor.total_income = (Number(sponsor.total_income || 0)) + commission;
+                    // await sponsor.save();
 
-                    console.log(`Level ${levelDistributed + 1} Referral: ₹${commission} credited to ${sponsor.email}`);
+                    console.log(`Level ${levelDistributed + 1} Referral: ₹${commission} pending for ${sponsor.email}`);
 
                     // Create notification for sponsor
                     try {
@@ -429,13 +430,13 @@ const distributeReferralIncome = async (buyerUserId, productAmount, productId = 
                     }
 
                     const Transaction = require('../models/Transaction');
-                    await Transaction.create({
+                    const tx = await Transaction.create({
                         user: sponsor._id,
                         relatedUser: buyer._id,
                         type: 'referral_income',
                         amount: commission,
                         description: `Milkish Referral Income (Level ${levelDistributed + 1})`,
-                        status: 'completed',
+                        status: 'pending',
                         hash: `REF15K_${Date.now()}_L${levelDistributed + 1}`
                     });
 
@@ -448,7 +449,8 @@ const distributeReferralIncome = async (buyerUserId, productAmount, productId = 
                         amount: productAmount,
                         percentage: 0, // Fixed amount
                         referral_amount: commission,
-                        status: 'credited'
+                        status: 'pending',
+                        transaction_id: tx._id
                     });
                 } else {
                     console.log(`Level ${levelDistributed + 1} Sponsor ${sponsor.email} is inactive/ineligible. Referral skipped.`);
@@ -472,11 +474,11 @@ const distributeReferralIncome = async (buyerUserId, productAmount, productId = 
                 const eligible = await isUserEligible(sponsor._id);
                 if (eligible) {
                     const referralIncome = (productAmount * 8) / 100;
-                    sponsor.sponsor_income = (Number(sponsor.sponsor_income || 0)) + referralIncome;
-                    sponsor.total_income = (Number(sponsor.total_income || 0)) + referralIncome;
-                    await sponsor.save();
+                    // sponsor.sponsor_income = (Number(sponsor.sponsor_income || 0)) + referralIncome;
+                    // sponsor.total_income = (Number(sponsor.total_income || 0)) + referralIncome;
+                    // await sponsor.save();
 
-                    console.log(`8% Referral: ₹${referralIncome} credited to ${sponsor.email}`);
+                    console.log(`8% Referral: ₹${referralIncome} pending for ${sponsor.email}`);
 
                     // Create notification for sponsor
                     try {
@@ -492,13 +494,13 @@ const distributeReferralIncome = async (buyerUserId, productAmount, productId = 
                     }
 
                     const Transaction = require('../models/Transaction');
-                    await Transaction.create({
+                    const tx = await Transaction.create({
                         user: sponsor._id,
                         relatedUser: buyer._id,
                         type: 'referral_income',
                         amount: referralIncome,
                         description: `Referral Income (8%) from product purchase`,
-                        status: 'completed',
+                        status: 'pending',
                         hash: `REF${Date.now()}`
                     });
 
@@ -511,7 +513,8 @@ const distributeReferralIncome = async (buyerUserId, productAmount, productId = 
                         amount: productAmount,
                         percentage: 8.00,
                         referral_amount: referralIncome,
-                        status: 'credited'
+                        status: 'pending',
+                        transaction_id: tx._id
                     });
                 } else {
                     console.log(`Direct Sponsor ${sponsor.email} is inactive/ineligible. Referral skipped.`);

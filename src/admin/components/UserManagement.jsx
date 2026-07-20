@@ -5,6 +5,9 @@ import { CheckCircle, Clock, Users, ShieldCheck, LogIn, Copy, Eye, EyeOff } from
 import { toast } from "react-hot-toast"
 import client from "../../api/client"
 import Pagination from "../../components/common/Pagination"
+import * as XLSX from "xlsx"
+import { jsPDF } from "jspdf"
+import "jspdf-autotable"
 
 export default function UserManagement() {
     const [searchTerm, setSearchTerm] = useState("")
@@ -17,9 +20,15 @@ export default function UserManagement() {
     const [startDate, setStartDate] = useState("")
     const [endDate, setEndDate] = useState("")
     const [availablePackages, setAvailablePackages] = useState([])
+    const [quantityFilter, setQuantityFilter] = useState("")
+    const [debouncedQuantity, setDebouncedQuantity] = useState("")
 
     const [users, setUsers] = useState([])
     const [loading, setLoading] = useState(true)
+
+    // Selection state for exporting
+    const [selectedUsers, setSelectedUsers] = useState([])
+    const [exportSelectedOnly, setExportSelectedOnly] = useState(false)
 
     // Pagination State
     const [page, setPage] = useState(1);
@@ -46,13 +55,28 @@ export default function UserManagement() {
         };
     }, [searchTerm]);
 
+    // Debounce quantity filter
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedQuantity(quantityFilter);
+            setPage(1); // Reset to page 1 on quantity change
+        }, 500);
 
+        return () => {
+            clearTimeout(handler);
+        };
+    }, [quantityFilter]);
+
+    // Reset selected users on query/page change
+    useEffect(() => {
+        setSelectedUsers([]);
+    }, [page, debouncedSearch, packageFilter, startDate, endDate, debouncedQuantity]);
 
     const [userStats, setUserStats] = useState({ totalUsers: 0, activeUsers: 0, totalAdmins: 0 });
 
     useEffect(() => {
         fetchUsers();
-    }, [page, debouncedSearch, packageFilter, startDate, endDate]);
+    }, [page, debouncedSearch, packageFilter, startDate, endDate, debouncedQuantity]);
 
     useEffect(() => {
         const fetchAllPackages = async () => {
@@ -80,7 +104,8 @@ export default function UserManagement() {
                 search: debouncedSearch,
                 package: packageFilter,
                 startDate,
-                endDate
+                endDate,
+                quantity: debouncedQuantity
             };
             const { data } = await client.get('/users', { params });
 
@@ -103,9 +128,142 @@ export default function UserManagement() {
     // Layout changes
 
 
-    // const toggleUserSelection = (userId) => {
-    //     setSelectedUsers((prev) => (prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]))
-    // }
+    const toggleUserSelection = (userId) => {
+        setSelectedUsers(prev =>
+            prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]
+        );
+    };
+
+    const toggleSelectAll = () => {
+        if (users.length === 0) return;
+        const allIdsOnPage = users.map(u => u._id);
+        const allSelected = allIdsOnPage.every(id => selectedUsers.includes(id));
+        if (allSelected) {
+            setSelectedUsers(prev => prev.filter(id => !allIdsOnPage.includes(id)));
+        } else {
+            setSelectedUsers(prev => {
+                const uniqueNewIds = allIdsOnPage.filter(id => !prev.includes(id));
+                return [...prev, ...uniqueNewIds];
+            });
+        }
+    };
+
+    const getExportData = async () => {
+        if (exportSelectedOnly) {
+            if (selectedUsers.length === 0) {
+                toast.error("No users selected for export");
+                return null;
+            }
+            return users.filter(u => selectedUsers.includes(u._id));
+        } else {
+            try {
+                setLoading(true);
+                const params = {
+                    page: 1,
+                    limit: 10000,
+                    search: debouncedSearch,
+                    package: packageFilter,
+                    startDate,
+                    endDate,
+                    quantity: debouncedQuantity
+                };
+                const { data } = await client.get('/users', { params });
+                return data.users || [];
+            } catch (err) {
+                console.error("Error fetching export data:", err);
+                toast.error("Failed to fetch all users for export");
+                return null;
+            } finally {
+                setLoading(false);
+            }
+        }
+    };
+
+    const exportToCSV = async () => {
+        const exportUsers = await getExportData();
+        if (!exportUsers || exportUsers.length === 0) return;
+
+        const headers = ["Full Name", "Email", "Mobile", "Referral ID", "Sponsor ID", "Wallet Address", "Packages", "Join Date", "Status"];
+        const rows = exportUsers.map(u => [
+            u.full_name || "",
+            u.email || "",
+            u.mobile || "",
+            u.referral_id || "",
+            u.sponsor_id || "",
+            u.wallet_address || "",
+            u.approved_packages ? u.approved_packages.map(p => `${p.name} (${p.quantity})`).join("; ") : "",
+            u.create_at ? new Date(u.create_at).toLocaleDateString() : "",
+            u.is_deleted == 0 || u.is_deleted === "0" ? "Active" : "Inactive"
+        ]);
+
+        const csvContent = "\uFEFF" + [headers.join(","), ...rows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))].join("\n");
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `users_export_${Date.now()}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.success("CSV file downloaded!");
+    };
+
+    const exportToExcel = async () => {
+        const exportUsers = await getExportData();
+        if (!exportUsers || exportUsers.length === 0) return;
+
+        const formatted = exportUsers.map(u => ({
+            "Full Name": u.full_name || "",
+            "Email": u.email || "",
+            "Mobile": u.mobile || "",
+            "Referral ID": u.referral_id || "",
+            "Sponsor ID": u.sponsor_id || "",
+            "Wallet Address": u.wallet_address || "",
+            "Packages": u.approved_packages ? u.approved_packages.map(p => `${p.name} (${p.quantity})`).join("; ") : "",
+            "Join Date": u.create_at ? new Date(u.create_at).toLocaleDateString() : "",
+            "Status": u.is_deleted == 0 || u.is_deleted === "0" ? "Active" : "Inactive"
+        }));
+
+        const worksheet = XLSX.utils.json_to_sheet(formatted);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Users");
+        XLSX.writeFile(workbook, `users_export_${Date.now()}.xlsx`);
+        toast.success("Excel file downloaded!");
+    };
+
+    const exportToPDF = async () => {
+        const exportUsers = await getExportData();
+        if (!exportUsers || exportUsers.length === 0) return;
+
+        const doc = new jsPDF({ orientation: "landscape" });
+        
+        doc.text("User Management - Shagun Project", 14, 15);
+        
+        const headers = [["Full Name", "Email", "Mobile", "Referral ID", "Sponsor ID", "Wallet Address", "Packages", "Join Date", "Status"]];
+        const rows = exportUsers.map(u => [
+            u.full_name || "",
+            u.email || "",
+            u.mobile || "",
+            u.referral_id || "",
+            u.sponsor_id || "",
+            u.wallet_address || "",
+            u.approved_packages ? u.approved_packages.map(p => `${p.name} (${p.quantity})`).join("; ") : "",
+            u.create_at ? new Date(u.create_at).toLocaleDateString() : "",
+            u.is_deleted == 0 || u.is_deleted === "0" ? "Active" : "Inactive"
+        ]);
+
+        doc.autoTable({
+            startY: 20,
+            head: headers,
+            body: rows,
+            theme: "grid",
+            styles: { fontSize: 8 },
+            headStyles: { fillColor: [20, 110, 120] }
+        });
+
+        doc.save(`users_export_${Date.now()}.pdf`);
+        toast.success("PDF file downloaded!");
+    };
 
     const [userWallet, setUserWallet] = useState(null)
 
@@ -235,13 +393,14 @@ export default function UserManagement() {
                     <h3 className="text-sm font-semibold uppercase tracking-wider text-teal-400">
                         Filter Options
                     </h3>
-                    {(packageFilter !== "all" || startDate || endDate || searchTerm) && (
+                    {(packageFilter !== "all" || startDate || endDate || searchTerm || quantityFilter) && (
                         <button
                             onClick={() => {
                                 setPackageFilter("all");
                                 setStartDate("");
                                 setEndDate("");
                                 setSearchTerm("");
+                                setQuantityFilter("");
                             }}
                             className="text-xs text-rose-400 hover:text-rose-300 font-medium transition-colors"
                         >
@@ -250,7 +409,7 @@ export default function UserManagement() {
                     )}
                 </div>
                 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                     {/* Search */}
                     <div className="space-y-1.5 col-span-1 lg:col-span-2">
                         <label className="text-xs font-medium text-gray-400 uppercase tracking-wider">Search</label>
@@ -278,6 +437,19 @@ export default function UserManagement() {
                         </select>
                     </div>
 
+                    {/* Quantity Filter */}
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-gray-400 uppercase tracking-wider">Package Qty</label>
+                        <input
+                            type="number"
+                            placeholder="All Quantities"
+                            value={quantityFilter}
+                            onChange={(e) => setQuantityFilter(e.target.value)}
+                            className="w-full px-3 py-2 bg-[#1a1a2e] border border-teal-500/20 rounded-lg text-sm text-white focus:border-teal-500 focus:outline-none transition-all"
+                            min="1"
+                        />
+                    </div>
+
                     {/* Date Filters */}
                     <div className="space-y-1.5">
                         <label className="text-xs font-medium text-gray-400 uppercase tracking-wider">Join Date Range</label>
@@ -300,12 +472,56 @@ export default function UserManagement() {
                 </div>
             </div>
 
+            {/* Export Options Toolbar */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-[#0f0f1a] rounded-xl border border-teal-500/20 p-4 shadow-xl">
+                <div className="flex items-center gap-3">
+                    <input
+                        type="checkbox"
+                        id="exportSelectedOnly"
+                        checked={exportSelectedOnly}
+                        onChange={(e) => setExportSelectedOnly(e.target.checked)}
+                        className="w-4 h-4 rounded border-teal-500/30 text-teal-500 focus:ring-teal-500 bg-[#1a1a2e] cursor-pointer"
+                    />
+                    <label htmlFor="exportSelectedOnly" className="text-sm font-medium text-gray-300 cursor-pointer select-none">
+                        Export selected rows only ({selectedUsers.length} selected)
+                    </label>
+                </div>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={exportToCSV}
+                        className="px-3.5 py-1.5 bg-teal-500/10 hover:bg-teal-500/20 text-teal-400 font-semibold rounded-lg border border-teal-500/20 text-xs transition-all flex items-center gap-1.5"
+                    >
+                        📥 CSV
+                    </button>
+                    <button
+                        onClick={exportToExcel}
+                        className="px-3.5 py-1.5 bg-green-500/10 hover:bg-green-500/20 text-green-400 font-semibold rounded-lg border border-green-500/20 text-xs transition-all flex items-center gap-1.5"
+                    >
+                        📥 Excel
+                    </button>
+                    <button
+                        onClick={exportToPDF}
+                        className="px-3.5 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 font-semibold rounded-lg border border-rose-500/20 text-xs transition-all flex items-center gap-1.5"
+                    >
+                        📥 PDF
+                    </button>
+                </div>
+            </div>
+
             {/* Users Table */}
             <div className="bg-[#0f0f1a] rounded-xl border border-teal-500/30 overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full whitespace-nowrap">
                         <thead className="bg-[#1a1a2e] text-center">
                             <tr>
+                                <th className="px-6 py-4 text-gray-400 font-semibold text-sm text-left w-12">
+                                    <input
+                                        type="checkbox"
+                                        checked={users.length > 0 && users.every(u => selectedUsers.includes(u._id))}
+                                        onChange={toggleSelectAll}
+                                        className="w-4 h-4 rounded border-teal-500/30 text-teal-500 focus:ring-teal-500 bg-[#1a1a2e] cursor-pointer"
+                                    />
+                                </th>
                                 <th className="px-6 py-4 text-gray-400 font-semibold text-sm text-left">User Details</th>
                                 <th className="px-6 py-4 text-gray-400 font-semibold text-sm">Identity</th>
                                 <th className="px-6 py-4 text-gray-400 font-semibold text-sm">Wallet</th>
@@ -319,19 +535,28 @@ export default function UserManagement() {
                         <tbody className="divide-y divide-teal-500/30 text-center">
                             {loading ? (
                                 <tr>
-                                    <td colSpan="8" className="px-6 py-8 text-center text-gray-400">
+                                    <td colSpan="9" className="px-6 py-8 text-center text-gray-400">
                                         Loading...
                                     </td>
                                 </tr>
                             ) : users.length === 0 ? (
                                 <tr>
-                                    <td colSpan="8" className="px-6 py-8 text-center text-gray-400">
+                                    <td colSpan="9" className="px-6 py-8 text-center text-gray-400">
                                         No users found matching your criteria
                                     </td>
                                 </tr>
                             ) : (
                                 users.map((user) => (
                                     <tr key={user._id} className="hover:bg-[#1a1a2e] transition-colors">
+                                        {/* Checkbox */}
+                                        <td className="px-6 py-4 text-left">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedUsers.includes(user._id)}
+                                                onChange={() => toggleUserSelection(user._id)}
+                                                className="w-4 h-4 rounded border-teal-500/30 text-teal-500 focus:ring-teal-500 bg-[#1a1a2e] cursor-pointer"
+                                            />
+                                        </td>
                                         {/* User Details */}
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-3 text-left">

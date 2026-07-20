@@ -112,6 +112,43 @@ const getUsers = async (req, res) => {
             }
         }
 
+        // Quantity filter
+        if (req.query.quantity) {
+            const qtyVal = Number(req.query.quantity);
+            if (!isNaN(qtyVal)) {
+                const matchingProductsQty = await Product.find({
+                    quantity: qtyVal,
+                    $or: [{ approve: 1 }, { approve: '1' }]
+                }).select('user_id').lean();
+
+                const matchingUserIdsQty = matchingProductsQty.map(p => p.user_id).filter(Boolean);
+                const objectIdUserIdsQty = matchingUserIdsQty
+                    .filter(id => mongoose.Types.ObjectId.isValid(id))
+                    .map(id => new mongoose.Types.ObjectId(id));
+
+                const qtyQuery = {
+                    $or: [
+                        { _id: { $in: objectIdUserIdsQty } },
+                        { id: { $in: matchingUserIdsQty } },
+                        { user_id: { $in: matchingUserIdsQty } }
+                    ]
+                };
+
+                if (keyword.$or) {
+                    const originalOr = keyword.$or;
+                    delete keyword.$or;
+                    keyword.$and = [
+                        { $or: originalOr },
+                        qtyQuery
+                    ];
+                } else if (keyword.$and) {
+                    keyword.$and.push(qtyQuery);
+                } else {
+                    keyword = { ...keyword, ...qtyQuery };
+                }
+            }
+        }
+
         let count;
         console.time('getUsers-CountQuery');
         if (Object.keys(keyword).length === 0) {

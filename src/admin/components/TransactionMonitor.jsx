@@ -21,6 +21,9 @@ import client from "../../api/client"
 import { toast } from "react-hot-toast"
 import { motion, AnimatePresence } from "framer-motion"
 import Pagination from "../../components/common/Pagination"
+import * as XLSX from "xlsx"
+import { jsPDF } from "jspdf"
+import "jspdf-autotable"
 
 const TypeBadge = ({ type }) => {
     const styles = {
@@ -96,9 +99,14 @@ export default function TransactionMonitor({ defaultType = "all" }) {
     const [pages, setPages] = useState(1);
     const [total, setTotal] = useState(0);
 
-    // Reset page when filters change
+    // Row selection states
+    const [selectedTxs, setSelectedTxs] = useState([]);
+    const [exportSelectedOnly, setExportSelectedOnly] = useState(false);
+
+    // Reset page and selection when filters change
     useEffect(() => {
         setPage(1);
+        setSelectedTxs([]);
     }, [searchTerm, selectedType, idFilter, startDate, endDate]);
 
     const fetchTransactions = async (isManual = false) => {
@@ -136,6 +144,160 @@ export default function TransactionMonitor({ defaultType = "all" }) {
         const timer = setTimeout(() => { fetchTransactions(); }, 500);
         return () => clearTimeout(timer);
     }, [searchTerm]);
+
+    // Selection handlers
+    const toggleTxSelection = (txId) => {
+        setSelectedTxs(prev => 
+            prev.includes(txId) ? prev.filter(id => id !== txId) : [...prev, txId]
+        );
+    };
+
+    const toggleSelectAll = () => {
+        if (transactions.length === 0) return;
+        const allIdsOnPage = transactions.map(t => t._id);
+        const allSelected = allIdsOnPage.every(id => selectedTxs.includes(id));
+        if (allSelected) {
+            setSelectedTxs(prev => prev.filter(id => !allIdsOnPage.includes(id)));
+        } else {
+            setSelectedTxs(prev => {
+                const uniqueNewIds = allIdsOnPage.filter(id => !prev.includes(id));
+                return [...prev, ...uniqueNewIds];
+            });
+        }
+    };
+
+    const handleBulkComplete = async () => {
+        if (selectedTxs.length === 0) return;
+        const pendingSelected = transactions.filter(t => selectedTxs.includes(t._id) && t.status === 'pending');
+        if (pendingSelected.length === 0) {
+            toast.error("No pending transactions selected");
+            return;
+        }
+        if (window.confirm(`Are you sure you want to mark ${pendingSelected.length} transactions as COMPLETED?`)) {
+            try {
+                setLoading(true);
+                const idsToUpdate = pendingSelected.map(t => t._id);
+                await client.put('/transactions/bulk/status', { ids: idsToUpdate, status: 'completed' });
+                toast.success("Transactions marked as completed");
+                fetchTransactions();
+                setSelectedTxs([]);
+            } catch (err) {
+                console.error("Bulk complete failed:", err);
+                toast.error("Failed to complete transactions");
+            } finally {
+                setLoading(false);
+            }
+        }
+    };
+
+    const getExportData = async () => {
+        if (exportSelectedOnly) {
+            if (selectedTxs.length === 0) {
+                toast.error("No transactions selected for export");
+                return null;
+            }
+            return transactions.filter(t => selectedTxs.includes(t._id));
+        } else {
+            try {
+                setLoading(true);
+                const params = {
+                    page: 1,
+                    limit: 10000,
+                    type: selectedType,
+                    search: searchTerm,
+                    startDate,
+                    endDate,
+                };
+                const { data } = await client.get('/transactions', { params });
+                return data.transactions || data || [];
+            } catch (err) {
+                console.error("Error fetching export data:", err);
+                toast.error("Failed to fetch all records for export");
+                return null;
+            } finally {
+                setLoading(false);
+            }
+        }
+    };
+
+    const exportToCSV = async () => {
+        const exportData = await getExportData();
+        if (!exportData || exportData.length === 0) return;
+
+        const headers = ["User", "Email", "Type", "Amount", "Status", "Date", "Description"];
+        const rows = exportData.map(t => [
+            t.user?.full_name || 'Anonymous',
+            t.user?.email || '',
+            t.type || '',
+            t.amount || 0,
+            t.status || '',
+            t.createdAt ? new Date(t.createdAt).toLocaleString() : '',
+            t.description || ''
+        ]);
+
+        const csvContent = "\uFEFF" + [headers.join(","), ...rows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))].join("\n");
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `referrals_export_${Date.now()}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.success("CSV file downloaded!");
+    };
+
+    const exportToExcel = async () => {
+        const exportData = await getExportData();
+        if (!exportData || exportData.length === 0) return;
+
+        const formatted = exportData.map(t => ({
+            "User": t.user?.full_name || 'Anonymous',
+            "Email": t.user?.email || '',
+            "Type": t.type || '',
+            "Amount": t.amount || 0,
+            "Status": t.status || '',
+            "Date": t.createdAt ? new Date(t.createdAt).toLocaleString() : '',
+            "Description": t.description || ''
+        }));
+
+        const worksheet = XLSX.utils.json_to_sheet(formatted);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Referrals");
+        XLSX.writeFile(workbook, `referrals_export_${Date.now()}.xlsx`);
+        toast.success("Excel file downloaded!");
+    };
+
+    const exportToPDF = async () => {
+        const exportData = await getExportData();
+        if (!exportData || exportData.length === 0) return;
+
+        const doc = new jsPDF({ orientation: "landscape" });
+        doc.text("Referral Earnings - Shagun Project", 14, 15);
+
+        const headers = [["User", "Email", "Type", "Amount", "Status", "Date", "Description"]];
+        const rows = exportData.map(t => [
+            t.user?.full_name || 'Anonymous',
+            t.user?.email || '',
+            t.type || '',
+            t.amount || 0,
+            t.status || '',
+            t.createdAt ? new Date(t.createdAt).toLocaleString() : '',
+            t.description || ''
+        ]);
+
+        doc.autoTable({
+            startY: 20,
+            head: headers,
+            body: rows,
+            theme: "grid",
+            styles: { fontSize: 8 },
+            headStyles: { fillColor: [79, 70, 229] }
+        });
+
+        doc.save(`referrals_export_${Date.now()}.pdf`);
+        toast.success("PDF file downloaded!");
+    };
 
     const clearAllFilters = () => {
         setSearchTerm("");
@@ -418,12 +580,64 @@ export default function TransactionMonitor({ defaultType = "all" }) {
                 </AnimatePresence>
             </div>
 
+            {/* Export & Bulk Action Toolbar */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-[#0f0f1a] rounded-3xl border border-white/10 p-4 shadow-xl text-white">
+                <div className="flex items-center gap-3">
+                    <input
+                        type="checkbox"
+                        id="exportSelectedOnly"
+                        checked={exportSelectedOnly}
+                        onChange={(e) => setExportSelectedOnly(e.target.checked)}
+                        className="w-4 h-4 rounded border-white/20 text-teal-500 focus:ring-teal-500 bg-[#0b0b14] cursor-pointer"
+                    />
+                    <label htmlFor="exportSelectedOnly" className="text-xs font-semibold text-gray-300 cursor-pointer select-none">
+                        Export selected only ({selectedTxs.length} selected)
+                    </label>
+                    {selectedTxs.some(id => transactions.some(t => t._id === id && t.status === 'pending')) && (
+                        <button
+                            onClick={handleBulkComplete}
+                            className="ml-4 px-3.5 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 shadow-lg shadow-emerald-500/10"
+                        >
+                            ✓ Bulk Complete
+                        </button>
+                    )}
+                </div>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={exportToCSV}
+                        className="px-3.5 py-1.5 bg-white/5 hover:bg-white/10 text-gray-300 font-bold rounded-xl border border-white/5 text-xs transition-all flex items-center gap-1.5"
+                    >
+                        📥 CSV
+                    </button>
+                    <button
+                        onClick={exportToExcel}
+                        className="px-3.5 py-1.5 bg-green-500/10 hover:bg-green-500/20 text-green-400 font-bold rounded-xl border border-green-500/10 text-xs transition-all flex items-center gap-1.5"
+                    >
+                        📥 Excel
+                    </button>
+                    <button
+                        onClick={exportToPDF}
+                        className="px-3.5 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 font-bold rounded-xl border border-rose-500/10 text-xs transition-all flex items-center gap-1.5"
+                    >
+                        📥 PDF
+                    </button>
+                </div>
+            </div>
+
             {/* Table Card */}
             <div className="glass-card rounded-3xl overflow-hidden shadow-2xl">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-white/5 border-b border-white/5">
+                                <th className="p-5 text-xs font-bold text-gray-400 uppercase tracking-wider w-12">
+                                    <input
+                                        type="checkbox"
+                                        checked={transactions.length > 0 && transactions.every(t => selectedTxs.includes(t._id))}
+                                        onChange={toggleSelectAll}
+                                        className="w-4 h-4 rounded border-white/20 text-teal-500 focus:ring-teal-500 bg-[#0b0b14] cursor-pointer"
+                                    />
+                                </th>
                                 <th className="p-5 text-xs font-bold text-gray-400 uppercase tracking-wider">User</th>
                                 <th className="p-5 text-xs font-bold text-gray-400 uppercase tracking-wider">Type</th>
                                 <th className="p-5 text-xs font-bold text-gray-400 uppercase tracking-wider">Amount</th>
@@ -436,7 +650,7 @@ export default function TransactionMonitor({ defaultType = "all" }) {
                             <AnimatePresence>
                                 {loading && transactions.length === 0 ? (
                                     <tr>
-                                        <td colSpan="6" className="p-20 text-center text-gray-500">
+                                        <td colSpan="7" className="p-20 text-center text-gray-500">
                                             <div className="flex flex-col items-center gap-4">
                                                 <RefreshCw className="w-10 h-10 animate-spin text-teal-500/30" />
                                                 <p className="animate-pulse">Analyzing blockchain records...</p>
@@ -445,7 +659,7 @@ export default function TransactionMonitor({ defaultType = "all" }) {
                                     </tr>
                                 ) : filteredTransactions.length === 0 ? (
                                     <tr>
-                                        <td colSpan="6" className="p-20 text-center text-gray-500">
+                                        <td colSpan="7" className="p-20 text-center text-gray-500">
                                             <Activity className="w-12 h-12 mx-auto mb-4 opacity-20" />
                                             <p>No transactions found matching current filters.</p>
                                         </td>
@@ -459,6 +673,14 @@ export default function TransactionMonitor({ defaultType = "all" }) {
                                             transition={{ delay: index * 0.02 }}
                                             className="hover:bg-white/[0.02] transition-colors group"
                                         >
+                                            <td className="p-5 w-12">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedTxs.includes(tx._id)}
+                                                    onChange={() => toggleTxSelection(tx._id)}
+                                                    className="w-4 h-4 rounded border-white/20 text-teal-500 focus:ring-teal-500 bg-[#0b0b14] cursor-pointer"
+                                                />
+                                            </td>
                                             <td className="p-5">
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-9 h-9 rounded-full bg-gradient-to-br from-teal-500/20 to-indigo-500/20 flex items-center justify-center border border-white/5 group-hover:border-teal-500/30 transition-all flex-shrink-0">

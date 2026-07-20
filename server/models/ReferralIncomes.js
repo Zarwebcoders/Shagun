@@ -36,6 +36,10 @@ const referralIncomesSchema = new mongoose.Schema({
         type: String,
         default: 'credited',
         maxLength: 32
+    },
+    transaction_id: {
+        type: String,
+        default: null
     }
 }, {
     timestamps: { createdAt: 'create_at', updatedAt: false } // Only create_at as per schema
