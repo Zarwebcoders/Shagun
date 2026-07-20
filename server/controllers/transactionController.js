@@ -387,4 +387,5 @@ module.exports = {
     createTransaction,
     updateTransactionStatus,
     getTransactionStats,
+    bulkUpdateTransactionStatus
 };
