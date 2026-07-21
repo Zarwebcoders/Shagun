@@ -43,6 +43,22 @@ const getUsers = async (req, res) => {
             }).select('user_id');
             const walletUserIds = matchingWallets.map(w => w.user_id).filter(Boolean);
 
+            // Find product user IDs matching amount or business_volume if numeric
+            let productUserIds = [];
+            const numSearch = Number(req.query.search);
+            if (!isNaN(numSearch) && req.query.search.trim() !== '') {
+                const matchingProductsAmt = await Product.find({
+                    $or: [
+                        { amount: numSearch },
+                        { business_volume: numSearch }
+                    ],
+                    $or: [{ approve: 1 }, { approve: '1' }]
+                }).select('user_id').lean();
+                productUserIds = matchingProductsAmt.map(p => p.user_id).filter(Boolean);
+            }
+
+            const allMatchingIds = [...walletUserIds, ...productUserIds];
+
             keyword = {
                 $or: [
                     { full_name: searchRegex },
@@ -50,15 +66,55 @@ const getUsers = async (req, res) => {
                     { referral_id: searchRegex },
                     { user_id: searchRegex },
                     { id: searchRegex },
-                    { _id: { $in: walletUserIds } },
-                    { id: { $in: walletUserIds } },
-                    { user_id: { $in: walletUserIds } }
+                    { _id: { $in: allMatchingIds.filter(id => mongoose.Types.ObjectId.isValid(id)) } },
+                    { id: { $in: allMatchingIds } },
+                    { user_id: { $in: allMatchingIds } }
                 ]
             };
 
             // If query matches ObjectId, check _id exactly as well
             if (mongoose.Types.ObjectId.isValid(req.query.search)) {
                 keyword.$or.push({ _id: new mongoose.Types.ObjectId(req.query.search) });
+            }
+        }
+
+        // Amount filter
+        if (req.query.amount) {
+            const amtVal = Number(req.query.amount);
+            if (!isNaN(amtVal)) {
+                const matchingProductsAmtFilter = await Product.find({
+                    $or: [
+                        { amount: amtVal },
+                        { business_volume: amtVal }
+                    ],
+                    $or: [{ approve: 1 }, { approve: '1' }]
+                }).select('user_id').lean();
+
+                const matchingUserIdsAmt = matchingProductsAmtFilter.map(p => p.user_id).filter(Boolean);
+                const objectIdUserIdsAmt = matchingUserIdsAmt
+                    .filter(id => mongoose.Types.ObjectId.isValid(id))
+                    .map(id => new mongoose.Types.ObjectId(id));
+
+                const amtQuery = {
+                    $or: [
+                        { _id: { $in: objectIdUserIdsAmt } },
+                        { id: { $in: matchingUserIdsAmt } },
+                        { user_id: { $in: matchingUserIdsAmt } }
+                    ]
+                };
+
+                if (keyword.$or) {
+                    const originalOr = keyword.$or;
+                    delete keyword.$or;
+                    keyword.$and = [
+                        { $or: originalOr },
+                        amtQuery
+                    ];
+                } else if (keyword.$and) {
+                    keyword.$and.push(amtQuery);
+                } else {
+                    keyword = { ...keyword, ...amtQuery };
+                }
             }
         }
 
@@ -206,27 +262,33 @@ const getUsers = async (req, res) => {
         const approvedProducts = await Product.find({
             user_id: { $in: allUserIds },
             approve: { $in: [1, '1'] }
-        }).select('user_id packag_type quantity approve').lean();
+        }).select('user_id packag_type quantity amount business_volume approve').lean();
         console.timeEnd('getUsers-ProductQuery');
 
         const userApprovedProductsMap = {};
+        const userTotalAmountMap = {};
+
         approvedProducts.forEach(prod => {
             const uidStr = String(prod.user_id);
             if (!userApprovedProductsMap[uidStr]) {
                 userApprovedProductsMap[uidStr] = [];
+                userTotalAmountMap[uidStr] = 0;
             }
             userApprovedProductsMap[uidStr].push({
                 name: prod.packag_type || "Standard",
                 quantity: prod.quantity || 1
             });
+            const prodAmt = Number(prod.amount) || Number(prod.business_volume) || 0;
+            userTotalAmountMap[uidStr] += prodAmt;
         });
 
         const usersWithWalletAndPackages = users.map(u => {
             const obj = { ...u };
             obj.wallet_address = walletMap[u._id.toString()] || null;
 
-            // Combine approved packages from all possible ID formats
+            // Combine approved packages and total amount from all possible ID formats
             const pkgQuantities = {};
+            let totalAmount = 0;
             const possibleIds = [u._id.toString(), u.id, u.user_id].filter(Boolean).map(String);
             possibleIds.forEach(idVal => {
                 if (userApprovedProductsMap[idVal]) {
@@ -235,11 +297,15 @@ const getUsers = async (req, res) => {
                         pkgQuantities[name] = (pkgQuantities[name] || 0) + (Number(item.quantity) || 1);
                     });
                 }
+                if (userTotalAmountMap[idVal]) {
+                    totalAmount += userTotalAmountMap[idVal];
+                }
             });
             obj.approved_packages = Object.entries(pkgQuantities).map(([name, quantity]) => ({
                 name,
                 quantity
             }));
+            obj.total_amount = totalAmount;
             return obj;
         });
         console.timeEnd('getUsers-DataMapping');
@@ -374,30 +440,107 @@ const updateUser = async (req, res) => {
     }
 };
 
-// @desc    Delete user
+// @desc    Delete user and all associated products, income records, and transactions
 // @route   DELETE /api/users/:id
 // @access  Private/Admin
 const deleteUser = async (req, res) => {
     try {
-        const user = await User.findById(req.params.id);
+        const idParam = req.params.id;
+        let queryCondition = {
+            $or: [
+                { user_id: idParam },
+                { referral_id: idParam },
+                { id: idParam }
+            ]
+        };
 
-        if (user) {
-            // Check if deleted via flag or actual delete? Image has is_deleted field.
-            // If soft delete:
-            user.is_deleted = 1;
-            await user.save();
-            // Or hard delete if previously hard delete
-            // await user.deleteOne(); 
-            // Sticking to hard delete for now to match previous logic, but user added is_deleted so maybe soft delete is intended.
-            // I will use hard delete for now to not break too much logic unless I see is_deleted usage elsewhere.
-            // Actually, let's just do hard delete as before but maybe set is_deleted if I want to be safe? 
-            // The previous code was: await user.deleteOne();
-            await user.deleteOne();
-            res.json({ message: 'User removed' });
-        } else {
-            res.status(404).json({ message: 'User not found' });
+        if (mongoose.Types.ObjectId.isValid(idParam)) {
+            queryCondition.$or.push({ _id: idParam });
         }
+
+        const user = await User.findOne(queryCondition);
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        const userIdentifiers = [
+            user._id ? user._id.toString() : null,
+            user.user_id,
+            user.referral_id,
+            user.id
+        ].filter(Boolean);
+
+        // Delete user record
+        await User.deleteOne({ _id: user._id });
+
+        // Delete products purchased by user
+        const Product = require('../models/Product');
+        await Product.deleteMany({
+            $or: [
+                { user_id: { $in: userIdentifiers } },
+                { referral_id: { $in: userIdentifiers } }
+            ]
+        });
+
+        // Delete level income generated by or distributed to user
+        const LevelIncome = require('../models/LevelIncome');
+        await LevelIncome.deleteMany({
+            $or: [
+                { user_id: { $in: userIdentifiers } },
+                { referral_id: { $in: userIdentifiers } },
+                { buyer_id: { $in: userIdentifiers } },
+                { from_user_id: { $in: userIdentifiers } }
+            ]
+        });
+
+        // Delete referral incomes generated by or distributed to user
+        const ReferralIncomes = require('../models/ReferralIncomes');
+        await ReferralIncomes.deleteMany({
+            $or: [
+                { user_id: { $in: userIdentifiers } },
+                { earner_user_id: { $in: userIdentifiers } },
+                { buyer_id: { $in: userIdentifiers } },
+                { referral_id: { $in: userIdentifiers } }
+            ]
+        });
+
+        // Delete transactions
+        const Transaction = require('../models/Transaction');
+        await Transaction.deleteMany({
+            $or: [
+                { user_id: { $in: userIdentifiers } },
+                { referral_id: { $in: userIdentifiers } }
+            ]
+        });
+
+        // Delete commissions
+        const Commission = require('../models/Commission');
+        if (Commission) {
+            await Commission.deleteMany({
+                $or: [
+                    { user_id: { $in: userIdentifiers } },
+                    { referral_id: { $in: userIdentifiers } },
+                    { from_user_id: { $in: userIdentifiers } }
+                ]
+            });
+        }
+
+        // Delete wallet records
+        await Wallet.deleteMany({
+            $or: [
+                { user_id: { $in: userIdentifiers } }
+            ]
+        });
+
+        // Clear dashboard cache
+        clearDashboardCache(user._id);
+
+        res.json({
+            message: `User ${user.referral_id || user.user_id || idParam} and all associated products, incomes, transactions, and wallet data deleted successfully.`
+        });
     } catch (error) {
+        console.error("Delete User Error:", error);
         res.status(500).json({ message: error.message });
     }
 };

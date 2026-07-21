@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { CheckCircle, Clock, Users, ShieldCheck, LogIn, Copy, Eye, EyeOff } from "lucide-react"
+import { CheckCircle, Clock, Users, ShieldCheck, LogIn, Copy, Eye, EyeOff, Trash2 } from "lucide-react"
 import { toast } from "react-hot-toast"
 import client from "../../api/client"
 import Pagination from "../../components/common/Pagination"
@@ -22,6 +22,8 @@ export default function UserManagement() {
     const [availablePackages, setAvailablePackages] = useState([])
     const [quantityFilter, setQuantityFilter] = useState("")
     const [debouncedQuantity, setDebouncedQuantity] = useState("")
+    const [amountFilter, setAmountFilter] = useState("")
+    const [debouncedAmount, setDebouncedAmount] = useState("")
 
     const [users, setUsers] = useState([])
     const [loading, setLoading] = useState(true)
@@ -67,16 +69,28 @@ export default function UserManagement() {
         };
     }, [quantityFilter]);
 
+    // Debounce amount filter
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedAmount(amountFilter);
+            setPage(1); // Reset to page 1 on amount change
+        }, 500);
+
+        return () => {
+            clearTimeout(handler);
+        };
+    }, [amountFilter]);
+
     // Reset selected users on query/page change
     useEffect(() => {
         setSelectedUsers([]);
-    }, [page, debouncedSearch, packageFilter, startDate, endDate, debouncedQuantity]);
+    }, [page, debouncedSearch, packageFilter, startDate, endDate, debouncedQuantity, debouncedAmount]);
 
     const [userStats, setUserStats] = useState({ totalUsers: 0, activeUsers: 0, totalAdmins: 0 });
 
     useEffect(() => {
         fetchUsers();
-    }, [page, debouncedSearch, packageFilter, startDate, endDate, debouncedQuantity]);
+    }, [page, debouncedSearch, packageFilter, startDate, endDate, debouncedQuantity, debouncedAmount]);
 
     useEffect(() => {
         const fetchAllPackages = async () => {
@@ -105,7 +119,8 @@ export default function UserManagement() {
                 package: packageFilter,
                 startDate,
                 endDate,
-                quantity: debouncedQuantity
+                quantity: debouncedQuantity,
+                amount: debouncedAmount
             };
             const { data } = await client.get('/users', { params });
 
@@ -191,7 +206,7 @@ export default function UserManagement() {
         const exportUsers = await getExportData();
         if (!exportUsers || exportUsers.length === 0) return;
 
-        const headers = ["Full Name", "Email", "Mobile", "Referral ID", "Sponsor ID", "Wallet Address", "Packages", "Join Date", "Status"];
+        const headers = ["Full Name", "Email", "Mobile", "Referral ID", "Sponsor ID", "Wallet Address", "Packages", "Total Amount", "Join Date", "Status"];
         const rows = exportUsers.map(u => [
             u.full_name || "",
             u.email || "",
@@ -200,6 +215,7 @@ export default function UserManagement() {
             u.sponsor_id || "",
             u.wallet_address || "",
             u.approved_packages ? u.approved_packages.map(p => `${p.name} (${p.quantity})`).join("; ") : "",
+            `₹${Number(u.total_amount || 0).toLocaleString()}`,
             u.create_at ? new Date(u.create_at).toLocaleDateString() : "",
             u.is_deleted == 0 || u.is_deleted === "0" ? "Active" : "Inactive"
         ]);
@@ -228,6 +244,7 @@ export default function UserManagement() {
             "Sponsor ID": u.sponsor_id || "",
             "Wallet Address": u.wallet_address || "",
             "Packages": u.approved_packages ? u.approved_packages.map(p => `${p.name} (${p.quantity})`).join("; ") : "",
+            "Total Amount": u.total_amount || 0,
             "Join Date": u.create_at ? new Date(u.create_at).toLocaleDateString() : "",
             "Status": u.is_deleted == 0 || u.is_deleted === "0" ? "Active" : "Inactive"
         }));
@@ -247,7 +264,7 @@ export default function UserManagement() {
         
         doc.text("User Management - Shagun Project", 14, 15);
         
-        const headers = [["Full Name", "Email", "Mobile", "Referral ID", "Sponsor ID", "Wallet Address", "Packages", "Join Date", "Status"]];
+        const headers = [["Full Name", "Email", "Mobile", "Referral ID", "Sponsor ID", "Wallet Address", "Packages", "Total Amount", "Join Date", "Status"]];
         const rows = exportUsers.map(u => [
             u.full_name || "",
             u.email || "",
@@ -256,6 +273,7 @@ export default function UserManagement() {
             u.sponsor_id || "",
             u.wallet_address || "",
             u.approved_packages ? u.approved_packages.map(p => `${p.name} (${p.quantity})`).join("; ") : "",
+            `₹${Number(u.total_amount || 0).toLocaleString()}`,
             u.create_at ? new Date(u.create_at).toLocaleDateString() : "",
             u.is_deleted == 0 || u.is_deleted === "0" ? "Active" : "Inactive"
         ]);
@@ -337,6 +355,20 @@ export default function UserManagement() {
         }
     }
 
+    const handleDeleteUser = async (user) => {
+        const idLabel = user.referral_id || user.user_id || user.full_name;
+        if (window.confirm(`Are you sure you want to DELETE user ${idLabel}? This will permanently delete their account, products, income records, transactions, and wallet link.`)) {
+            try {
+                const { data } = await client.delete(`/users/${user._id}`);
+                toast.success(data.message || "User and associated records deleted successfully");
+                fetchUsers();
+            } catch (error) {
+                console.error("Delete user error:", error);
+                toast.error(error.response?.data?.message || "Failed to delete user");
+            }
+        }
+    }
+
     // Client-side filtering is no longer needed as backend handles it
     const filteredUsers = users;
 
@@ -401,7 +433,7 @@ export default function UserManagement() {
                     <h3 className="text-sm font-semibold uppercase tracking-wider text-teal-400">
                         Filter Options
                     </h3>
-                    {(packageFilter !== "all" || startDate || endDate || searchTerm || quantityFilter) && (
+                    {(packageFilter !== "all" || startDate || endDate || searchTerm || quantityFilter || amountFilter) && (
                         <button
                             onClick={() => {
                                 setPackageFilter("all");
@@ -409,6 +441,7 @@ export default function UserManagement() {
                                 setEndDate("");
                                 setSearchTerm("");
                                 setQuantityFilter("");
+                                setAmountFilter("");
                             }}
                             className="text-xs text-rose-400 hover:text-rose-300 font-medium transition-colors"
                         >
@@ -423,7 +456,7 @@ export default function UserManagement() {
                         <label className="text-xs font-medium text-gray-400 uppercase tracking-wider">Search</label>
                         <input
                             type="text"
-                            placeholder="Search by name, email, ref ID, or wallet..."
+                            placeholder="Search by name, email, ref ID, amount, or wallet..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-full px-4 py-2 bg-[#1a1a2e] border border-teal-500/20 rounded-lg text-sm text-white focus:border-teal-500 focus:outline-none transition-all"
@@ -443,6 +476,19 @@ export default function UserManagement() {
                                 <option key={pkg} value={pkg}>{pkg}</option>
                             ))}
                         </select>
+                    </div>
+
+                    {/* Amount Filter */}
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-gray-400 uppercase tracking-wider">Amount (₹)</label>
+                        <input
+                            type="number"
+                            placeholder="Exact Amount"
+                            value={amountFilter}
+                            onChange={(e) => setAmountFilter(e.target.value)}
+                            className="w-full px-3 py-2 bg-[#1a1a2e] border border-teal-500/20 rounded-lg text-sm text-white focus:border-teal-500 focus:outline-none transition-all"
+                            min="0"
+                        />
                     </div>
 
                     {/* Quantity Filter */}
@@ -534,6 +580,7 @@ export default function UserManagement() {
                                 <th className="px-6 py-4 text-gray-400 font-semibold text-sm">Identity</th>
                                 <th className="px-6 py-4 text-gray-400 font-semibold text-sm">Wallet</th>
                                 <th className="px-6 py-4 text-gray-400 font-semibold text-sm">Packages</th>
+                                <th className="px-6 py-4 text-gray-400 font-semibold text-sm">Total Amount</th>
                                 <th className="px-6 py-4 text-gray-400 font-semibold text-sm">Password</th>
                                 <th className="px-6 py-4 text-gray-400 font-semibold text-sm">Settings</th>
                                 <th className="px-6 py-4 text-gray-400 font-semibold text-sm">Timestamps</th>
@@ -543,13 +590,13 @@ export default function UserManagement() {
                         <tbody className="divide-y divide-teal-500/30 text-center">
                             {loading ? (
                                 <tr>
-                                    <td colSpan="9" className="px-6 py-8 text-center text-gray-400">
+                                    <td colSpan="10" className="px-6 py-8 text-center text-gray-400">
                                         Loading...
                                     </td>
                                 </tr>
                             ) : users.length === 0 ? (
                                 <tr>
-                                    <td colSpan="9" className="px-6 py-8 text-center text-gray-400">
+                                    <td colSpan="10" className="px-6 py-8 text-center text-gray-400">
                                         No users found matching your criteria
                                     </td>
                                 </tr>
@@ -615,6 +662,13 @@ export default function UserManagement() {
                                                     <span className="text-gray-600 text-xs">No Packages</span>
                                                 )}
                                             </div>
+                                        </td>
+
+                                        {/* Total Amount */}
+                                        <td className="px-6 py-4 text-sm">
+                                            <span className="text-emerald-400 font-semibold font-mono text-xs bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20 inline-block">
+                                                ₹{Number(user.total_amount || 0).toLocaleString()}
+                                            </span>
                                         </td>
 
                                         <td className="px-6 py-4 text-sm">
@@ -736,6 +790,13 @@ export default function UserManagement() {
                                                     title="Edit"
                                                 >
                                                     ✏️
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeleteUser(user)}
+                                                    className="p-2 text-red-500 hover:bg-red-500/20 rounded-lg transition-all"
+                                                    title="Delete User & All Records"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
                                                 </button>
                                             </div>
                                         </td>
