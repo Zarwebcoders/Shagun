@@ -54,11 +54,11 @@ const getUsers = async (req, res) => {
                             _id: "$user_id",
                             totalAmt: {
                                 $sum: {
-                                    $cond: [
-                                        { $gt: ["$amount", 0] },
-                                        "$amount",
-                                        { $ifNull: ["$business_volume", 0] }
-                                    ]
+                                    $cond: {
+                                        if: { $gt: [{ $ifNull: ["$business_volume", 0] }, 0] },
+                                        then: "$business_volume",
+                                        else: { $multiply: ["$amount", { $ifNull: ["$quantity", 1] }] }
+                                    }
                                 }
                             }
                         }
@@ -100,11 +100,11 @@ const getUsers = async (req, res) => {
                             _id: "$user_id",
                             totalAmt: {
                                 $sum: {
-                                    $cond: [
-                                        { $gt: ["$amount", 0] },
-                                        "$amount",
-                                        { $ifNull: ["$business_volume", 0] }
-                                    ]
+                                    $cond: {
+                                        if: { $gt: [{ $ifNull: ["$business_volume", 0] }, 0] },
+                                        then: "$business_volume",
+                                        else: { $multiply: ["$amount", { $ifNull: ["$quantity", 1] }] }
+                                    }
                                 }
                             }
                         }
@@ -300,7 +300,10 @@ const getUsers = async (req, res) => {
                 name: prod.packag_type || "Standard",
                 quantity: prod.quantity || 1
             });
-            const prodAmt = Number(prod.amount) || Number(prod.business_volume) || 0;
+            const qty = Number(prod.quantity) || 1;
+            const prodAmt = (prod.business_volume && Number(prod.business_volume) > 0)
+                ? Number(prod.business_volume)
+                : (Number(prod.amount) || 0) * qty;
             userTotalAmountMap[uidStr] += prodAmt;
         });
 
