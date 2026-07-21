@@ -55,9 +55,14 @@ const getUsers = async (req, res) => {
                             totalAmt: {
                                 $sum: {
                                     $cond: {
-                                        if: { $gt: [{ $ifNull: ["$business_volume", 0] }, 0] },
-                                        then: "$business_volume",
-                                        else: { $multiply: ["$amount", { $ifNull: ["$quantity", 1] }] }
+                                        if: { $gt: [{ $convert: { input: "$business_volume", to: "double", onError: 0, onNull: 0 } }, 0] },
+                                        then: { $convert: { input: "$business_volume", to: "double", onError: 0, onNull: 0 } },
+                                        else: {
+                                            $multiply: [
+                                                { $convert: { input: "$amount", to: "double", onError: 0, onNull: 0 } },
+                                                { $convert: { input: "$quantity", to: "double", onError: 1, onNull: 1 } }
+                                            ]
+                                        }
                                     }
                                 }
                             }
@@ -101,9 +106,14 @@ const getUsers = async (req, res) => {
                             totalAmt: {
                                 $sum: {
                                     $cond: {
-                                        if: { $gt: [{ $ifNull: ["$business_volume", 0] }, 0] },
-                                        then: "$business_volume",
-                                        else: { $multiply: ["$amount", { $ifNull: ["$quantity", 1] }] }
+                                        if: { $gt: [{ $convert: { input: "$business_volume", to: "double", onError: 0, onNull: 0 } }, 0] },
+                                        then: { $convert: { input: "$business_volume", to: "double", onError: 0, onNull: 0 } },
+                                        else: {
+                                            $multiply: [
+                                                { $convert: { input: "$amount", to: "double", onError: 0, onNull: 0 } },
+                                                { $convert: { input: "$quantity", to: "double", onError: 1, onNull: 1 } }
+                                            ]
+                                        }
                                     }
                                 }
                             }
