@@ -43,18 +43,29 @@ const getUsers = async (req, res) => {
             }).select('user_id');
             const walletUserIds = matchingWallets.map(w => w.user_id).filter(Boolean);
 
-            // Find product user IDs matching amount or business_volume if numeric
+            // Find product user IDs matching aggregate total purchase amount if numeric
             let productUserIds = [];
             const numSearch = Number(req.query.search);
             if (!isNaN(numSearch) && req.query.search.trim() !== '') {
-                const matchingProductsAmt = await Product.find({
-                    $or: [
-                        { amount: numSearch },
-                        { business_volume: numSearch }
-                    ],
-                    $or: [{ approve: 1 }, { approve: '1' }]
-                }).select('user_id').lean();
-                productUserIds = matchingProductsAmt.map(p => p.user_id).filter(Boolean);
+                const totalAmtAggSearch = await Product.aggregate([
+                    { $match: { approve: { $in: [1, '1'] } } },
+                    {
+                        $group: {
+                            _id: "$user_id",
+                            totalAmt: {
+                                $sum: {
+                                    $cond: [
+                                        { $gt: ["$amount", 0] },
+                                        "$amount",
+                                        { $ifNull: ["$business_volume", 0] }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    { $match: { totalAmt: numSearch } }
+                ]);
+                productUserIds = totalAmtAggSearch.map(p => p._id).filter(Boolean);
             }
 
             const allMatchingIds = [...walletUserIds, ...productUserIds];
@@ -78,19 +89,30 @@ const getUsers = async (req, res) => {
             }
         }
 
-        // Amount filter
+        // Amount filter (matches user's aggregate TOTAL purchase amount across all approved packages)
         if (req.query.amount) {
             const amtVal = Number(req.query.amount);
             if (!isNaN(amtVal)) {
-                const matchingProductsAmtFilter = await Product.find({
-                    $or: [
-                        { amount: amtVal },
-                        { business_volume: amtVal }
-                    ],
-                    $or: [{ approve: 1 }, { approve: '1' }]
-                }).select('user_id').lean();
+                const totalAmtAgg = await Product.aggregate([
+                    { $match: { approve: { $in: [1, '1'] } } },
+                    {
+                        $group: {
+                            _id: "$user_id",
+                            totalAmt: {
+                                $sum: {
+                                    $cond: [
+                                        { $gt: ["$amount", 0] },
+                                        "$amount",
+                                        { $ifNull: ["$business_volume", 0] }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    { $match: { totalAmt: amtVal } }
+                ]);
 
-                const matchingUserIdsAmt = matchingProductsAmtFilter.map(p => p.user_id).filter(Boolean);
+                const matchingUserIdsAmt = totalAmtAgg.map(p => p._id).filter(Boolean);
                 const objectIdUserIdsAmt = matchingUserIdsAmt
                     .filter(id => mongoose.Types.ObjectId.isValid(id))
                     .map(id => new mongoose.Types.ObjectId(id));
