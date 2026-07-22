@@ -57,12 +57,7 @@ const getUsers = async (req, res) => {
                                     $cond: {
                                         if: { $gt: [{ $convert: { input: "$business_volume", to: "double", onError: 0, onNull: 0 } }, 0] },
                                         then: { $convert: { input: "$business_volume", to: "double", onError: 0, onNull: 0 } },
-                                        else: {
-                                            $multiply: [
-                                                { $convert: { input: "$amount", to: "double", onError: 0, onNull: 0 } },
-                                                { $convert: { input: "$quantity", to: "double", onError: 1, onNull: 1 } }
-                                            ]
-                                        }
+                                        else: { $convert: { input: "$amount", to: "double", onError: 0, onNull: 0 } }
                                     }
                                 }
                             }
@@ -108,12 +103,7 @@ const getUsers = async (req, res) => {
                                     $cond: {
                                         if: { $gt: [{ $convert: { input: "$business_volume", to: "double", onError: 0, onNull: 0 } }, 0] },
                                         then: { $convert: { input: "$business_volume", to: "double", onError: 0, onNull: 0 } },
-                                        else: {
-                                            $multiply: [
-                                                { $convert: { input: "$amount", to: "double", onError: 0, onNull: 0 } },
-                                                { $convert: { input: "$quantity", to: "double", onError: 1, onNull: 1 } }
-                                            ]
-                                        }
+                                        else: { $convert: { input: "$amount", to: "double", onError: 0, onNull: 0 } }
                                     }
                                 }
                             }
@@ -313,7 +303,7 @@ const getUsers = async (req, res) => {
             const qty = Number(prod.quantity) || 1;
             const prodAmt = (prod.business_volume && Number(prod.business_volume) > 0)
                 ? Number(prod.business_volume)
-                : (Number(prod.amount) || 0) * qty;
+                : (Number(prod.amount) || 0);
             userTotalAmountMap[uidStr] += prodAmt;
         });
 
