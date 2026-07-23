@@ -36,6 +36,7 @@ export default function UserManagement() {
     const [page, setPage] = useState(1);
     const [pages, setPages] = useState(1);
     const [totalUsers, setTotalUsers] = useState(0);
+    const [limit, setLimit] = useState(10);
     const [visiblePasswords, setVisiblePasswords] = useState({});
 
     const togglePasswordVisibility = (userId) => {
@@ -90,7 +91,7 @@ export default function UserManagement() {
 
     useEffect(() => {
         fetchUsers();
-    }, [page, debouncedSearch, packageFilter, startDate, endDate, debouncedQuantity, debouncedAmount]);
+    }, [page, limit, debouncedSearch, packageFilter, startDate, endDate, debouncedQuantity, debouncedAmount]);
 
     useEffect(() => {
         const fetchAllPackages = async () => {
@@ -114,7 +115,7 @@ export default function UserManagement() {
             setLoading(true);
             const params = {
                 page,
-                limit: 10,
+                limit,
                 search: debouncedSearch,
                 package: packageFilter,
                 startDate,
@@ -188,7 +189,8 @@ export default function UserManagement() {
                     package: packageFilter,
                     startDate,
                     endDate,
-                    quantity: debouncedQuantity
+                    quantity: debouncedQuantity,
+                    amount: debouncedAmount
                 };
                 const { data } = await client.get('/users', { params });
                 return data.users || [];
@@ -807,16 +809,38 @@ export default function UserManagement() {
                     </table>
                 </div>
 
-                {/* Pagination */}
-                {pages > 1 && (
-                    <Pagination
-                        currentPage={page}
-                        totalPages={pages}
-                        onPageChange={setPage}
-                        totalResults={totalUsers}
-                        itemsPerPage={10}
-                        itemName="users"
-                    />
+                {/* Pagination & Limit Selector */}
+                {totalUsers > 0 && (
+                    <div className="flex flex-col md:flex-row items-center justify-between gap-4 p-4 border-t border-teal-500/20 bg-[#0f0f1a]/80">
+                        <div className="flex items-center gap-2 bg-[#1a1a2e] border border-teal-500/20 rounded-lg px-3 py-1.5 text-xs text-gray-300">
+                            <span>Show</span>
+                            <select
+                                value={limit}
+                                onChange={(e) => {
+                                    setLimit(Number(e.target.value));
+                                    setPage(1);
+                                }}
+                                className="bg-transparent border-none text-white focus:outline-none focus:ring-0 cursor-pointer font-bold font-mono"
+                            >
+                                <option value={10} className="bg-[#1a1a2e]">10</option>
+                                <option value={20} className="bg-[#1a1a2e]">20</option>
+                                <option value={50} className="bg-[#1a1a2e]">50</option>
+                                <option value={100} className="bg-[#1a1a2e]">100</option>
+                            </select>
+                            <span>records per page</span>
+                        </div>
+                        
+                        <div className="flex-grow flex justify-end">
+                            <Pagination
+                                currentPage={page}
+                                totalPages={pages}
+                                onPageChange={setPage}
+                                totalResults={totalUsers}
+                                itemsPerPage={limit}
+                                itemName="users"
+                            />
+                        </div>
+                    </div>
                 )}
             </div>
 
