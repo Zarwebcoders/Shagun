@@ -11,12 +11,43 @@ const addRate = async (req, res) => {
     }
 
     try {
-        const newRate = await TokenRate.create({
-            phase,
-            rate,
-            phase_number: phase_number || null,
-            source: source || 'contract_getCurrentPhase'
+        // Upsert TokenRate entry to prevent duplicates in history
+        let newRate = await TokenRate.findOne({ 
+            phase, 
+            phase_number: phase_number || null 
         });
+
+        if (newRate) {
+            newRate.rate = rate;
+            newRate.source = source || 'contract_getCurrentPhase';
+            await newRate.save();
+        } else {
+            newRate = await TokenRate.create({
+                phase,
+                rate,
+                phase_number: phase_number || null,
+                source: source || 'contract_getCurrentPhase'
+            });
+        }
+
+        // Sync with Setting collection so that user dashboards get the updated rate and phase
+        const Setting = require('../models/Setting');
+        
+        await Setting.findOneAndUpdate(
+            { key: 'rexTokenPrice' },
+            { value: Number(rate) },
+            { upsert: true, new: true }
+        );
+
+        const phaseDisplayStr = phase_number && Number(phase_number) !== Number(phase)
+            ? `Phase ${phase}.${phase_number}`
+            : `Phase ${phase}`;
+
+        await Setting.findOneAndUpdate(
+            { key: 'currentPhase' },
+            { value: phaseDisplayStr },
+            { upsert: true, new: true }
+        );
 
         res.status(201).json(newRate);
     } catch (error) {
