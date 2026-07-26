@@ -41,13 +41,31 @@ const getMyReferrals = async (req, res) => {
             userMap[u._id.toString()] = u;
         });
 
-        // Attach user details to incomes
-        const incomesWithDetails = incomes.map(inc => ({
-            ...inc,
-            referred_user_name: userMap[inc.referred_user_id]?.full_name || 'Unknown',
-            referred_user_official_id: userMap[inc.referred_user_id]?.user_id || inc.referred_user_id,
-            referred_user_referral_id: userMap[inc.referred_user_id]?.referral_id || 'N/A'
-        }));
+        // Fetch products to check for EV products and PV values
+        const Product = require('../models/Product');
+        const productIds = [...new Set(incomes.map(inc => inc.product_id).filter(id => mongoose.Types.ObjectId.isValid(id)))];
+        const products = await Product.find({ _id: { $in: productIds } }).lean();
+        const productMap = {};
+        products.forEach(p => {
+            productMap[p._id.toString()] = p;
+        });
+
+        // Attach user and product details to incomes
+        const incomesWithDetails = incomes.map(inc => {
+            const prod = inc.product_id ? productMap[inc.product_id] : null;
+            const isEV = prod && (
+                (prod.packag_type && prod.packag_type.toLowerCase().includes('ev')) ||
+                prod.product_id === 4
+            );
+            return {
+                ...inc,
+                referred_user_name: userMap[inc.referred_user_id]?.full_name || 'Unknown',
+                referred_user_official_id: userMap[inc.referred_user_id]?.user_id || inc.referred_user_id,
+                referred_user_referral_id: userMap[inc.referred_user_id]?.referral_id || 'N/A',
+                is_ev: !!isEV,
+                pv: prod ? (prod.quantity || 1) : 1
+            };
+        });
 
         res.status(200).json(incomesWithDetails);
     } catch (error) {

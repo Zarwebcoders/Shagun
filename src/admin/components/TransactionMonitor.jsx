@@ -198,6 +198,22 @@ export default function TransactionMonitor({ defaultType = "all" }) {
         }
     };
 
+    const handleSingleComplete = async (txId) => {
+        if (window.confirm("Are you sure you want to mark this transaction as COMPLETED?")) {
+            try {
+                setLoading(true);
+                await client.put(`/transactions/${txId}`, { status: 'completed' });
+                toast.success("Transaction marked as completed");
+                fetchTransactions();
+            } catch (err) {
+                console.error("Complete transaction failed:", err);
+                toast.error("Failed to complete transaction");
+            } finally {
+                setLoading(false);
+            }
+        }
+    };
+
     const getExportData = async () => {
         if (exportSelectedOnly) {
             if (selectedTxs.length === 0) {
@@ -743,12 +759,22 @@ export default function TransactionMonitor({ defaultType = "all" }) {
                                                 </div>
                                             </td>
                                             <td className="p-5 text-right">
-                                                <button 
-                                                    onClick={() => setActiveTx(tx)}
-                                                    className="text-[10px] bg-white/5 border border-white/10 px-2 py-1 rounded hover:bg-white/10 transition-all uppercase tracking-widest text-gray-400 hover:text-white"
-                                                >
-                                                    Details
-                                                </button>
+                                                <div className="flex justify-end items-center gap-2">
+                                                    {tx.status === 'pending' && (
+                                                        <button 
+                                                            onClick={() => handleSingleComplete(tx._id)}
+                                                            className="text-[10px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2 py-1 rounded hover:bg-emerald-500/20 transition-all font-bold uppercase tracking-wider"
+                                                        >
+                                                            Complete
+                                                        </button>
+                                                    )}
+                                                    <button 
+                                                        onClick={() => setActiveTx(tx)}
+                                                        className="text-[10px] bg-white/5 border border-white/10 px-2 py-1 rounded hover:bg-white/10 transition-all uppercase tracking-widest text-gray-400 hover:text-white"
+                                                    >
+                                                        Details
+                                                    </button>
+                                                </div>
                                             </td>
                                         </motion.tr>
                                     ))

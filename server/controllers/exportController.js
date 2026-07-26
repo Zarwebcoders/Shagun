@@ -115,16 +115,52 @@ const exportReferralIncome = async (req, res) => {
             ...dateFilter
         }).sort({ create_at: -1 }).lean();
 
+        // Fetch referred user details for names
+        const mongoose = require('mongoose');
+        const referredIds = [...new Set(incomes.map(inc => inc.referred_user_id).filter(id => id))];
+        const users = await User.find({ 
+            $or: [
+                { id: { $in: referredIds } },
+                { user_id: { $in: referredIds } },
+                { referral_id: { $in: referredIds } },
+                { _id: { $in: referredIds.filter(id => mongoose.Types.ObjectId.isValid(id)) } }
+            ]
+        }).select('id full_name').lean();
+        const userMap = {};
+        users.forEach(u => {
+            if (u.id) userMap[u.id] = u;
+            userMap[u._id.toString()] = u;
+        });
+
+        // Fetch products to check for EV products and PV values
+        const Product = require('../models/Product');
+        const productIds = [...new Set(incomes.map(inc => inc.product_id).filter(id => mongoose.Types.ObjectId.isValid(id)))];
+        const products = await Product.find({ _id: { $in: productIds } }).lean();
+        const productMap = {};
+        products.forEach(p => {
+            productMap[p._id.toString()] = p;
+        });
+
         const headers = ['Date', 'From User', 'Product ID', 'Txn Amount', 'Percentage (%)', 'Referral Amount', 'Status'];
-        const rows = incomes.map(inc => [
-            new Date(inc.create_at || inc.created_at).toLocaleString(),
-            inc.referred_user_name || '-',
-            inc.product_id || '-',
-            inc.amount,
-            inc.percentage,
-            inc.referral_amount,
-            inc.status || '-'
-        ]);
+        const rows = incomes.map(inc => {
+            const referredName = userMap[inc.referred_user_id]?.full_name || 'Unknown';
+            const prod = inc.product_id ? productMap[inc.product_id] : null;
+            const isEV = prod && (
+                (prod.packag_type && prod.packag_type.toLowerCase().includes('ev')) ||
+                prod.product_id === 4
+            );
+            const txnAmount = isEV ? `${prod.quantity || 1} PV` : inc.amount;
+
+            return [
+                new Date(inc.create_at || inc.created_at).toLocaleString(),
+                referredName,
+                inc.product_id || '-',
+                txnAmount,
+                inc.percentage,
+                inc.referral_amount,
+                inc.status || '-'
+            ];
+        });
 
         const filename = `referral-income-${Date.now()}`;
         if (format === 'excel') return sendExcel(res, filename + '.xls', headers, rows);

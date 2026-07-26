@@ -162,10 +162,16 @@ export default function ReferralIncome() {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className="text-gray-300 flex items-center font-medium">
-                                                <FaRupeeSign className="text-sm mr-0.5 text-gray-400" />
-                                                {Number(item.amount).toLocaleString()}
-                                            </span>
+                                            {item.is_ev ? (
+                                                <span className="text-teal-400 font-bold font-mono">
+                                                    {item.pv || 1} PV
+                                                </span>
+                                            ) : (
+                                                <span className="text-gray-300 flex items-center font-medium">
+                                                    <FaRupeeSign className="text-sm mr-0.5 text-gray-400" />
+                                                    {Number(item.amount).toLocaleString()}
+                                                </span>
+                                            )}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="flex items-center gap-1 text-yellow-400">
