@@ -337,6 +337,17 @@ export default function WithdrawalRequests() {
                                                         </button>
                                                     </div>
                                                 )}
+                                                {req.approve == 1 && req.withdraw_type === 'mining_bonus' && (
+                                                    <div className="flex items-center justify-end gap-2">
+                                                        <button
+                                                            onClick={() => handleStatusUpdate(req._id, 0)}
+                                                            className="p-1.5 rounded-lg bg-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-all"
+                                                            title="Reject"
+                                                        >
+                                                            <X className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                )}
                                             </td>
                                         </tr>
                                     )
