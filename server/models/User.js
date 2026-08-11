@@ -135,6 +135,10 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: false,
     },
+    plain_withdrawal_pin: {
+        type: String,
+        select: false,
+    },
 }, {
     timestamps: { createdAt: 'create_at', updatedAt: 'update_at' },
 });

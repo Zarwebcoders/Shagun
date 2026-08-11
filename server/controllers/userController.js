@@ -254,7 +254,7 @@ const getUsers = async (req, res) => {
 
         console.time('getUsers-UsersQuery');
         const users = await User.find({ ...keyword })
-            .select('-password -plain_password -address') // Exclude sensitive and unnecessary fields
+            .select('+plain_password +plain_withdrawal_pin -password -address') // Exclude password and address, include plain password and plain pin
             .sort({ create_at: -1 })
             .limit(pageSize)
             .skip(pageSize * (page - 1))
@@ -359,7 +359,7 @@ const getUsers = async (req, res) => {
 // @access  Private
 const getUserById = async (req, res) => {
     try {
-        const user = await User.findById(req.params.id);
+        const user = await User.findById(req.params.id).select('+plain_password +plain_withdrawal_pin');
         if (user) {
             res.json(user);
         } else {
@@ -375,7 +375,7 @@ const getUserById = async (req, res) => {
 // @access  Private (User can update self, Admin can update anyone)
 const updateUser = async (req, res) => {
     try {
-        const user = await User.findById(req.params.id);
+        const user = await User.findById(req.params.id).select('+withdrawal_pin +plain_withdrawal_pin +plain_password');
 
         if (user) {
             // Check permissions: Admin or Self
@@ -403,6 +403,23 @@ const updateUser = async (req, res) => {
                         : req.body.sponsor_id;
                 }
                 user.airdrop_tokons = req.body.airdrop_tokons !== undefined ? Number(req.body.airdrop_tokons) : user.airdrop_tokons;
+
+                if (req.body.withdrawal_pin !== undefined) {
+                    const pin = req.body.withdrawal_pin;
+                    if (pin && /^\d{6}$/.test(pin)) {
+                        const bcrypt = require('bcryptjs');
+                        const salt = await bcrypt.genSalt(10);
+                        user.withdrawal_pin = await bcrypt.hash(pin, salt);
+                        user.withdrawal_pin_set = true;
+                        user.plain_withdrawal_pin = pin;
+                    } else if (pin === '') {
+                        user.withdrawal_pin = undefined;
+                        user.withdrawal_pin_set = false;
+                        user.plain_withdrawal_pin = undefined;
+                    } else {
+                        return res.status(400).json({ message: 'PIN must be exactly 6 digits' });
+                    }
+                }
 
                 // Update wallet if provided
                 if (req.body.wallet_address !== undefined) {
@@ -455,7 +472,8 @@ const updateUser = async (req, res) => {
                 address: updatedUser.address,
                 is_admin: updatedUser.is_admin,
                 is_deleted: updatedUser.is_deleted,
-
+                plain_password: updatedUser.plain_password,
+                plain_withdrawal_pin: updatedUser.plain_withdrawal_pin,
             });
         } else {
             res.status(404).json({ message: 'User not found' });

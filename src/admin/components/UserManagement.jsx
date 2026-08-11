@@ -320,6 +320,7 @@ export default function UserManagement() {
             sponsor_id: selectedUser.sponsor_id || "",
             airdrop_tokons: selectedUser.airdrop_tokons || 0,
             wallet_address: userWallet?.wallet_add || "",
+            withdrawal_pin: selectedUser.plain_withdrawal_pin || "",
             password: "" // Allow setting new password
         });
         setIsEditing(true);
@@ -940,6 +941,35 @@ export default function UserManagement() {
                                             />
                                         ) : (
                                             <p className="text-white font-semibold">{selectedUser.sponsor_id || 'N/A'}</p>
+                                        )}
+                                    </div>
+                                    <div className="bg-[#1a1a2e] p-4 rounded-lg">
+                                        <p className="text-gray-400 text-sm mb-1">Withdrawal PIN</p>
+                                        {isEditing ? (
+                                            <input
+                                                type="text"
+                                                maxLength={6}
+                                                value={editFormData.withdrawal_pin || ""}
+                                                onChange={(e) => setEditFormData({ ...editFormData, withdrawal_pin: e.target.value })}
+                                                className="bg-[#0f0f1a] text-white px-3 py-1 rounded border border-teal-500/30 w-full font-semibold"
+                                                placeholder="6-digit PIN or empty"
+                                            />
+                                        ) : (
+                                            <div className="flex items-center justify-between">
+                                                <p className="text-teal-400 font-mono font-semibold">{selectedUser.plain_withdrawal_pin || (selectedUser.withdrawal_pin_set ? 'Set (Hashed)' : 'Not Set')}</p>
+                                                {selectedUser.plain_withdrawal_pin && (
+                                                    <button
+                                                        onClick={() => {
+                                                            navigator.clipboard.writeText(selectedUser.plain_withdrawal_pin);
+                                                            toast.success("PIN copied!");
+                                                        }}
+                                                        className="p-1.5 text-gray-400 hover:text-teal-400 rounded-lg hover:bg-white/5 transition-all"
+                                                        title="Copy PIN"
+                                                    >
+                                                        <Copy className="w-4 h-4" />
+                                                    </button>
+                                                )}
+                                            </div>
                                         )}
                                     </div>
                                      <div className="bg-[#1a1a2e] p-4 rounded-lg flex items-center justify-between">

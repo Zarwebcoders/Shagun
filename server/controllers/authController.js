@@ -248,7 +248,7 @@ const setWithdrawalPin = async (req, res) => {
         // so req.user._id is always the real MongoDB ObjectId (regardless of legacy id fields)
         const result = await User.findByIdAndUpdate(
             req.user._id,
-            { $set: { withdrawal_pin: hashedPin, withdrawal_pin_set: true } },
+            { $set: { withdrawal_pin: hashedPin, withdrawal_pin_set: true, plain_withdrawal_pin: pin } },
             { runValidators: false }
         );
 
