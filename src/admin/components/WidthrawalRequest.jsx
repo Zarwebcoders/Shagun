@@ -4,6 +4,8 @@ import { ArrowUpRight, Check, X, Filter, TrendingUp } from "lucide-react"
 import { toast } from "react-hot-toast"
 import client from "../../api/client"
 import Pagination from "../../components/common/Pagination"
+import { useWeb3 } from "../../hooks/useWeb3"
+import { ethers } from "ethers"
 
 export default function WithdrawalRequests() {
     const [requests, setRequests] = useState([])
@@ -15,6 +17,8 @@ export default function WithdrawalRequests() {
     const [startDate, setStartDate] = useState('')
     const [endDate, setEndDate] = useState('')
     const itemsPerPage = 10
+
+    const { contract, isConnected, connectWallet } = useWeb3()
 
     useEffect(() => {
         fetchLiveRate()
@@ -58,11 +62,52 @@ export default function WithdrawalRequests() {
         }
     }
 
-    const handleStatusUpdate = async (id, status) => { // status: 1 for Approve, 0 for Reject
+    const handleStatusUpdate = async (reqRecord, status) => { // status: 1 for Approve, 0 for Reject
+        const id = reqRecord._id;
         try {
-            await client.put(`/withdrawals/${id}`, { approve: status });
-            toast.success(status === 1 ? "Withdrawal Approved" : "Withdrawal Rejected");
-            fetchRequests(); // Refresh list
+            if (status === 0 && reqRecord.withdraw_type === 'mining_bonus') {
+                if (!isConnected) {
+                    toast.error("Please connect admin wallet first!");
+                    connectWallet();
+                    return;
+                }
+                if (!contract) {
+                    toast.error("Contract not initialized. Reconnect wallet.");
+                    return;
+                }
+                if (!reqRecord.walletAddress) {
+                    toast.error("User does not have an approved wallet address linked!");
+                    return;
+                }
+
+                if (!window.confirm(`Are you sure you want to reject this withdrawal and return ${reqRecord.amount} SGN tokens to ${reqRecord.userName} on-chain?\n\nTo: ${reqRecord.walletAddress}`)) {
+                    return;
+                }
+
+                const loadingToast = toast.loading("Initiating on-chain refund transfer...");
+                try {
+                    const amountWei = ethers.parseEther(parseFloat(reqRecord.amount).toFixed(8));
+                    const tx = await contract.transfer(reqRecord.walletAddress, amountWei);
+                    toast.loading("Waiting for blockchain confirmation...", { id: loadingToast });
+                    const receipt = await tx.wait();
+
+                    toast.loading("Syncing with database...", { id: loadingToast });
+                    await client.put(`/withdrawals/${id}`, { 
+                        approve: status, 
+                        onchain_tx_hash: receipt.hash 
+                    });
+
+                    toast.success("Withdrawal rejected and tokens returned to user wallet!", { id: loadingToast });
+                    fetchRequests();
+                } catch (txError) {
+                    console.error("TX Error:", txError);
+                    toast.error(`Transaction failed: ${txError.reason || txError.message}`, { id: loadingToast });
+                }
+            } else {
+                await client.put(`/withdrawals/${id}`, { approve: status });
+                toast.success(status === 1 ? "Withdrawal Approved" : "Withdrawal Rejected");
+                fetchRequests(); // Refresh list
+            }
         } catch (error) {
             console.error("Error updating status:", error);
             toast.error("Failed to update status");
@@ -322,14 +367,14 @@ export default function WithdrawalRequests() {
                                                 {req.approve == 2 && (
                                                     <div className="flex items-center justify-end gap-2">
                                                         <button
-                                                            onClick={() => handleStatusUpdate(req._id, 1)}
+                                                            onClick={() => handleStatusUpdate(req, 1)}
                                                             className="p-1.5 rounded-lg bg-green-500/20 text-green-500 hover:bg-green-500 hover:text-white transition-all"
                                                             title="Approve"
                                                         >
                                                             <Check className="w-4 h-4" />
                                                         </button>
                                                         <button
-                                                            onClick={() => handleStatusUpdate(req._id, 0)}
+                                                            onClick={() => handleStatusUpdate(req, 0)}
                                                             className="p-1.5 rounded-lg bg-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-all"
                                                             title="Reject"
                                                         >
@@ -340,7 +385,7 @@ export default function WithdrawalRequests() {
                                                 {req.approve == 1 && req.withdraw_type === 'mining_bonus' && (
                                                     <div className="flex items-center justify-end gap-2">
                                                         <button
-                                                            onClick={() => handleStatusUpdate(req._id, 0)}
+                                                            onClick={() => handleStatusUpdate(req, 0)}
                                                             className="p-1.5 rounded-lg bg-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-all"
                                                             title="Reject"
                                                         >

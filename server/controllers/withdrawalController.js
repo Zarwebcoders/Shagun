@@ -323,6 +323,7 @@ const getAllWithdrawals = async (req, res) => {
 
         // Query MyAccount records for bank details
         const MyAccount = require('../models/MyAccount');
+        const Wallet = require('../models/Wallet');
         const myAccountUserIds = [];
         users.forEach(user => {
             if (user.id) myAccountUserIds.push(user.id);
@@ -332,12 +333,20 @@ const getAllWithdrawals = async (req, res) => {
         userIds.forEach(id => myAccountUserIds.push(id));
         const uniqueMyAccountUserIds = [...new Set(myAccountUserIds)].filter(Boolean);
 
-        const accounts = uniqueMyAccountUserIds.length > 0
-            ? await MyAccount.find({ user_id: { $in: uniqueMyAccountUserIds } }).select('user_id acc_num acc_name back_code back_name branch').lean()
-            : [];
+        const [accounts, wallets] = await Promise.all([
+            uniqueMyAccountUserIds.length > 0
+                ? MyAccount.find({ user_id: { $in: uniqueMyAccountUserIds } }).select('user_id acc_num acc_name back_code back_name branch').lean()
+                : [],
+            uniqueMyAccountUserIds.length > 0
+                ? Wallet.find({ user_id: { $in: uniqueMyAccountUserIds } }).select('user_id wallet_add').lean()
+                : []
+        ]);
 
         const accountMap = {};
         accounts.forEach(acc => { accountMap[acc.user_id] = acc; });
+
+        const walletMap = {};
+        wallets.forEach(w => { walletMap[String(w.user_id).trim()] = w.wallet_add; });
 
         // Build flat, lean response rows (no nested user_id object)
         const populatedWithdrawals = withdrawals.map(w => {
@@ -377,6 +386,8 @@ const getAllWithdrawals = async (req, res) => {
                 // Flat user fields instead of nested object
                 userName: user.full_name || 'Unknown User',
                 referralId: user.referral_id || 'N/A',
+                email: user.email || 'N/A',
+                walletAddress: walletMap[w.user_id] || walletMap[user.id] || walletMap[user.user_id] || '',
                 // Core withdrawal fields
                 amount: w.amount,
                 payable_amount: w.payable_amount,
@@ -453,6 +464,26 @@ const updateWithdrawalStatus = async (req, res) => {
             await user.save();
 
             console.log(`Withdrawal ${withdrawal._id} approved and deducted from ${user.email}`);
+        }
+
+        if (req.body.onchain_tx_hash) {
+            withdrawal.onchain_tx_hash = req.body.onchain_tx_hash;
+        }
+
+        // Handle rejection specifically for mining bonus to return tokens from admin to user
+        if (withdrawal.approve == "2" && (approve == 0 || approve == "0")) {
+            if (user && withdrawal.withdraw_type === 'mining_bonus') {
+                const amount = withdrawal.amount;
+                const admin = await User.findOne({ is_admin: { $in: ["1", 1] } });
+                if (admin) {
+                    admin.real_tokens = (admin.real_tokens || 0) - amount;
+                    await admin.save();
+                }
+                user.real_tokens = (user.real_tokens || 0) + amount;
+                // user.mining_bonus is NOT deducted here so it remains available for withdrawal
+                await user.save();
+                console.log(`Withdrawal ${withdrawal._id} rejected. Tokens returned from admin wallet to user ${user.email} (Mining bonus preserved)`);
+            }
         }
 
         withdrawal.approve = String(approve);
