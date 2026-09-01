@@ -5,6 +5,7 @@ const Transaction = require('../models/Transaction');
 const Setting = require('../models/Setting');
 const Notification = require('../models/Notification');
 const { PRODUCT_DEFINITIONS } = require('../utils/levelIncome25');
+const { validateAndResolveUserWallet } = require('../utils/walletValidation');
 
 // @desc    Purchase a product (Create Product Investment)
 // @route   POST /api/products
@@ -21,6 +22,13 @@ const createProduct = async (req, res) => {
     try {
         console.log("DEBUG: createProduct called with:", req.body);
 
+        // Validate and resolve wallet address (ensures 1 wallet = 1 account rule)
+        const walletResult = await validateAndResolveUserWallet(req.user, walletAddress, true);
+        if (!walletResult.valid) {
+            return res.status(400).json({ message: walletResult.message });
+        }
+        const resolvedWalletAddress = walletResult.walletAddress;
+
         // Validate product_id (Backend IDs are numeric 1-4)
         const numericPid = Number(product_id);
         if (!product_id || !PRODUCT_DEFINITIONS[numericPid]) {
@@ -33,6 +41,28 @@ const createProduct = async (req, res) => {
 
         const productDef = PRODUCT_DEFINITIONS[product_id];
         const qty = Number(quantity) || 1;
+        const effectiveUserId = req.user.id || req.user._id;
+        const normalizedTxnId = transactionId ? String(transactionId).trim() : '';
+
+        // Prevent duplicate transaction ID submission
+        if (normalizedTxnId) {
+            const existingTxn = await Product.findOne({ transcation_id: normalizedTxnId });
+            if (existingTxn) {
+                return res.status(400).json({ message: 'A purchase with this Transaction ID has already been submitted.' });
+            }
+        }
+
+        // Prevent rapid double-clicks / multi-submissions within 5 seconds for the same user & product
+        const recentDuplicate = await Product.findOne({
+            user_id: effectiveUserId,
+            product_id: product_id,
+            amount: productDef.price,
+            quantity: qty,
+            cereate_at: { $gte: new Date(Date.now() - 5000) }
+        });
+        if (recentDuplicate) {
+            return res.status(429).json({ message: 'A purchase request was just submitted. Please wait a moment.' });
+        }
 
         // Get token rate from settings (Always using rexTokenPrice for consistency)
         const tokenRateSetting = await Setting.findOne({ key: 'rexTokenPrice' });
@@ -45,15 +75,15 @@ const createProduct = async (req, res) => {
 
         // Create Product Record
         const newProduct = await Product.create({
-            user_id: req.user.id || req.user._id,
-            transcation_id: transactionId || `TXN${Date.now()}`,
+            user_id: effectiveUserId,
+            transcation_id: normalizedTxnId || `TXN${Date.now()}`,
             w2_transaction_id: "",
             packag_type: productDef.name,
             product_id: product_id,
             token_value: productDef.tokenValue,
             amount: productDef.price,
             token_amount: tokenAmount,
-            wallet_address: walletAddress || "",
+            wallet_address: resolvedWalletAddress || "",
             approvel: 0,
             approve: 0,
             quantity: qty,

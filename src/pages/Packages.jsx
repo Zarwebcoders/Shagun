@@ -36,6 +36,7 @@ export default function Packages() {
     const [user, setUser] = useState(null);
     const [selectedInvoice, setSelectedInvoice] = useState(null);
     const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const [formData, setFormData] = useState({
         amount: "15000",
@@ -210,35 +211,38 @@ export default function Packages() {
 
     // submit form
     const handleSubmit = async () => {
+        if (isSubmitting) return;
+
+        if (!formData.amount) {
+            toast.error("Please enter amount");
+            return;
+        }
+
+        if (!formData.quantity || formData.quantity < 1) {
+            toast.error("Please select at least 1 quantity");
+            return;
+        }
+
+        if (!isConnected || !account) {
+            toast.error("Please connect your wallet first!");
+            return;
+        }
+
+        if (!formData.paymentSlip) {
+            toast.error("Please upload payment proof!");
+            return;
+        }
+
+        const selectedProduct = PRODUCTS.find(p => p.name === formData.product);
+        const minAmt = selectedProduct ? selectedProduct.minAmount : 500;
+
+        if (formData.amount < minAmt) {
+            toast.error(`Minimum amount for ${formData.product} is ₹${minAmt}`);
+            return;
+        }
+
+        setIsSubmitting(true);
         try {
-            if (!formData.amount) {
-                toast.error("Please enter amount");
-                return;
-            }
-
-            if (!formData.quantity || formData.quantity < 1) {
-                toast.error("Please select at least 1 quantity");
-                return;
-            }
-
-            if (!isConnected || !account) {
-                toast.error("Please connect your wallet first!");
-                return;
-            }
-
-            if (!formData.paymentSlip) {
-                toast.error("Please upload payment proof!");
-                return;
-            }
-
-            const selectedProduct = PRODUCTS.find(p => p.name === formData.product);
-            const minAmt = selectedProduct ? selectedProduct.minAmount : 500;
-
-            if (formData.amount < minAmt) {
-                toast.error(`Minimum amount for ${formData.product} is ₹${minAmt}`);
-                return;
-            }
-
             let paymentSlipBase64 = "";
             if (formData.paymentSlip) {
                 paymentSlipBase64 = await fileToBase64(formData.paymentSlip);
@@ -257,13 +261,7 @@ export default function Packages() {
 
             toast.success("Product purchased successfully!");
 
-            toast.success("Product purchased successfully!");
-
             // Refresh products
-            // const { data } = await client.get('/products');
-            // setInvestments(data);
-            // Trigger re-fetch via dependency update if logic allows, or manually call fetch
-            // For now, let's just reset page to 1 to trigger refresh
             setPage(1);
 
             // Reset form
@@ -279,6 +277,8 @@ export default function Packages() {
         } catch (error) {
             console.error("Error creating product:", error);
             toast.error(error.response?.data?.message || "Failed to submit product");
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -635,10 +635,23 @@ export default function Packages() {
                             <span className="text-purple-500 font-bold">*</span> Processing time: Up to 24 hours
                         </p>
                         <button
+                            type="button"
                             onClick={handleSubmit}
-                            className="w-full sm:w-auto px-12 py-4 bg-gradient-brand text-white font-bold rounded-xl shadow-[0_0_20px_rgba(45,212,191,0.3)] hover:shadow-[0_0_30px_rgba(45,212,191,0.5)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 text-lg"
+                            disabled={isSubmitting}
+                            className={`w-full sm:w-auto px-12 py-4 bg-gradient-brand text-white font-bold rounded-xl shadow-[0_0_20px_rgba(45,212,191,0.3)] transition-all duration-300 text-lg flex items-center justify-center gap-3 ${
+                                isSubmitting
+                                    ? "opacity-60 cursor-not-allowed"
+                                    : "hover:shadow-[0_0_30px_rgba(45,212,191,0.5)] hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                            }`}
                         >
-                            BUY NOW
+                            {isSubmitting ? (
+                                <>
+                                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                    <span>PROCESSING...</span>
+                                </>
+                            ) : (
+                                "BUY NOW"
+                            )}
                         </button>
                     </div>
                 </div>

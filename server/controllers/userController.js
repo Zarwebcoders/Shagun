@@ -5,6 +5,7 @@ const MiningBonus = require('../models/MiningBonus');
 const Transaction = require('../models/Transaction');
 const Wallet = require('../models/Wallet');
 const Product = require('../models/Product');
+const { findConflictingWalletAccount } = require('../utils/walletValidation');
 
 const dashboardCache = new Map(); // userId -> { data, expiry }
 const DASHBOARD_CACHE_TTL = 30000; // 30 seconds cache (aligned with browser Cache-Control)
@@ -433,13 +434,8 @@ const updateUser = async (req, res) => {
                     ].filter(Boolean).map(String))];
 
                     if (walletAddress) {
-                        const escapedAddress = walletAddress.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                        const conflictingWallet = await Wallet.findOne({
-                            user_id: { $nin: userWalletIds },
-                            wallet_add: { $regex: `^${escapedAddress}$`, $options: 'i' }
-                        });
-
-                        if (conflictingWallet) {
+                        const conflict = await findConflictingWalletAccount(walletAddress, user);
+                        if (conflict) {
                             return res.status(400).json({ message: 'This wallet address is already linked to another account.' });
                         }
                     }

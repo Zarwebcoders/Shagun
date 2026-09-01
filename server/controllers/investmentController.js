@@ -2,14 +2,22 @@ const Investment = require('../models/Investment');
 const User = require('../models/User');
 const Package = require('../models/Package');
 const Transaction = require('../models/Transaction');
+const { validateAndResolveUserWallet } = require('../utils/walletValidation');
 
 // @desc    Purchase a package (Create Investment)
 // @route   POST /api/investments
 // @access  Private
 const createInvestment = async (req, res) => {
-    let { packageId, amount, transactionId, sponsorId, paymentSlip } = req.body;
+    let { packageId, amount, transactionId, sponsorId, paymentSlip, walletAddress } = req.body;
 
     try {
+        // Validate and resolve wallet address (ensures 1 wallet = 1 account rule)
+        const walletResult = await validateAndResolveUserWallet(req.user, walletAddress, true);
+        if (!walletResult.valid) {
+            return res.status(400).json({ message: walletResult.message });
+        }
+        const resolvedWalletAddress = walletResult.walletAddress;
+
         let pkg;
         if (packageId) {
             pkg = await Package.findById(packageId);
@@ -44,6 +52,25 @@ const createInvestment = async (req, res) => {
 
         // Let's stick to the user's current flow but fix the "Package not found" and save the payment slip.
 
+        const normalizedTxnId = transactionId ? String(transactionId).trim() : '';
+        if (normalizedTxnId) {
+            const existingTxn = await Investment.findOne({ transactionId: normalizedTxnId });
+            if (existingTxn) {
+                return res.status(400).json({ message: 'An investment with this Transaction ID has already been submitted.' });
+            }
+        }
+
+        // Prevent rapid double-clicks / multi-submissions within 5 seconds for the same user & package
+        const recentDuplicate = await Investment.findOne({
+            user: req.user.id,
+            package: pkg._id,
+            amount: Number(amount),
+            createdAt: { $gte: new Date(Date.now() - 5000) }
+        });
+        if (recentDuplicate) {
+            return res.status(429).json({ message: 'An investment request was just submitted. Please wait a moment.' });
+        }
+
         // Calculate end date based on duration (days)
         const startDate = new Date();
         const endDate = new Date(startDate);
@@ -63,12 +90,12 @@ const createInvestment = async (req, res) => {
             dailyReturnAmount: (Number(amount) * pkg.dailyReturn) / 100,
             startDate,
             endDate,
-            transactionId: transactionId || `INV${Date.now()}`,
+            transactionId: normalizedTxnId || `INV${Date.now()}`,
             status: 'pending', // Defaults to pending
             sponsorId: sponsorId || "",
             paymentSlip: paymentSlip || "",
             product: req.body.product || "",
-            walletAddress: req.body.walletAddress || ""
+            walletAddress: resolvedWalletAddress || ""
         });
 
         // Commission is NOT distributed here anymore. It will be distributed upon approval.

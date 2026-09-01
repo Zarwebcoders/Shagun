@@ -1,23 +1,13 @@
 const Wallet = require('../models/Wallet');
-
-const normalizeWalletAddress = (address) => String(address || '').trim().toLowerCase();
+const {
+    normalizeWalletAddress,
+    getWalletIdentifiers: getWalletIds,
+    findConflictingWalletAccount
+} = require('../utils/walletValidation');
 
 const getWalletIdentifiers = (user) => (
     [...new Set([user?._id?.toString(), user?.id, user?.user_id].filter(Boolean).map(String))]
 );
-
-const findWalletByAddress = (address, excludedUserIds = []) => {
-    const escapedAddress = address.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const query = {
-        wallet_add: { $regex: `^${escapedAddress}$`, $options: 'i' }
-    };
-
-    if (excludedUserIds.length > 0) {
-        query.user_id = { $nin: excludedUserIds };
-    }
-
-    return Wallet.findOne(query);
-};
 
 // @desc    Add or Update Wallet
 // @route   POST /api/wallet
@@ -42,9 +32,9 @@ const addOrUpdateWallet = async (req, res) => {
 
             return res.status(200).json(userWallet);
         } else {
-            const existingWallet = await findWalletByAddress(wallet_add, userIds);
+            const conflict = await findConflictingWalletAccount(wallet_add, req.user);
 
-            if (existingWallet) {
+            if (conflict) {
                 return res.status(400).json({ message: 'This wallet address is already linked to another account.' });
             }
 
