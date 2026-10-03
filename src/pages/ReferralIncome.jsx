@@ -1,6 +1,6 @@
 "use client"
 import { useState, useEffect, useMemo } from "react"
-import { TrendingUp, Calendar, User, ShoppingBag, Percent } from "lucide-react"
+import { TrendingUp, Calendar, User, ShoppingBag } from "lucide-react"
 import client from "../api/client"
 import DateRangePicker from "../components/DateRangePicker.jsx"
 import ExportButtons from "../components/ExportButtons.jsx"
@@ -116,16 +116,15 @@ export default function ReferralIncome() {
                                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">From User</th>
                                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Product Info</th>
                                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Txn Amount</th>
-                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Percentage</th>
                                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Referral Amount</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
                             {loading ? (
-                                <tr><td colSpan="6" className="px-6 py-10 text-center text-gray-500">Loading income history...</td></tr>
+                                <tr><td colSpan="5" className="px-6 py-10 text-center text-gray-500">Loading income history...</td></tr>
                             ) : filteredIncomes.length === 0 ? (
                                 <tr>
-                                    <td colSpan="6" className="px-6 py-10 text-center">
+                                    <td colSpan="5" className="px-6 py-10 text-center">
                                         <p className="text-gray-400">{(startDate || endDate) ? "No results for the selected date range." : "No referral income found yet."}</p>
                                     </td>
                                 </tr>
@@ -171,12 +170,6 @@ export default function ReferralIncome() {
                                                     {Number(item.amount).toLocaleString()}
                                                 </span>
                                             )}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="flex items-center gap-1 text-yellow-400">
-                                                <Percent className="w-3 h-3" />
-                                                {item.percentage}%
-                                            </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <span className="text-green-400 font-bold font-mono text-lg flex items-center">
