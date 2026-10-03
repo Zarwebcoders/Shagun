@@ -118,15 +118,14 @@ export default function ReferralIncome() {
                                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Txn Amount</th>
                                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Percentage</th>
                                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Referral Amount</th>
-                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Status</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
                             {loading ? (
-                                <tr><td colSpan="7" className="px-6 py-10 text-center text-gray-500">Loading income history...</td></tr>
+                                <tr><td colSpan="6" className="px-6 py-10 text-center text-gray-500">Loading income history...</td></tr>
                             ) : filteredIncomes.length === 0 ? (
                                 <tr>
-                                    <td colSpan="7" className="px-6 py-10 text-center">
+                                    <td colSpan="6" className="px-6 py-10 text-center">
                                         <p className="text-gray-400">{(startDate || endDate) ? "No results for the selected date range." : "No referral income found yet."}</p>
                                     </td>
                                 </tr>
@@ -155,7 +154,7 @@ export default function ReferralIncome() {
                                                     Product ID: {item.product_id || '-'}
                                                 </span>
                                                 {item.product_transcation_id && (
-                                                    <span className="text-[10px] text-gray-500 font-mono mt-1">
+                                                     <span className="text-[10px] text-gray-500 font-mono mt-1">
                                                         Ref: {item.product_transcation_id}
                                                     </span>
                                                 )}
@@ -183,14 +182,6 @@ export default function ReferralIncome() {
                                             <span className="text-green-400 font-bold font-mono text-lg flex items-center">
                                                 +<FaRupeeSign className="text-sm ml-0.5 mr-0.5 text-green-400" />
                                                 {Number(item.referral_amount).toLocaleString()}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className={`px-2 py-1 rounded-full text-xs font-medium border ${item.status === 'credited'
-                                                ? 'bg-green-500/10 text-green-500 border-green-500/20'
-                                                : 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
-                                                }`}>
-                                                {item.status}
                                             </span>
                                         </td>
                                     </tr>
